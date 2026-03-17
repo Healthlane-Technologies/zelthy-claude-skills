@@ -14,6 +14,11 @@ This repository serves as the **single source of truth** for Zango frontend deve
 | `/scaffold-form` | Generate FormRenderer - server-driven or local RJSF |
 | `/scaffold-detail` | Generate custom detail view - drawer or route-based |
 | `/scaffold-workflow` | Add workflow status transitions and tags |
+| `/launch-frontend` | Create a new Zango frontend app from scratch |
+| `/setup-routes` | Configure routes and menu (frontend + backend database) |
+| `/setup-navbar` | Customize sidebar - logo, menu, bottom content, topbar |
+| `/setup-auth` | Configure login page, OAuth, 2FA, role selection |
+| `/setup-theme` | Configure colors, typography, CSS variables |
 
 ## Quick Reference
 
