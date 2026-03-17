@@ -1,0 +1,47 @@
+{
+  "name": "zango-crud-docs",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@zango-core/components": "0.2.0-rc.1",
+    "@zango-core/crm-framework": "1.0.16-rc.1",
+    "@zango-core/crud": "1.0.13-rc.4",
+    "@zango-core/training": "1.0.5",
+    "lucide-react": "^0.563.0",
+    "prismjs": "^1.29.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-live": "^4.1.7",
+    "react-router-dom": "^7.7.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/react": "^19.2.9",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.9.3",
+    "vite": "^7.0.6",
+    "vite-plugin-css-injected-by-js": "^3.5.2",
+    "vite-plugin-singlefile": "^2.0.2"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:zango": "vite build --config vite.config.zango.js",
+    "build:reference": "node ../scripts/generate-reference.js",
+    "preview": "vite preview"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

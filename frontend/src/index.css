@@ -1,0 +1,162 @@
+@import 'tailwindcss';
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+
+/* Tailwind 4: scan sources for class detection */
+@source "../node_modules/@zango-core/crm-framework/**/*.{js,jsx,ts,tsx}";
+@source "../node_modules/@zango-core/crud/**/*.{js,jsx,ts,tsx}";
+
+/* Tailwind 4: custom theme colors for @zango-core components */
+@theme {
+  --color-brand-25: #F5F3FF;
+  --color-brand-50: #EAE8FF;
+  --color-brand-100: #D4D0FF;
+  --color-brand-200: #AEA7FF;
+  --color-brand-300: #877EFF;
+  --color-brand-400: #6C63ED;
+  --color-brand-500: #5048ED;
+  --color-brand-600: #4038CA;
+  --color-brand-700: #302AA8;
+  --color-brand-800: #201D85;
+  --color-brand-900: #151263;
+  --color-brand-950: #0A0940;
+  --color-gray-25: #FCFCFD;
+  --color-gray-50: #F9FAFB;
+  --color-gray-100: #F2F4F7;
+  --color-gray-200: #E4E7EC;
+  --color-gray-300: #D0D5DD;
+  --color-gray-400: #98A2B3;
+  --color-gray-500: #667085;
+  --color-gray-600: #475467;
+  --color-gray-700: #344054;
+  --color-gray-800: #1D2939;
+  --color-gray-900: #101828;
+  --color-gray-950: #0C111D;
+  --color-success-500: #12B76A;
+  --color-error-500: #F04438;
+  --color-warning-500: #F79009;
+  --color-base-white: #FFFFFF;
+  --color-base-black: #000000;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Code block styling */
+.code-block {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+/* Prism theme overrides */
+code[class*="language-"],
+pre[class*="language-"] {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  tab-size: 2;
+  hyphens: none;
+  color: #e2e8f0;
+  background: transparent;
+}
+
+pre[class*="language-"] {
+  padding: 1.25rem;
+  margin: 0;
+  overflow: auto;
+  border-radius: 0 0 0.75rem 0.75rem;
+  background: #0f172a;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata { color: #64748b; font-style: italic; }
+
+.token.punctuation { color: #94a3b8; }
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted { color: #f472b6; }
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted { color: #a5f3fc; }
+
+.token.operator,
+.token.entity,
+.token.url { color: #fbbf24; }
+
+.token.atrule,
+.token.attr-value,
+.token.keyword { color: #818cf8; }
+
+.token.function,
+.token.class-name { color: #67e8f9; }
+
+.token.regex,
+.token.important,
+.token.variable { color: #fcd34d; }
+
+/* Live editor styling */
+.live-editor textarea {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Monaco, monospace !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  outline: none !important;
+  caret-color: #818cf8;
+}
+
+.live-editor textarea:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Props table styling */
+.props-table th {
+  text-align: left;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.props-table td {
+  vertical-align: top;
+}
+
+/* Custom scrollbar for code blocks */
+pre::-webkit-scrollbar {
+  height: 6px;
+}
+
+pre::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 3px;
+}
+
+pre::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+
+pre::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}

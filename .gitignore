@@ -1,0 +1,10 @@
+node_modules/
+dist/
+zango-build/
+.env
+.DS_Store
+*.log
+frontend/node_modules/
+frontend/dist/
+frontend/zango-build/
+frontend/.env
