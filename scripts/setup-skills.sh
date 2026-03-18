@@ -34,18 +34,6 @@ for skill_dir in "$SKILL_REPO"/skills/*/; do
   fi
 done
 
-# 2. Symlink references
-mkdir -p "$PROJECT_DIR/references"
-for ref in "$SKILL_REPO"/references/*.md; do
-  ref_name=$(basename "$ref")
-  target="$PROJECT_DIR/references/$ref_name"
-  if [ -L "$target" ] || [ -f "$target" ]; then
-    echo "  Skip (exists): references/$ref_name"
-  else
-    ln -s "$ref" "$target"
-    echo "  Linked: references/$ref_name"
-  fi
-done
 
 echo ""
 echo "  Skills: $linked linked, $skipped skipped"
