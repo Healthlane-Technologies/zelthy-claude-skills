@@ -1,9 +1,6 @@
 #!/bin/bash
-# Setup Zango Skills in a project (Agent Skills Spec format)
+# Setup Zango Skills in a project
 # Usage: bash /path/to/pkg-zango-skill/scripts/setup-skills.sh [project-dir]
-#
-# - Symlinks skill directories into project's skills/ folder
-# - Creates or appends to CLAUDE.md with skill discovery info
 
 set -e
 
@@ -12,8 +9,8 @@ PROJECT_DIR="${1:-.}"
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 
 echo "Zango Skills Setup"
-echo "  Skills source: $SKILL_REPO/skills/"
-echo "  Target project: $PROJECT_DIR"
+echo "  Source: $SKILL_REPO"
+echo "  Target: $PROJECT_DIR"
 echo ""
 
 # 1. Symlink skill directories
@@ -25,10 +22,10 @@ for skill_dir in "$SKILL_REPO"/skills/*/; do
   skill_name=$(basename "$skill_dir")
   target="$PROJECT_DIR/skills/$skill_name"
   if [ -L "$target" ]; then
-    echo "  Skip (already linked): $skill_name/"
+    echo "  Skip (linked): $skill_name/"
     skipped=$((skipped + 1))
   elif [ -d "$target" ]; then
-    echo "  Skip (local dir exists): $skill_name/"
+    echo "  Skip (exists): $skill_name/"
     skipped=$((skipped + 1))
   else
     ln -s "$skill_dir" "$target"
@@ -37,49 +34,51 @@ for skill_dir in "$SKILL_REPO"/skills/*/; do
   fi
 done
 
+# 2. Symlink references
+mkdir -p "$PROJECT_DIR/references"
+for ref in "$SKILL_REPO"/references/*.md; do
+  ref_name=$(basename "$ref")
+  target="$PROJECT_DIR/references/$ref_name"
+  if [ -L "$target" ] || [ -f "$target" ]; then
+    echo "  Skip (exists): references/$ref_name"
+  else
+    ln -s "$ref" "$target"
+    echo "  Linked: references/$ref_name"
+  fi
+done
+
 echo ""
 echo "  Skills: $linked linked, $skipped skipped"
 echo ""
 
-# 2. Create or append CLAUDE.md
+# 3. Create or append CLAUDE.md
 CLAUDE_MD="$PROJECT_DIR/CLAUDE.md"
 SKILLS_BLOCK='
-## Zango Frontend Skills
-
-The following Zango skills are available in the `skills/` directory (Agent Skills Spec format):
+## Zango Skills
 
 | Skill | Description |
 |-------|-------------|
-| `zango-frontend` | Get help with Zango CRUD - components, hooks, API formats |
-| `scaffold-crud-page` | Generate a complete CRUD page with CrudHandler |
-| `scaffold-form` | Generate FormRenderer (server-driven or local RJSF) |
-| `scaffold-detail` | Generate custom detail view (drawer or route-based) |
-| `scaffold-workflow` | Add workflow status transitions and tags |
-| `launch-frontend` | Create a new Zango frontend app from scratch |
-| `setup-routes` | Configure routes and menu (frontend + backend) |
-| `setup-navbar` | Customize sidebar - logo, menu, bottom content |
-| `setup-auth` | Configure login, OAuth, 2FA, role selection |
-| `setup-theme` | Configure colors, typography, CSS variables |
+| `zango-frontend` | Build Zango frontend - pages, tables, forms, workflows, routing, auth, theme |
+| `app-panel` | Browser automation for Zango admin panel |
 
-### Key Rules (for AI assistants)
+### Key Rules
 - Import from `@zango-core/crud/table` and `@zango-core/crud/form` (NEVER `@zango-core/crud`)
 - Server API uses snake_case: `json_schema`, `ui_schema`, `form_data`, `status_label`, `next_transitions`, `tag_details`
-- Reference files are in `skills/zango-frontend/references/`
 '
 
 if [ -f "$CLAUDE_MD" ]; then
-  if grep -q "Zango Frontend Skills" "$CLAUDE_MD" 2>/dev/null; then
-    echo "  CLAUDE.md: already contains Zango skills section, skipping"
+  if grep -q "Zango Skills" "$CLAUDE_MD" 2>/dev/null; then
+    echo "  CLAUDE.md: already has Zango section"
   else
     echo "" >> "$CLAUDE_MD"
     echo "$SKILLS_BLOCK" >> "$CLAUDE_MD"
-    echo "  CLAUDE.md: appended Zango skills section"
+    echo "  CLAUDE.md: appended Zango section"
   fi
 else
   echo "# Project Instructions" > "$CLAUDE_MD"
   echo "$SKILLS_BLOCK" >> "$CLAUDE_MD"
-  echo "  CLAUDE.md: created with Zango skills section"
+  echo "  CLAUDE.md: created"
 fi
 
 echo ""
-echo "Done! Restart Claude Code in $PROJECT_DIR to use the skills."
+echo "Done! Restart Claude Code to use skills."
