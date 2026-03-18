@@ -1,5 +1,6 @@
 #!/bin/bash
 # Setup Zango Skills in a project
+# Symlinks skills from this repo into the workspace's .claude/skills/ directory
 # Usage: bash /path/to/pkg-zango-skill/scripts/setup-skills.sh [project-dir]
 
 set -e
@@ -9,18 +10,18 @@ PROJECT_DIR="${1:-.}"
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 
 echo "Zango Skills Setup"
-echo "  Source: $SKILL_REPO"
-echo "  Target: $PROJECT_DIR"
+echo "  Source: $SKILL_REPO/skills/"
+echo "  Target: $PROJECT_DIR/.claude/skills/"
 echo ""
 
-# 1. Symlink skill directories
-mkdir -p "$PROJECT_DIR/skills"
+# 1. Symlink skill directories into .claude/skills/
+mkdir -p "$PROJECT_DIR/.claude/skills"
 
 linked=0
 skipped=0
 for skill_dir in "$SKILL_REPO"/skills/*/; do
   skill_name=$(basename "$skill_dir")
-  target="$PROJECT_DIR/skills/$skill_name"
+  target="$PROJECT_DIR/.claude/skills/$skill_name"
   if [ -L "$target" ]; then
     echo "  Skip (linked): $skill_name/"
     skipped=$((skipped + 1))
@@ -34,12 +35,11 @@ for skill_dir in "$SKILL_REPO"/skills/*/; do
   fi
 done
 
-
 echo ""
 echo "  Skills: $linked linked, $skipped skipped"
 echo ""
 
-# 3. Create or append CLAUDE.md
+# 2. Create or append CLAUDE.md
 CLAUDE_MD="$PROJECT_DIR/CLAUDE.md"
 SKILLS_BLOCK='
 ## Zango Skills
@@ -70,3 +70,5 @@ fi
 
 echo ""
 echo "Done! Restart Claude Code to use skills."
+echo "  /zango-frontend - Frontend development"
+echo "  /app-panel - App Panel automation"
