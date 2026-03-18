@@ -2,32 +2,68 @@
 name: app-panel
 description: "Automate Zango App Panel operations via browser - launch apps, configure themes, set up routes and menus, sync policies, manage users/packages/tasks, configure authentication. Use when users want to perform admin operations on the Zango platform without manual clicking."
 license: MIT
-compatibility: Requires browser automation capability (agent-browser or claude-in-chrome MCP tools). Needs Zango App Panel URL and platform admin credentials.
+compatibility: Requires agent-browser CLI (npm i -g agent-browser && agent-browser install). Needs Zango App Panel URL and platform admin credentials.
 metadata:
   author: Healthlane Technologies
-  version: "2.0"
+  version: "3.0"
+allowed-tools: Bash(agent-browser:*) Bash(bash:*)
 ---
 
 # Zango App Panel Automation
 
-Automate admin operations on the Zango App Panel via browser.
+Automate admin operations on the Zango App Panel using agent-browser CLI.
+
+## Prerequisites
+
+agent-browser must be installed:
+```bash
+npm install -g agent-browser
+agent-browser install  # Downloads Chrome for Testing
+```
 
 ## Before Starting
 
 Ask the user:
 1. **App Panel URL?** (e.g., `http://app0.zelthy.com:8000`)
-2. **Admin credentials?** (email + password - stored in memory only, NEVER written to files)
+2. **Admin credentials?** (email + password - NEVER write to files)
 3. **Which app?** (if multiple apps exist)
 4. **What operation?** (see list below)
 
+## Core Workflow Pattern
+
+Every operation follows: open → snapshot → interact → verify
+
+```bash
+agent-browser open <url>
+agent-browser wait --load networkidle
+agent-browser snapshot -i          # Get refs like @e1, @e2
+agent-browser fill @e1 "value"     # Interact using refs
+agent-browser click @e2
+agent-browser screenshot result.png # Verify
+```
+
 ## Login Flow
 
-1. Navigate to `{base_url}/auth/login/`
-2. Fill "Enter Username" textbox with email
-3. Fill "Email Password" textbox with password
-4. Click "Login" button
-5. Wait for redirect to `/platform/apps`
-6. Verify: page title = "Zango App Panel"
+```bash
+agent-browser open "{base_url}/auth/login/"
+agent-browser wait --load networkidle
+agent-browser find placeholder "Enter Username" fill "{email}"
+agent-browser find placeholder "Email Password" fill "{password}"
+agent-browser find role button click --name "Login"
+agent-browser wait --url "**/platform/apps" --timeout 10000
+```
+
+Or use the login script: `bash scripts/login.sh {url} {email} {password}`
+
+## Handling Webviews (Appbuilder Configure)
+
+The appbuilder configure panel opens in an iframe. Extract URL and open directly:
+```bash
+# Get iframe URL
+agent-browser eval "document.querySelector('iframe')?.src"
+# Open in current browser
+agent-browser open "<extracted-url>"
+```
 
 ## Routing to Agents
 
