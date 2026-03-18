@@ -1,41 +1,48 @@
-# Form Reference
+# Zango FormRenderer Reference
 
-Complete reference for FormRenderer -- dual-mode form engine with server-driven and local RJSF support.
+> Auto-generated from documentation pages. Regenerate with: `node scripts/generate-reference.js`
+
+## Import
+```js
+import { FormRenderer } from '@zango-core/crud/form';
+```
+
+## Server Response Format (snake_case)
+```json
+{ "success": true, "response": { "is_multistep": false, "form": { "json_schema": { "type": "object", "properties": {} }, "ui_schema": {}, "form_data": {} } } }
+```
+
+Note: Server uses `json_schema`, `ui_schema`, `form_data`. Local `rjsf_schema` prop uses camelCase: `schema`, `uiSchema`, `formData`.
 
 ---
 
-## FormRenderer
 
-### Import
+## FormRenderer (Forms)
 
-```jsx
-import { FormRenderer } from "@zango-core/crud/form";
-```
+**Sections:** Import | Props | Server Response Format | Server-Driven Mode | Local RJSF Mode | Multi-Step Forms | Form Sync | Autocomplete | Integration with CrudHandler | Submit Button Portal | Choosing Between Modes
 
 ### Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| api_endpoint | `string` | — | Enables server-driven mode. Endpoint for GET (schema) and POST (submit). When provided, `rjsf_schema` and `onSubmit` are ignored. |
-| getParams | `object` | `{ action: 'initialize_form' }` | Query params appended to the GET request for fetching form schema. |
-| postParams | `object` | `{ form_type: 'create_form' }` | Query params appended to the POST request for submission. |
-| showConfirmAlert | `boolean` | `false` | Show confirmation dialog before submitting. |
-| customConfirmAlert | `ReactNode \| Function` | — | Custom confirmation UI. Receives `{ onConfirm, onCancel }`. |
-| rjsf_schema | `object` | — | Local RJSF schema: `{ schema, uiSchema, formData }`. Enables local mode. Ignored if `api_endpoint` is provided. |
-| onSubmit | `function` | — | Client-side submit handler for local mode. Receives validated formData. Ignored if `api_endpoint` is provided. |
-| onResponse | `function` | — | Callback after successful submission. Receives server response (server mode) or onSubmit return value (local mode). |
-| onError | `function` | — | Callback when submission fails. Receives error object. |
-| customWidgets | `object` | — | Map of custom RJSF widget names to React components. Reference via `"ui:widget": "yourWidgetName"`. |
-| submitButtonContainerId | `string` | — | DOM element ID to portal the submit button into. |
-| skipAutoRefresh | `boolean` | `false` | Prevent automatic table refresh after successful submission in CrudHandler. |
+| `api_endpoint` | string | { action: initialize_form | Enables server-driven mode. The endpoint used to GET the form schema and POST form submissions. When provided, rjsf_schema and onSubmit are ignored. |
+| `getParams` | object | { action: initialize_form | Query parameters appended to the GET request when fetching the form schema in server-driven mode. Override to load edit forms or pass context. |
+| `postParams` | object | { form_type: create_form | Query parameters appended to the POST request when submitting the form in server-driven mode. Typically set to { form_type:  |
+| `showConfirmAlert` | boolean | false | When true, displays a confirmation dialog before submitting the form. Uses the browser default unless customConfirmAlert is provided. |
+| `customConfirmAlert` | ReactNode | Function | false | Custom confirmation UI rendered when showConfirmAlert is true. Receives { onConfirm, onCancel } props. Return a React element that calls onConfirm to proceed or onCancel to abort. |
+| `rjsf_schema` | object | false | Local RJSF schema object with shape { schema, uiSchema, formData }. Enables local mode for client-side form rendering without any server calls. Ignored if api_endpoint is provided. |
+| `onSubmit` | function | false | Client-side submit handler for local mode. Receives the validated formData as its argument. Can return a promise. Ignored if api_endpoint is provided. |
+| `onResponse` | function | false | Callback invoked after a successful form submission. Receives the full server response object (server mode) or the return value of onSubmit (local mode). |
+| `onError` | function | false | Callback invoked when form submission fails. Receives the error object. Use this for toast notifications or error logging. |
+| `customWidgets` | object | false | Map of custom RJSF widget names to React components. Merged with the default widget set. Reference a custom widget in ui_schema via  |
+| `submitButtonContainerId` | string | false | DOM element ID where the submit button should be portaled via React.createPortal. Useful for placing the submit button outside the form, e.g., in a dialog footer. The target element must exist in the DOM when the form mounts. |
+| `skipAutoRefresh` | boolean | false | When true, prevents the automatic table refresh that normally occurs after a successful form submission in CrudHandler integration. Useful when you want to handle refresh logic manually. |
 
----
+### Code Examples
 
-## Server-Driven Mode
-
-The form schema is fetched from the server. Submission is handled automatically.
-
-### Server Response Format
+```jsx
+import { FormRenderer } from "@zango-core/crud/form";
+```
 
 ```json
 // GET /api/users/?action=initialize_form
@@ -50,7 +57,11 @@ The form schema is fetched from the server. Submission is handled automatically.
         "properties": {
           "name": { "type": "string", "title": "Full Name" },
           "email": { "type": "string", "title": "Email", "format": "email" },
-          "role": { "type": "string", "title": "Role", "enum": ["Admin", "Editor", "Viewer"] }
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "enum": ["Admin", "Editor", "Viewer"]
+          }
         }
       },
       "ui_schema": {
@@ -65,31 +76,50 @@ The form schema is fetched from the server. Submission is handled automatically.
 }
 ```
 
-> **Key naming:** Server responses use snake_case: `json_schema`, `ui_schema`, `form_data`. Local `rjsf_schema` uses camelCase: `schema`, `uiSchema`, `formData`.
-
-### Submit Response Format
-
 ```json
-// Success:
-{ "success": true, "response": { "message": "User created successfully" } }
+// POST /api/users/?form_type=create_form
+// Request body: { "name": "Jane Doe", "email": "jane@acme.com", "role": "Admin" }
 
-// Validation error:
-{ "success": false, "response": { "message": "Validation failed", "errors": { "email": "A user with this email already exists" } } }
+// Success response:
+{
+  "success": true,
+  "response": {
+    "message": "User created successfully"
+  }
+}
+
+// Validation error response:
+{
+  "success": false,
+  "response": {
+    "message": "Validation failed",
+    "errors": {
+      "email": "A user with this email already exists"
+    }
+  }
+}
 ```
-
-### Create Form
 
 ```jsx
-<FormRenderer
-  api_endpoint="/api/users/"
-  onResponse={(response) => console.log("Success:", response)}
-  onError={(error) => console.error("Failed:", error)}
-/>
-// GET  /api/users/?action=initialize_form
-// POST /api/users/?form_type=create_form
-```
+import { FormRenderer } from "@zango-core/crud/form";
 
-### Edit Form
+function CreateUserForm() {
+  return (
+    <FormRenderer
+      api_endpoint="/api/users/"
+      onResponse={(response) => {
+        console.log("Form submitted successfully:", response);
+      }}
+      onError={(error) => {
+        console.error("Form submission failed:", error);
+      }}
+    />
+  );
+}
+
+// GET  /api/users/?action=initialize_form      --> fetches schema
+// POST /api/users/?form_type=create_form        --> submits data
+```
 
 ```jsx
 <FormRenderer
@@ -103,13 +133,17 @@ The form schema is fetched from the server. Submission is handled automatically.
     form_type: "edit_form",
     object_uuid: "abc-123-def-456",
   }}
-  onResponse={(response) => console.log("Updated:", response)}
+  onResponse={(response) => {
+    console.log("User updated:", response);
+  }}
+  onError={(error) => {
+    console.error("Update failed:", error);
+  }}
 />
+
 // GET  /api/users/?action=initialize_form&form_type=edit_form&object_uuid=abc-123-def-456
 // POST /api/users/?form_type=edit_form&object_uuid=abc-123-def-456
 ```
-
-### With Confirm Alert
 
 ```jsx
 <FormRenderer
@@ -119,53 +153,93 @@ The form schema is fetched from the server. Submission is handled automatically.
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl">
         <h3 className="text-lg font-semibold mb-2">Confirm Submission</h3>
-        <p className="text-gray-600 mb-6">Are you sure you want to save?</p>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to save these changes?
+        </p>
         <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} className="px-4 py-2 border rounded-lg">Cancel</button>
-          <button onClick={onConfirm} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">Confirm</button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700
+                       hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg
+                       hover:bg-indigo-700"
+          >
+            Confirm
+          </button>
         </div>
       </div>
     </div>
   )}
+  onResponse={(response) => {
+    console.log("Submitted with confirmation:", response);
+  }}
 />
 ```
 
----
-
-## Local RJSF Mode
-
-Define schema client-side. No server calls for schema loading.
-
 ```jsx
+import { FormRenderer } from "@zango-core/crud/form";
+
 const userFormSchema = {
   schema: {
     type: "object",
     required: ["name", "email"],
     properties: {
-      name: { type: "string", title: "Full Name", minLength: 2 },
-      email: { type: "string", title: "Email Address", format: "email" },
+      name: {
+        type: "string",
+        title: "Full Name",
+        minLength: 2,
+      },
+      email: {
+        type: "string",
+        title: "Email Address",
+        format: "email",
+      },
       department: {
         type: "string",
         title: "Department",
         enum: ["Engineering", "Design", "Marketing", "Sales", "Support"],
       },
-      bio: { type: "string", title: "Bio", maxLength: 500 },
-      active: { type: "boolean", title: "Active Employee", default: true },
+      bio: {
+        type: "string",
+        title: "Bio",
+        maxLength: 500,
+      },
+      active: {
+        type: "boolean",
+        title: "Active Employee",
+        default: true,
+      },
     },
   },
   uiSchema: {
-    name: { "ui:placeholder": "Enter full name", "ui:autofocus": true },
-    email: { "ui:placeholder": "user@company.com" },
-    department: { "ui:placeholder": "Select department" },
+    name: {
+      "ui:placeholder": "Enter full name",
+      "ui:autofocus": true,
+    },
+    email: {
+      "ui:placeholder": "user@company.com",
+    },
+    department: {
+      "ui:placeholder": "Select department",
+    },
     bio: {
       "ui:widget": "textarea",
       "ui:placeholder": "Tell us about yourself...",
       "ui:options": { rows: 4 },
     },
-    active: { "ui:widget": "checkbox" },
+    active: {
+      "ui:widget": "checkbox",
+    },
     "ui:order": ["name", "email", "department", "bio", "active"],
   },
-  formData: { active: true },
+  formData: {
+    active: true,
+  },
 };
 
 function CreateUserForm() {
@@ -173,6 +247,7 @@ function CreateUserForm() {
     <FormRenderer
       rjsf_schema={userFormSchema}
       onSubmit={async (formData) => {
+        // Handle submission client-side
         const response = await fetch("/api/users/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -180,22 +255,19 @@ function CreateUserForm() {
         });
         return response.json();
       }}
-      onResponse={(result) => console.log("Created:", result)}
-      onError={(error) => console.error("Failed:", error)}
+      onResponse={(result) => {
+        console.log("User created:", result);
+      }}
+      onError={(error) => {
+        console.error("Failed to create user:", error);
+      }}
     />
   );
 }
 ```
 
----
-
-## Multi-Step Forms
-
-Multi-step forms are driven entirely by the server response shape. The `json_schema` properties are keyed by step (`step_1`, `step_2`, etc.), and `is_multistep: true` signals wizard mode.
-
-### Server Response
-
 ```json
+// GET /api/onboarding/?action=initialize_form
 {
   "success": true,
   "response": {
@@ -210,7 +282,8 @@ Multi-step forms are driven entirely by the server response shape. The `json_sch
             "required": ["first_name", "last_name"],
             "properties": {
               "first_name": { "type": "string", "title": "First Name" },
-              "last_name": { "type": "string", "title": "Last Name" }
+              "last_name": { "type": "string", "title": "Last Name" },
+              "phone": { "type": "string", "title": "Phone Number" }
             }
           },
           "step_2": {
@@ -219,7 +292,27 @@ Multi-step forms are driven entirely by the server response shape. The `json_sch
             "required": ["company_name"],
             "properties": {
               "company_name": { "type": "string", "title": "Company Name" },
-              "role": { "type": "string", "title": "Role", "enum": ["Admin", "Manager", "Employee"] }
+              "role": {
+                "type": "string",
+                "title": "Role",
+                "enum": ["Admin", "Manager", "Employee"]
+              }
+            }
+          },
+          "step_3": {
+            "type": "object",
+            "title": "Preferences",
+            "properties": {
+              "notifications": {
+                "type": "boolean",
+                "title": "Enable Notifications",
+                "default": true
+              },
+              "theme": {
+                "type": "string",
+                "title": "Theme",
+                "enum": ["Light", "Dark", "System"]
+              }
             }
           }
         }
@@ -227,12 +320,14 @@ Multi-step forms are driven entirely by the server response shape. The `json_sch
       "ui_schema": {
         "step_1": {
           "first_name": { "ui:placeholder": "Enter first name", "ui:autofocus": true },
-          "last_name": { "ui:placeholder": "Enter last name" }
+          "last_name": { "ui:placeholder": "Enter last name" },
+          "phone": { "ui:placeholder": "+1 (555) 000-0000" }
         },
         "step_2": {
           "company_name": { "ui:placeholder": "Enter company name" },
           "role": { "ui:placeholder": "Select your role" }
-        }
+        },
+        "step_3": {}
       },
       "form_data": {}
     }
@@ -240,24 +335,20 @@ Multi-step forms are driven entirely by the server response shape. The `json_sch
 }
 ```
 
-### Usage
-
 ```jsx
-// Same component -- wizard UI is driven by the response shape
+// The same FormRenderer component -- the wizard UI is driven entirely
+// by the server response shape.
 <FormRenderer
   api_endpoint="/api/onboarding/"
-  onResponse={(response) => console.log("Onboarding complete:", response)}
-  onError={(error) => console.error("Onboarding failed:", error)}
+  onResponse={(response) => {
+    console.log("Onboarding complete:", response);
+    // Navigate to dashboard, show success toast, etc.
+  }}
+  onError={(error) => {
+    console.error("Onboarding failed:", error);
+  }}
 />
 ```
-
----
-
-## Form Sync
-
-When a field has `"ui:options": { "syncOnChange": true }`, changing that field triggers a POST to `?form_action=sync_form` with the current form data. The server returns an updated schema (e.g., with filtered dropdown options).
-
-### UI Schema
 
 ```json
 {
@@ -269,104 +360,151 @@ When a field has `"ui:options": { "syncOnChange": true }`, changing that field t
     "ui:placeholder": "Select state",
     "ui:options": { "syncOnChange": true }
   },
-  "city": { "ui:placeholder": "Select city" }
-}
-```
-
-### Sync Request/Response
-
-```
-POST /api/address/?form_action=sync_form
-Body: { "country": "India", "state": "", "city": "" }
-
-Response: Full updated form schema with state options filtered for India.
-```
-
----
-
-## Autocomplete
-
-Fields with `"ui:widget": "autocomplete"` trigger a debounced search to the server.
-
-### Schema
-
-```json
-{
-  "vendor": {
-    "ui:widget": "autocomplete",
-    "ui:placeholder": "Search vendors..."
+  "city": {
+    "ui:placeholder": "Select city"
   }
 }
 ```
 
-### Request/Response
+```json
+// User selects "India" in the country dropdown.
+// FormRenderer automatically sends:
 
+// POST /api/address/?form_action=sync_form
+// Request body:
+{
+  "country": "India",
+  "state": "",
+  "city": ""
+}
+
+// Server returns the full updated schema with state options filtered by country:
+{
+  "success": true,
+  "response": {
+    "is_multistep": false,
+    "form": {
+      "json_schema": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string",
+            "title": "Country",
+            "enum": ["India", "USA", "UK"]
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "enum": ["Maharashtra", "Karnataka", "Delhi", "Tamil Nadu"]
+          },
+          "city": { "type": "string", "title": "City" }
+        }
+      },
+      "ui_schema": {
+        "country": {
+          "ui:placeholder": "Select country",
+          "ui:options": { "syncOnChange": true }
+        },
+        "state": {
+          "ui:placeholder": "Select state",
+          "ui:options": { "syncOnChange": true }
+        },
+        "city": { "ui:placeholder": "Select city" }
+      },
+      "form_data": {
+        "country": "India",
+        "state": "",
+        "city": ""
+      }
+    }
+  }
+}
 ```
-POST /api/purchase-orders/?form_action=fetch_autocomplete_options
-Body: { "field_name": "vendor", "search_query": "Acm" }
 
-Response:
+```json
+{
+  "json_schema": {
+    "type": "object",
+    "required": ["vendor"],
+    "properties": {
+      "vendor": {
+        "type": "string",
+        "title": "Vendor"
+      },
+      "material": {
+        "type": "string",
+        "title": "Material"
+      }
+    }
+  },
+  "ui_schema": {
+    "vendor": {
+      "ui:widget": "autocomplete",
+      "ui:placeholder": "Search vendors..."
+    },
+    "material": {
+      "ui:widget": "autocomplete",
+      "ui:placeholder": "Search materials..."
+    }
+  },
+  "form_data": {}
+}
+```
+
+```json
+// User types "Acm" in the vendor field.
+// FormRenderer sends (after debounce):
+
+// POST /api/purchase-orders/?form_action=fetch_autocomplete_options
+// Request body:
+{
+  "field_name": "vendor",
+  "search_query": "Acm"
+}
+
+// Server response:
 {
   "success": true,
   "response": {
     "options": [
       { "label": "Acme Corp", "value": "acme-uuid-001" },
-      { "label": "Acme Industries", "value": "acme-uuid-002" }
+      { "label": "Acme Industries", "value": "acme-uuid-002" },
+      { "label": "Acmatic Solutions", "value": "acmatic-uuid-003" }
     ]
   }
 }
 ```
 
----
-
-## Submit Button Portal
-
-Use `submitButtonContainerId` to render the submit button outside the form (e.g., in a dialog footer).
-
-```jsx
-import { FormRenderer } from "@zango-core/crud/form";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-
-function UserFormDialog({ open, onClose }) {
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create User</DialogTitle>
-        </DialogHeader>
-
-        <FormRenderer
-          api_endpoint="/api/users/"
-          submitButtonContainerId="user-form-footer"
-          onResponse={() => onClose()}
-        />
-
-        <DialogFooter>
-          <button onClick={onClose} className="px-4 py-2 border rounded-lg">Cancel</button>
-          <div id="user-form-footer" />
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-```
-
----
-
-## Integration with CrudHandler
-
 ```jsx
 import { useState } from "react";
 import { CrudHandler } from "@zango-core/crud/table";
 import { FormRenderer } from "@zango-core/crud/form";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 function UserManagement() {
-  const [formDialog, setFormDialog] = useState({ open: false, mode: null, uuid: null });
+  const [formDialog, setFormDialog] = useState({
+    open: false,
+    mode: null,     // "create" | "edit"
+    uuid: null,
+  });
 
-  const openCreateForm = () => setFormDialog({ open: true, mode: "create", uuid: null });
-  const openEditForm = (uuid) => setFormDialog({ open: true, mode: "edit", uuid });
-  const closeForm = () => setFormDialog({ open: false, mode: null, uuid: null });
+  const openCreateForm = () => {
+    setFormDialog({ open: true, mode: "create", uuid: null });
+  };
+
+  const openEditForm = (uuid) => {
+    setFormDialog({ open: true, mode: "edit", uuid });
+  };
+
+  const closeForm = () => {
+    setFormDialog({ open: false, mode: null, uuid: null });
+  };
 
   return (
     <div>
@@ -375,17 +513,46 @@ function UserManagement() {
         headerProps={{
           title: "User Management",
           customRightActions: (
-            <button onClick={openCreateForm} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">
+            <button
+              onClick={openCreateForm}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm"
+            >
               Add User
             </button>
           ),
         }}
+        customTableBody={({ data }) => (
+          <table className="w-full">
+            <tbody>
+              {data?.map((row) => (
+                <tr key={row.uuid} className="border-b hover:bg-gray-50">
+                  <td className="p-3">{row.name}</td>
+                  <td className="p-3">{row.email}</td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => openEditForm(row.uuid)}
+                      className="text-indigo-600 text-sm hover:underline"
+                    >
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       />
 
-      <Dialog open={formDialog.open} onOpenChange={(open) => !open && closeForm()}>
+      {/* Add/Edit Dialog with FormRenderer */}
+      <Dialog
+        open={formDialog.open}
+        onOpenChange={(open) => !open && closeForm()}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{formDialog.mode === "edit" ? "Edit User" : "Add User"}</DialogTitle>
+            <DialogTitle>
+              {formDialog.mode === "edit" ? "Edit User" : "Add User"}
+            </DialogTitle>
           </DialogHeader>
 
           {formDialog.open && (
@@ -399,17 +566,29 @@ function UserManagement() {
                 }),
               }}
               postParams={{
-                form_type: formDialog.mode === "edit" ? "edit_form" : "create_form",
+                form_type:
+                  formDialog.mode === "edit" ? "edit_form" : "create_form",
                 ...(formDialog.uuid && { object_uuid: formDialog.uuid }),
               }}
               submitButtonContainerId="user-form-footer"
-              onResponse={() => closeForm()}
-              onError={(error) => console.error("Form error:", error)}
+              onResponse={() => {
+                closeForm();
+                // CrudHandler auto-refreshes the table after submission
+              }}
+              onError={(error) => {
+                console.error("Form error:", error);
+              }}
             />
           )}
 
           <DialogFooter>
-            <button onClick={closeForm} className="px-4 py-2 border rounded-lg">Cancel</button>
+            <button
+              onClick={closeForm}
+              className="px-4 py-2 border rounded-lg"
+            >
+              Cancel
+            </button>
+            {/* Submit button is portaled here */}
             <div id="user-form-footer" />
           </DialogFooter>
         </DialogContent>
@@ -419,15 +598,42 @@ function UserManagement() {
 }
 ```
 
+```jsx
+import { FormRenderer } from "@zango-core/crud/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+function UserFormDialog({ open, onClose }) {
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create User</DialogTitle>
+        </DialogHeader>
+
+        {/* Form body renders here, without the submit button */}
+        <FormRenderer
+          api_endpoint="/api/users/"
+          submitButtonContainerId="user-form-footer"
+          onResponse={() => onClose()}
+        />
+
+        <DialogFooter>
+          <button onClick={onClose} className="px-4 py-2 border rounded-lg">
+            Cancel
+          </button>
+          {/* The submit button is portaled into this container */}
+          <div id="user-form-footer" />
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
 ---
-
-## Choosing Between Modes
-
-| Feature | Server-Driven | Local RJSF |
-|---------|---------------|-------------|
-| Schema source | Backend API | Client-side object |
-| Submission | Automatic POST | Custom `onSubmit` handler |
-| Multi-step | Supported via `is_multistep` | Manual implementation |
-| Form sync | Supported via `syncOnChange` | Not available |
-| Autocomplete | Supported via `"ui:widget": "autocomplete"` | Not available |
-| Best for | Standard CRUD forms, admin panels | Custom forms, wizards, client-only validation |

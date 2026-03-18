@@ -1,44 +1,45 @@
-# Workflow Reference
+# Zango Workflow Reference
 
-Complete reference for WorkflowStatus, WorkflowTags, and workflow-related hooks.
+> Auto-generated from documentation pages. Regenerate with: `node scripts/generate-reference.js`
+
+## Import
+```js
+import { WorkflowStatus, WorkflowTags, DetailViewProvider, useWorkflow, useDetailView, useDetailViewContext } from '@zango-core/crud/table';
+```
+
+## Workflow Data Format
+- Status: `{ status_label, status_color }`
+- Transitions: `{ name, display_name, from, to, is_form_based, is_manual, to_state_meta: { status_label, status_color } }`
+- Tags: `{ name, tag_label, state: "enabled"|"disabled", enable: { is_form_based, confirmation_message }, disable: { ... } }`
+- Use `next_transitions` (NOT `transitions`), `tag_details` (NOT `tags`)
 
 ---
 
-## WorkflowStatus
 
-Manages workflow status transitions with full lifecycle control and custom rendering options.
+## WorkflowStatus (Workflow)
 
-### Import
-
-```jsx
-import { WorkflowStatus } from "@zango-core/crud/table";
-// or
-import { WorkflowStatus } from "@zango-core/crud/workflow";
-```
+**Sections:** Overview | Props | Callback Lifecycle | Usage Patterns | Programmatic Form Control
 
 ### Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| apiUrl | `string` | — | API endpoint for fetching workflow data. Uses DetailView context if not provided. |
-| workflowDetails | `object` | — | Direct workflow data object. When provided, skips the API fetch. |
-| formContainerId | `string` | — | DOM element ID where the transition form should render (portal). |
-| onStatusChange | `() => void` | — | Callback after a successful status transition. |
-| beforeTransition | `(transition) => Promise<void>` | — | Async callback before a transition starts. Useful for opening dialogs or validating. |
-| afterTransition | `(transition, success) => Promise<void>` | — | Async callback after a transition completes. |
-| confirmationAlert | `Function` | — | Custom confirmation UI function. Replaces default browser confirm. |
-| renderTransitions | `Function` | — | Custom render function for the transitions UI. |
-| onFormCancel | `React.Ref` | — | Ref that receives a function to programmatically close the active form. |
+| `apiUrl` | string | - | API endpoint for fetching workflow data. Uses DetailView context if not provided. |
+| `workflowDetails` | object | - | Direct workflow data object. When provided, skips the API fetch and uses this data directly. |
+| `formContainerId` | string | - | DOM element ID where the transition form should render. Enables portal rendering into custom containers like dialogs or modals. |
+| `onStatusChange` | () => void | - | Callback invoked after a successful status transition completes. Use for refreshing data or updating UI. |
+| `beforeTransition` | (transition) => Promise<void> | - | Async callback invoked before a transition starts. Useful for opening dialogs, validating state, or showing custom UI. |
+| `afterTransition` | (transition, success) => Promise<void> | - | Async callback invoked after a transition completes. Receives the transition object and a boolean indicating success. |
+| `confirmationAlert` | Function | - | Custom confirmation UI function. Replaces the default browser confirmation dialog before executing a transition. |
+| `renderTransitions` | Function | - | Custom render function for the transitions UI. Receives the available transitions and allows complete control over their presentation. |
+| `onFormCancel` | React.Ref | - | Ref that receives a function to programmatically close/cancel the active form. The ref value is a function when a form is shown, null otherwise. |
 
-### Usage Patterns
-
-**1. Auto (inside DetailView context) -- no props needed:**
+### Code Examples
 
 ```jsx
+// Inside a DetailView — no props needed
 <WorkflowStatus />
 ```
-
-**2. Standalone with API URL:**
 
 ```jsx
 <WorkflowStatus
@@ -46,19 +47,6 @@ import { WorkflowStatus } from "@zango-core/crud/workflow";
   onStatusChange={() => console.log("Changed!")}
 />
 ```
-
-**3. With DetailViewProvider context:**
-
-```jsx
-import { DetailViewProvider, WorkflowStatus, WorkflowTags } from "@zango-core/crud/table";
-
-<DetailViewProvider apiUrl="/api/users/?object_uuid=123">
-  <WorkflowStatus />
-  <WorkflowTags />
-</DetailViewProvider>
-```
-
-### Dialog Pattern (Form in Modal)
 
 ```jsx
 import { useState } from "react";
@@ -74,10 +62,14 @@ function OrderDetail({ objectUuid }) {
         apiUrl={`/api/orders/?object_uuid=${objectUuid}`}
         formContainerId="workflow-form-container"
         beforeTransition={async (transition) => {
+          // Open the dialog before the form renders
           setShowDialog(true);
         }}
         afterTransition={async (transition, success) => {
-          if (success) setShowDialog(false);
+          // Close the dialog after a successful transition
+          if (success) {
+            setShowDialog(false);
+          }
         }}
         onStatusChange={() => {
           console.log("Status updated, refreshing...");
@@ -91,8 +83,6 @@ function OrderDetail({ objectUuid }) {
   );
 }
 ```
-
-### Custom Rendering
 
 ```jsx
 <WorkflowStatus
@@ -112,7 +102,8 @@ function OrderDetail({ objectUuid }) {
         <button
           key={t.name}
           onClick={() => onTransition(t)}
-          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm"
+          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm
+                     hover:bg-indigo-700 transition-colors"
         >
           {t.display_name}
         </button>
@@ -122,10 +113,9 @@ function OrderDetail({ objectUuid }) {
 />
 ```
 
-### Programmatic Form Control (onFormCancel)
-
 ```jsx
 import { useRef } from "react";
+import { WorkflowStatus } from "@zango-core/crud/workflow";
 
 function OrderWorkflow() {
   const cancelRef = useRef(null);
@@ -136,7 +126,12 @@ function OrderWorkflow() {
         apiUrl="/api/orders/?object_uuid=123"
         onFormCancel={cancelRef}
       />
-      <button onClick={() => cancelRef.current?.()}>
+
+      <button
+        onClick={() => cancelRef.current?.()}
+        className="mt-4 px-4 py-2 text-sm text-gray-600 border rounded-lg
+                   hover:bg-gray-50 transition-colors"
+      >
         Close Form
       </button>
     </div>
@@ -144,94 +139,31 @@ function OrderWorkflow() {
 }
 ```
 
-### Glitch-Free Portal Rendering
-
-When rendering forms inside dialogs, delay portal activation until the DOM is ready:
-
-```jsx
-import { useState, useEffect, useRef } from "react";
-import { Dialog } from "@/components/ui/dialog";
-import { WorkflowStatus } from "@zango-core/crud/table";
-
-function OrderWorkflow({ objectUuid }) {
-  const [showDialog, setShowDialog] = useState(false);
-  const [dialogReady, setDialogReady] = useState(false);
-  const cancelRef = useRef(null);
-
-  useEffect(() => {
-    if (showDialog) {
-      const timer = setTimeout(() => setDialogReady(true), 100);
-      return () => clearTimeout(timer);
-    }
-    setDialogReady(false);
-  }, [showDialog]);
-
-  return (
-    <div>
-      <WorkflowStatus
-        apiUrl={`/api/orders/?object_uuid=${objectUuid}`}
-        formContainerId={dialogReady ? "workflow-form-portal" : undefined}
-        onFormCancel={cancelRef}
-        beforeTransition={async () => {
-          setShowDialog(true);
-          await new Promise((r) => setTimeout(r, 100));
-        }}
-        afterTransition={async (transition, success) => {
-          if (success) setShowDialog(false);
-        }}
-      />
-
-      <Dialog
-        open={showDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            cancelRef.current?.();
-            setShowDialog(false);
-          }
-        }}
-      >
-        <div id="workflow-form-portal" />
-      </Dialog>
-    </div>
-  );
-}
-```
-
 ---
 
-## WorkflowTags
+## WorkflowTags (Workflow)
 
-Manages workflow tags with toggle functionality and form-based transitions.
-
-### Import
-
-```jsx
-import { WorkflowTags } from "@zango-core/crud/table";
-// or
-import { WorkflowTags } from "@zango-core/crud/workflow";
-```
+**Sections:** Props | Usage Examples
 
 ### Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| apiUrl | `string` | — | API endpoint for fetching tag data. Uses DetailView context if not provided. |
-| tagDetails | `TagDetail[]` | — | Direct tag data array. Skips API fetch when provided. |
-| formContainerId | `string` | — | DOM element ID where the tag form renders (portal). |
-| onTagChange | `() => void` | — | Callback after a successful tag change. |
-| beforeTagChange | `(tag, newState) => Promise<void>` | — | Async callback before a tag change. |
-| afterTagChange | `(tag, success) => Promise<void>` | — | Async callback after a tag change. |
-| confirmationAlert | `Function` | — | Custom confirmation UI. |
-| renderTags | `Function` | — | Custom render function for tags UI. |
-| onFormCancel | `React.Ref` | — | Ref for programmatic form cancel. |
+| `apiUrl` | string | - | API endpoint for fetching tag data. Uses DetailView context if not provided. |
+| `tagDetails` | TagDetail[] | - | Direct tag data array. When provided, skips the API fetch and uses this data directly. |
+| `formContainerId` | string | - | DOM element ID where the tag transition form should render. Enables portal rendering into dialogs or modals. |
+| `onTagChange` | () => void | - | Callback invoked after a successful tag change. Use for refreshing data or closing modals. |
+| `beforeTagChange` | (tag, newState) => Promise<void> | - | Async callback invoked before a tag change starts. Receives the tag object and the target state (enabled/disabled). |
+| `afterTagChange` | (tag, success) => Promise<void> | - | Async callback invoked after a tag change completes. Receives the tag object and a boolean indicating success. |
+| `confirmationAlert` | Function | - | Custom confirmation UI function. Replaces the default browser confirmation before toggling a tag. |
+| `renderTags` | Function | - | Custom render function for the tags UI. Receives the tags array and toggle handler for complete control over presentation. |
+| `onFormCancel` | React.Ref | - | Ref that receives a function to programmatically close/cancel the active tag form. The ref value is a function when a form is shown, null otherwise. |
 
-### Basic Usage
+### Code Examples
 
 ```jsx
 <WorkflowTags apiUrl="/api/users/?object_uuid=123" />
 ```
-
-### With Dialog for Forms
 
 ```jsx
 import { useState } from "react";
@@ -247,12 +179,17 @@ function UserTags({ objectUuid }) {
         apiUrl={`/api/users/?object_uuid=${objectUuid}`}
         formContainerId="tag-form-container"
         beforeTagChange={async (tag, newState) => {
+          console.log(`About to ${newState} tag: ${tag.tag_label}`);
           setShowModal(true);
         }}
         afterTagChange={async (tag, success) => {
-          if (!success) console.error("Tag change failed:", tag.tag_label);
+          if (!success) {
+            console.error("Tag change failed for:", tag.tag_label);
+          }
         }}
-        onTagChange={() => setShowModal(false)}
+        onTagChange={() => {
+          setShowModal(false);
+        }}
       />
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
@@ -263,18 +200,20 @@ function UserTags({ objectUuid }) {
 }
 ```
 
-### Custom Tag Rendering
-
 ```jsx
 <WorkflowTags
   apiUrl="/api/users/?object_uuid=123"
   renderTags={({ tags, onToggle }) => (
     <div className="grid grid-cols-2 gap-4">
       {tags.map((tag) => (
-        <div key={tag.name} className="flex items-center justify-between p-4 rounded-xl border">
+        <div
+          key={tag.name}
+          className="flex items-center justify-between p-4 rounded-xl
+                     border border-gray-200 bg-white shadow-sm"
+        >
           <div>
-            <p className="text-sm font-medium">{tag.tag_label}</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-sm font-medium text-gray-900">{tag.tag_label}</p>
+            <p className="text-xs text-gray-500 mt-1">
               {tag.state === "enabled" ? "Active" : "Inactive"}
             </p>
           </div>
@@ -282,10 +221,14 @@ function UserTags({ objectUuid }) {
             onClick={() => onToggle(tag)}
             className={`relative inline-flex h-6 w-11 rounded-full transition-colors
               ${tag.state === "enabled" ? "bg-indigo-600" : "bg-gray-200"}`}
+            role="switch"
+            aria-checked={tag.state === "enabled"}
             disabled={tag.state === "enabled" ? !tag.is_disable_allowed : !tag.is_enable_allowed}
           >
-            <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform mt-0.5
-              ${tag.state === "enabled" ? "translate-x-5 ml-0.5" : "translate-x-0.5"}`}
+            <span
+              className={`inline-block h-5 w-5 rounded-full bg-white shadow transform
+                transition-transform mt-0.5
+                ${tag.state === "enabled" ? "translate-x-5 ml-0.5" : "translate-x-0.5"}`}
             />
           </button>
         </div>
@@ -297,119 +240,11 @@ function UserTags({ objectUuid }) {
 
 ---
 
-## Workflow API Response Format
+## Advanced Features (Advanced)
 
-### Detail View workflow_details
+**Sections:** Programmatic Form Control (onFormCancel) | Glitch-Free Portal Rendering | Error Handling & Timeouts | Migration Guide
 
-```json
-{
-  "workflow_details": {
-    "current_status": "active",
-    "current_status_meta": {
-      "status_label": "Active",
-      "status_color": "#12B76A"
-    },
-    "next_transitions": [
-      {
-        "name": "approve",
-        "display_name": "Approve",
-        "from": "active",
-        "to": "approved",
-        "is_form_based": false,
-        "to_state_meta": {
-          "status_label": "Approved",
-          "status_color": "#12B76A"
-        }
-      }
-    ],
-    "tag_details": [
-      {
-        "name": "urgent",
-        "state": "enabled",
-        "tag_label": "Urgent",
-        "enable": { "is_form_based": false },
-        "disable": { "is_form_based": false }
-      }
-    ]
-  }
-}
-```
-
-### StatusCol Data Format (in table rows)
-
-```json
-{
-  "workflow_status": {
-    "status_label": "Active",
-    "status_color": "#12B76A"
-  }
-}
-```
-
----
-
-## Workflow Hooks
-
-### useWorkflow({ apiUrl, beforeTransition?, afterTransition? })
-
-Low-level hook for programmatic workflow control.
-
-```jsx
-import { useWorkflow } from "@zango-core/crud/table";
-
-function ApproveButton({ objectUuid }) {
-  const { workflowDetails, executeTransition, loading } = useWorkflow({
-    apiUrl: `/api/orders/?object_uuid=${objectUuid}`,
-  });
-
-  if (loading || !workflowDetails) return null;
-  const approveTransition = workflowDetails.next_transitions.find((t) => t.name === "approve");
-  if (!approveTransition) return null;
-
-  return <button onClick={() => executeTransition(approveTransition)}>Approve</button>;
-}
-```
-
-**Returns:**
-
-| Property | Type | Description |
-|----------|------|-------------|
-| workflowDetails | `object` | Full workflow data: current_status, current_status_meta, next_transitions, tag_details. |
-| loading | `boolean` | True while workflow data is being fetched. |
-| error | `string \| null` | Error message if fetch or operation failed. |
-| refreshWorkflow | `() => Promise<void>` | Re-fetch workflow data. |
-| executeTransition | `(transition, formData?) => Promise<boolean>` | Execute a status transition. Returns success boolean. |
-| toggleTag | `(tag) => Promise<boolean>` | Toggle a tag on or off. Returns success boolean. |
-
-### useDetailView({ apiUrl })
-
-Fetches detail data for a specific record.
-
-```jsx
-import { useDetailView } from "@zango-core/crud/table";
-
-const { data, loading, error, refresh, objectUuid, workflowDetails, rowActions } = useDetailView({
-  apiUrl: "/api/users/?object_uuid=abc-123",
-});
-```
-
-### useDetailViewContext()
-
-Reads from the nearest DetailViewProvider context. Same return shape as useDetailView.
-
-```jsx
-import { useDetailViewContext } from "@zango-core/crud/table";
-
-function StatusBadge() {
-  const { workflowDetails, loading } = useDetailViewContext();
-  if (loading || !workflowDetails) return null;
-  return <span className="badge">{workflowDetails.current_status_meta?.status_label}</span>;
-}
-```
-
----
-
-## Combining WorkflowStatus and WorkflowTags
+### Code Examples
 
 ```jsx
 import { useRef } from "react";
@@ -428,7 +263,13 @@ function OrderDetail({ objectUuid }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Order Detail</h2>
-        <button onClick={closeAllForms}>Close All Forms</button>
+        <button
+          onClick={closeAllForms}
+          className="px-4 py-2 text-sm text-gray-600 border border-gray-300
+                     rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          Close All Forms
+        </button>
       </div>
 
       <WorkflowStatus
@@ -444,3 +285,179 @@ function OrderDetail({ objectUuid }) {
   );
 }
 ```
+
+```jsx
+import { useState, useEffect, useRef } from "react";
+import { Dialog } from "@/components/ui/dialog";
+import { WorkflowStatus } from "@zango-core/crud/table";
+
+function OrderWorkflow({ objectUuid }) {
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogReady, setDialogReady] = useState(false);
+  const cancelRef = useRef(null);
+
+  // When dialog opens, wait for DOM to be ready before enabling portal
+  useEffect(() => {
+    if (showDialog) {
+      const timer = setTimeout(() => {
+        setDialogReady(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setDialogReady(false);
+    }
+  }, [showDialog]);
+
+  return (
+    <div>
+      <WorkflowStatus
+        apiUrl={`/api/orders/?object_uuid=${objectUuid}`}
+        formContainerId={dialogReady ? "workflow-form-portal" : undefined}
+        onFormCancel={cancelRef}
+        beforeTransition={async (transition) => {
+          setShowDialog(true);
+          // Wait for dialog DOM to mount
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }}
+        afterTransition={async (transition, success) => {
+          if (success) {
+            setShowDialog(false);
+          }
+        }}
+      />
+
+      <Dialog
+        open={showDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            cancelRef.current?.();
+            setShowDialog(false);
+          }
+        }}
+      >
+        <div className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Transition Form</h3>
+          <div id="workflow-form-portal" />
+        </div>
+      </Dialog>
+    </div>
+  );
+}
+```
+
+```jsx
+import { WorkflowStatus } from "@zango-core/crud/table";
+
+function OrderWorkflow({ objectUuid }) {
+  return (
+    <WorkflowStatus
+      apiUrl={`/api/orders/?object_uuid=${objectUuid}`}
+      afterTransition={async (transition, success) => {
+        if (!success) {
+          // The component already displays an error message.
+          // Use this callback for additional error handling:
+          console.error("Transition failed:", transition.label);
+
+          // Send to error tracking
+          // errorTracker.capture("workflow_transition_failed", { transition });
+        }
+      }}
+      onStatusChange={() => {
+        // Only called on success — safe to refresh data here
+        window.location.reload();
+      }}
+    />
+  );
+}
+
+// The component renders error states automatically:
+//
+// +------------------------------------------+
+// |  ⚠ Transition failed                      |
+// |  Could not complete "Approve Order".      |
+// |  Please try again or contact support.     |
+// |                                           |
+// |  [Retry]  [Dismiss]                       |
+// +------------------------------------------+
+```
+
+```jsx
+import { useState } from "react";
+import { Dialog } from "@/components/ui/dialog";
+import { WorkflowStatus } from "@zango-core/crud/table";
+
+function OrderDetail({ objectUuid }) {
+  const [showDialog, setShowDialog] = useState(false);
+
+  return (
+    <div>
+      <WorkflowStatus
+        apiUrl={`/api/orders/?object_uuid=${objectUuid}`}
+        formContainerId="workflow-form"
+        beforeTransition={async () => {
+          setShowDialog(true);
+        }}
+        afterTransition={async (transition, success) => {
+          if (success) setShowDialog(false);
+        }}
+      />
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <div id="workflow-form" />
+      </Dialog>
+    </div>
+  );
+}
+```
+
+```jsx
+import { useState, useEffect, useRef } from "react";
+import { Dialog } from "@/components/ui/dialog";
+import { WorkflowStatus } from "@zango-core/crud/table";
+
+function OrderDetail({ objectUuid }) {
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogReady, setDialogReady] = useState(false);  // NEW: track DOM readiness
+  const cancelRef = useRef(null);                          // NEW: programmatic cancel
+
+  // NEW: delay portal activation until dialog DOM is mounted
+  useEffect(() => {
+    if (showDialog) {
+      const timer = setTimeout(() => setDialogReady(true), 100);
+      return () => clearTimeout(timer);
+    }
+    setDialogReady(false);
+  }, [showDialog]);
+
+  return (
+    <div>
+      <WorkflowStatus
+        apiUrl={`/api/orders/?object_uuid=${objectUuid}`}
+        formContainerId={dialogReady ? "workflow-form" : undefined}  // CHANGED: conditional
+        onFormCancel={cancelRef}                                      // NEW: cancel ref
+        beforeTransition={async () => {
+          setShowDialog(true);
+          await new Promise((r) => setTimeout(r, 100));              // NEW: wait for DOM
+        }}
+        afterTransition={async (transition, success) => {
+          if (success) setShowDialog(false);
+        }}
+      />
+
+      <Dialog
+        open={showDialog}
+        onOpenChange={(open) => {                                    // CHANGED: cleanup on close
+          if (!open) {
+            cancelRef.current?.();
+            setShowDialog(false);
+          }
+        }}
+      >
+        <div id="workflow-form" />
+      </Dialog>
+    </div>
+  );
+}
+```
+
+---
