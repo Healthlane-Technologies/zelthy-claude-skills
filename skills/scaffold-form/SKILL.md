@@ -216,3 +216,16 @@ function {{EntityName}}FormDialog({ open, onClose, mode = "create", objectUuid =
 - Multi-step forms: Driven by server response with `is_multistep: true` -- no special client code needed
 - Form sync: Add `"ui:options": { "syncOnChange": true }` in ui_schema for dependent dropdowns
 - Autocomplete: Use `"ui:widget": "autocomplete"` for search-as-you-type fields
+
+## Post-Generation Steps
+
+After generating the form:
+1. If the form is in a custom page, ensure the page is registered in `src/custom/pages/index.js`
+2. If server-driven, remind: "The backend needs a form class that returns json_schema + ui_schema. Check your CRUD view's form configuration."
+3. If the form is in a dialog, generate the dialog wrapper code too
+4. If wiring into CrudHandler's Add New button, show: `headerProps={{ onAddClick: () => setShowDialog(true) }}`
+
+## Chaining
+
+- Need a page for this form? → Chain to `/scaffold-page`
+- Need a table alongside? → Chain to `/scaffold-table`

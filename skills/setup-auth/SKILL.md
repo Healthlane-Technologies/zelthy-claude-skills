@@ -222,3 +222,9 @@ import CustomLogin from './custom/pages/CustomLogin';
   }}
 />
 ```
+
+## Post-Setup
+
+If a custom login component was generated:
+1. Ensure it's exported in `src/custom/pages/index.js`
+2. Verify `authConfig.customComponents.LoginPage` points to the correct import

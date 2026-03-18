@@ -242,3 +242,12 @@ Routes also depend on `settings.json` in the workspace root:
 Make sure `appbuilder` is mounted so the initializer API works.
 
 For the complete routing and pages reference, see: [App Builder Reference](../zango-frontend/references/APPBUILDER-REFERENCE.md)
+
+## Post-Route Checks
+
+After adding routes:
+
+1. **If custom page_type**: Check if the component file exists at `src/custom/pages/{{ComponentName}}.jsx`. If not, offer to create it → Chain to `/scaffold-page`
+2. **If custom page_type**: Check if exported in `src/custom/pages/index.js`. If not, add the export.
+3. **Check .env**: Read `.env` and verify the API endpoint path is in `VITE_PROXY_ROUTES`. If not, add it.
+4. **Remind**: "Restart your dev server if you changed .env"

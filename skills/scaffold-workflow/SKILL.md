@@ -238,3 +238,33 @@ function ApproveButton({ objectUuid }) {
 - `beforeTransition` receives the transition object. Use it to open dialogs BEFORE the form renders
 - `afterTransition` receives `(transition, success)`. Only close dialogs when `success === true`
 - Workflow API data uses snake_case: `current_status`, `current_status_meta`, `next_transitions`, `tag_details`, `status_label`, `status_color`, `display_name`, `tag_label`
+
+## Backend Reminder
+
+WorkflowStatus and WorkflowTags read data from the API response's `workflow_details` field. This requires:
+
+1. A workflow class on the backend (extends WorkflowBase):
+```python
+from packages.workflow.base.engine import WorkflowBase
+
+class PatientWorkflow(WorkflowBase):
+    status_transitions = [
+        {"name": "submit", "from": "draft", "to": "submitted", "is_manual": True, "roles": ["Admin"]},
+        {"name": "approve", "from": "submitted", "to": "approved", "is_manual": True, "form": ApproveForm},
+    ]
+    tag_transitions = [
+        {"name": "urgent", "enabled": {"roles": ["Admin"]}, "disabled": {"roles": ["Admin"]}},
+    ]
+    class Meta:
+        model = PatientModel
+        statuses = {"draft": {"label": "Draft", "color": "#F79009"}, "submitted": {...}, "approved": {...}}
+        tags = ["urgent", "reviewed"]
+        on_create_status = "draft"
+```
+
+2. The CRUD view must include workflow in its response (this is automatic if the model has a workflow).
+
+## Chaining
+
+- Need the page/table? → Chain to `/scaffold-table`
+- Need custom detail view? → Chain to `/scaffold-detail`

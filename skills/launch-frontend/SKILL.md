@@ -180,3 +180,13 @@ For details on these, use `/setup-navbar`, `/setup-auth`, or `/setup-theme`.
 | Blank page after login | Component name mismatch | Ensure export name matches route's `component` field exactly |
 | Build fails | Dependency issues | Run `npm install --legacy-peer-deps` |
 | Styles missing | Tailwind not configured | Check `index.css` has `@import 'tailwindcss';` |
+
+## Post-Setup Offers
+
+After the app is running, ask:
+
+"Your app is running! What would you like to do next?"
+- Add a page → Chain to `/scaffold-page`
+- Customize the sidebar → Chain to `/setup-navbar`
+- Set up theme/branding → Chain to `/setup-theme`
+- Configure authentication → Chain to `/setup-auth`

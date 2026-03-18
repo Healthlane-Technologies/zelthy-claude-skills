@@ -10,7 +10,8 @@ This repository serves as the **single source of truth** for Zango frontend deve
 | Skill | Description |
 |-------|-------------|
 | `zango-frontend` | Get help with Zango CRUD - components, hooks, API formats |
-| `scaffold-crud-page` | Generate a complete CRUD page with CrudHandler |
+| `scaffold-page` | Create a new page (dashboard, custom, or standard CRUD route) |
+| `scaffold-table` | Add CrudHandler data table (with custom detail, cards, kanban, styling) |
 | `scaffold-form` | Generate FormRenderer (server-driven or local RJSF) |
 | `scaffold-detail` | Generate custom detail view (drawer or route-based) |
 | `scaffold-workflow` | Add workflow status transitions and tags |

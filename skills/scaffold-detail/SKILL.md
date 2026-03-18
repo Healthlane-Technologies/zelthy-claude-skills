@@ -265,3 +265,16 @@ import {{EntityName}}MainDetail from "./{{EntityName}}MainDetail";
 - `workflow_details.next_transitions` is an array of `{ name, display_name, from, to, is_form_based, to_state_meta }`
 - For route-based detail with workflow, wrap content in `<DetailViewProvider>` so WorkflowStatus/WorkflowTags auto-fetch
 - `sections` array items have `{ key, title, data (object), extra_html (optional), form (optional) }`
+
+## Post-Generation Steps
+
+After generating the detail component:
+1. Read `src/custom/pages/index.js` - add export if it's a standalone page
+2. Wire into CrudHandler: `customDrawerDetail={ComponentName}` or `customMainDetail={ComponentName}`
+3. If route-based, add `enableDetailViewRoute={true}` to CrudHandler
+4. If route-based, ensure a "Back" button is included (use `useNavigate()`)
+
+## Chaining
+
+- Need the parent page/table? → Chain to `/scaffold-table`
+- Need workflow in the detail? → Chain to `/scaffold-workflow`

@@ -284,3 +284,10 @@ theme_obj.save()
 The theme system is runtime-based -- no frontend rebuild needed for theme changes.
 
 For the complete theme reference, see: [App Builder Reference](../zango-frontend/references/APPBUILDER-REFERENCE.md)
+
+## Post-Setup
+
+If the user is using Tailwind CSS v4:
+1. Check `src/index.css` for `@theme` block
+2. If missing, add the @theme block with CSS variable mappings
+3. Remind: "Don't use tailwind.config.js - Tailwind v4 uses CSS-based config"
