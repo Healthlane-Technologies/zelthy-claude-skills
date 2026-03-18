@@ -35,49 +35,29 @@ npm run dev
 
 ## Setup: Adding Skills to Your Project
 
-### Option 1: Symlink (recommended)
+### Option 1: Setup Script (recommended)
 
-Symlink the skills directory into your project. One-time setup, always up to date.
-
-```bash
-# From your project root (e.g., workspaces/bmspspmonitoring/frontend/)
-mkdir -p .claude
-
-# Symlink the commands directory
-ln -s /path/to/pkg-zango-skill/.claude/commands .claude/commands
-
-# Symlink the reference file
-ln -s /path/to/pkg-zango-skill/ZANGO-SKILL-REFERENCE.md ./ZANGO-SKILL-REFERENCE.md
-```
-
-**Example with absolute path:**
-```bash
-cd ~/poc_projects/poc/workspaces/bmspspmonitoring/frontend
-mkdir -p .claude
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands .claude/commands
-ln -s ~/poc_projects/poc/pkg-zango-skill/ZANGO-SKILL-REFERENCE.md ./ZANGO-SKILL-REFERENCE.md
-```
-
-Now when you open Claude Code in your project, all `/zango-*`, `/scaffold-*`, `/setup-*`, `/launch-*` commands are available.
-
-**Will this override existing skills?**
-No. If your project already has `.claude/commands/` with its own skills, symlinking the entire directory would replace it. Instead, symlink individual files:
+One command does everything - symlinks skills, reference, and creates/updates CLAUDE.md:
 
 ```bash
-# If you already have .claude/commands/ with your own skills
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands/zango-frontend.md .claude/commands/
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands/scaffold-crud-page.md .claude/commands/
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands/scaffold-form.md .claude/commands/
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands/scaffold-detail.md .claude/commands/
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands/scaffold-workflow.md .claude/commands/
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands/launch-frontend.md .claude/commands/
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands/setup-routes.md .claude/commands/
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands/setup-navbar.md .claude/commands/
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands/setup-auth.md .claude/commands/
-ln -s ~/poc_projects/poc/pkg-zango-skill/.claude/commands/setup-theme.md .claude/commands/
+bash /path/to/pkg-zango-skill/scripts/setup-skills.sh /path/to/your-project
 ```
 
-If a filename conflicts with an existing skill, the local file takes priority.
+**Example:**
+```bash
+bash ~/poc_projects/poc/pkg-zango-skill/scripts/setup-skills.sh ~/poc_projects/poc/workspaces/bmspspmonitoring
+```
+
+**What it does:**
+1. Symlinks each skill file individually into `.claude/commands/` (skips if file already exists)
+2. Symlinks `ZANGO-SKILL-REFERENCE.md`
+3. If `CLAUDE.md` exists - appends the skills section (won't duplicate if already present)
+4. If `CLAUDE.md` doesn't exist - creates it with the skills section
+
+**Safe with existing projects:**
+- Won't override existing skill files with the same name
+- Won't replace your project's existing CLAUDE.md content
+- Idempotent - running it twice is safe
 
 ### Option 2: Copy
 
