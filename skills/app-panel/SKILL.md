@@ -1,11 +1,11 @@
 ---
 name: app-panel
-description: "Automate Zango App Panel operations via browser - launch apps, configure themes, sync policies, manage routes/users/packages/tasks. Use when users want to perform admin operations on the Zango platform panel without manual clicking."
+description: "Automate Zango App Panel operations via browser - launch apps, configure themes, set up routes and menus, sync policies, manage users/packages/tasks, configure authentication. Use when users want to perform admin operations on the Zango platform without manual clicking."
 license: MIT
-compatibility: Requires browser automation capability (agent-browser or claude-in-chrome MCP tools). Needs Zango App Panel URL and admin credentials.
+compatibility: Requires browser automation capability (agent-browser or claude-in-chrome MCP tools). Needs Zango App Panel URL and platform admin credentials.
 metadata:
   author: Healthlane Technologies
-  version: "1.0"
+  version: "2.0"
 ---
 
 # Zango App Panel Automation
@@ -15,144 +15,44 @@ Automate admin operations on the Zango App Panel via browser.
 ## Before Starting
 
 Ask the user:
-1. **App Panel URL?** (e.g., `http://app0.zelthy.com:8000/platform/apps`)
-2. **Admin credentials?** (email + password - stored in memory only, never written to files)
-3. **What operation?** (see list below)
+1. **App Panel URL?** (e.g., `http://app0.zelthy.com:8000`)
+2. **Admin credentials?** (email + password - stored in memory only, NEVER written to files)
+3. **Which app?** (if multiple apps exist)
+4. **What operation?** (see list below)
 
 ## Login Flow
 
 1. Navigate to `{base_url}/auth/login/`
-2. Fill username (textbox "Enter Username")
-3. Fill password (textbox "Email Password")
+2. Fill "Enter Username" textbox with email
+3. Fill "Email Password" textbox with password
 4. Click "Login" button
 5. Wait for redirect to `/platform/apps`
-6. Verify: page title should be "Zango App Panel"
+6. Verify: page title = "Zango App Panel"
 
-## Operations
+## Routing to Agents
 
-### Launch New App
-**Path:** `/platform/apps` → Click "Launch New App"
-**Form fields:** App Name (text), Description (textarea), Upload Template (file, optional)
-**Action:** Click "Launch App" button
-**Verify:** New app card appears in the grid
+Based on what the user wants, read the relevant agent file:
 
-### Configure Theme
-**Path:** Click app card → App Settings → Themes tab
-**URL:** `/platform/apps/{app_uuid}/app-settings/app-configuration/#themes`
-**Actions:**
-- Click "Add Theme" to create new OR click edit (pencil icon) on existing
-- Set colors: Primary, Secondary, Background, Gray, Success, Warning, Error, Info
-- Set typography: Font Family, Font Size, Line Height
-- Save
-- Mark as ACTIVE if needed
-**Verify:** Theme card shows updated colors with ACTIVE badge
-
-### Edit Basic Information / Branding
-**Path:** App Settings → Basic Information tab
-**URL:** `/platform/apps/{app_uuid}/app-settings/app-configuration/`
-**Actions:**
-- Click "Edit Details"
-- Update: App Name, Description, Meta Title, Logo, Favicon
-- Save
-
-### Configure User Roles
-**Path:** App Settings → User Roles tab
-**URL:** `/platform/apps/{app_uuid}/app-settings/app-configuration/#user-roles`
-**Actions:** Create/edit/delete roles
-
-### Configure Authentication
-**Path:** App Settings → Authentication tab
-**URL:** `/platform/apps/{app_uuid}/app-settings/app-configuration/#authentication`
-
-### Manage Secrets
-**Path:** App Settings → Secrets tab
-**URL:** `/platform/apps/{app_uuid}/app-settings/app-configuration/#secrets`
-
-### Sync Policies
-**Path:** Code → Policies tab
-**URL:** `/platform/apps/{app_uuid}/code/#policies`
-**Actions:**
-- Click "Sync Policies" button
-- Wait for sync to complete
-- Edit individual policies: assign roles per policy
-**Verify:** Policy list refreshed with updated configurations
-
-### Sync Async Tasks
-**Path:** Code → Async Tasks tab
-**URL:** `/platform/apps/{app_uuid}/code/#asynctasks`
-**Actions:**
-- Click "Sync Tasks" button
-- Wait for sync
-- Edit individual tasks: set schedule (cron), activate/deactivate
-**Verify:** Task list shows updated status
-
-### View/Manage Routes
-**Path:** Code → Routes tab
-**URL:** `/platform/apps/{app_uuid}/code/#routes`
-**Shows:** App Routes (path pattern → module) and Package Routes
-**Read-only** from panel (configured via settings.json)
-
-### Manage Packages
-**Path:** Code → Packages tab
-**URL:** `/platform/apps/{app_uuid}/code/#packages`
-**Shows:** Installed packages and their configurations
-
-### Manage Users
-**Path:** App Users (sidebar)
-**URL:** `/platform/apps/{app_uuid}/user-management/`
-**Actions:**
-- Click "Add User" → Fill name, email, role → Save
-- Edit existing user
-- Reset Password
-- Deactivate/Activate user
-**Verify:** User appears in list with correct role and status
-
-### View Logs
-**Path:** Logs (sidebar)
-**URL:** `/platform/apps/{app_uuid}/logs/`
-
-### Manage Releases
-**Path:** Releases (sidebar)
-**URL:** `/platform/apps/{app_uuid}/releases/`
+| Operation | Agent File |
+|-----------|------------|
+| Launch new app | [launch-app.md](agents/launch-app.md) |
+| Edit app info, branding, logo | [basic-info.md](agents/basic-info.md) |
+| Configure theme colors/typography | [theme.md](agents/theme.md) |
+| Set up routes and menus | [appbuilder-config.md](agents/appbuilder-config.md) |
+| Configure authentication | [authentication.md](agents/authentication.md) |
+| Manage user roles | [user-roles.md](agents/user-roles.md) |
+| Manage app users | [users.md](agents/users.md) |
+| Manage secrets | [secrets.md](agents/secrets.md) |
+| Sync policies | [policies.md](agents/policies.md) |
+| Manage packages | [packages.md](agents/packages.md) |
+| Sync async tasks | [async-tasks.md](agents/async-tasks.md) |
 
 ## Navigation Reference
 
-### URL Patterns
-```
-/platform/apps                                          → Apps list
-/platform/apps/{uuid}/app-settings/app-configuration/   → Basic Info
-/platform/apps/{uuid}/app-settings/app-configuration/#themes → Themes
-/platform/apps/{uuid}/app-settings/app-configuration/#user-roles → Roles
-/platform/apps/{uuid}/app-settings/app-configuration/#authentication → Auth
-/platform/apps/{uuid}/app-settings/app-configuration/#secrets → Secrets
-/platform/apps/{uuid}/code/                             → Code Summary
-/platform/apps/{uuid}/code/#data-models                 → Data Models
-/platform/apps/{uuid}/code/#routes                      → Routes
-/platform/apps/{uuid}/code/#policies                    → Policies
-/platform/apps/{uuid}/code/#packages                    → Packages
-/platform/apps/{uuid}/code/#asynctasks                  → Async Tasks
-/platform/apps/{uuid}/user-management/                  → Users
-/platform/apps/{uuid}/logs/                             → Logs
-/platform/apps/{uuid}/releases/                         → Releases
-```
-
-### Left Sidebar Items
-- App Settings (gear icon)
-- Code (document icon)
-- App Users (people icon)
-- Logs (list icon)
-- Releases (rocket icon)
-
-### Key Buttons
-- "Launch New App" - Top right on apps list
-- "Edit Details" - Top right on Basic Information
-- "+ Add Theme" - Top right on Themes
-- "Sync Policies" - Top right on Policies
-- "Sync Tasks" - Top right on Async Tasks
-- "+ Add User" - On User Management
+See [UI-MAP.md](references/UI-MAP.md) for complete URL patterns, selectors, and page structure.
 
 ## Safety Rules
 - NEVER store credentials in files
 - ALWAYS screenshot before and after destructive actions
-- ASK before: launching new apps, deactivating users, modifying themes
-- Take GIF recording for multi-step operations when possible
+- ASK user before: launching apps, deleting routes/menus, deactivating users
+- For webview pages (appbuilder configure): extract iframe src URL and open in new tab
