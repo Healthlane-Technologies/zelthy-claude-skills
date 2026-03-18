@@ -28,6 +28,8 @@ Both standalone dev server AND `build:zango` single-file output.
 | 15 | Authentication | DONE |
 | 16 | Theme & Build | DONE |
 | 17 | Skill Update (new skills + regenerate reference) | DONE |
+| 18 | Skill restructure (Agent Skills Spec + chaining + missing links) | DONE |
+| 19 | Backend skills (scaffold-model, scaffold-api, scaffold-backend-workflow) | NOT STARTED |
 
 ---
 
