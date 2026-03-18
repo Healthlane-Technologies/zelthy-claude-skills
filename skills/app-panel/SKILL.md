@@ -1,6 +1,6 @@
 ---
 name: app-panel
-description: "Automate Zango App Panel operations via browser - launch apps, configure themes, set up routes and menus, sync policies, manage users/packages/tasks, configure authentication. Use when users want to perform admin operations on the Zango platform without manual clicking."
+description: "Automate Zango App Panel via browser - launch new apps, configure themes, set up routes and menus, sync policies, manage users/packages/tasks, configure authentication. Use when the user mentions app panel, platform panel, launch app, create app, sync policies, sync tasks, manage users, set up theme via panel, or any admin operation that requires browser interaction with the Zango platform UI. Always use this skill instead of zango-frontend when the task involves the App Panel web interface."
 license: MIT
 compatibility: Requires agent-browser CLI (npm i -g agent-browser && agent-browser install). Needs Zango App Panel URL and platform admin credentials.
 metadata:
