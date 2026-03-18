@@ -1,0 +1,30 @@
+#!/bin/bash
+# Zango Frontend App Setup Guide
+# This script documents the steps to create a new Zango frontend app.
+# It is for reference only - use the /launch-frontend skill for guided setup.
+
+echo "=== Zango Frontend App Setup ==="
+echo ""
+echo "Step 1: Create the app"
+echo "  npx @zango-core/create-zango-app <project-name>"
+echo ""
+echo "Step 2: Configure environment"
+echo "  cd <project-name>"
+echo "  cp .env.example .env"
+echo "  # Edit .env with your backend URL and proxy routes"
+echo ""
+echo "Step 3: Start development"
+echo "  npm run dev"
+echo ""
+echo "Step 4: Create first custom page"
+echo "  # Create src/custom/pages/Dashboard.jsx"
+echo "  # Export in src/custom/pages/index.js"
+echo ""
+echo "Step 5: Configure routes"
+echo "  # Use /appbuilder/configure/ panel or Django shell"
+echo ""
+echo "Step 6: Build for deployment"
+echo "  npm run build:zango    # Single-file for Zango platform"
+echo "  npm run build          # Standard web build"
+echo ""
+echo "For detailed guidance, use the /launch-frontend skill in Claude Code."
