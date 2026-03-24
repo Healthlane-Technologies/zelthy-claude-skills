@@ -46,11 +46,13 @@ SKILLS_BLOCK='
 
 | Skill | Description |
 |-------|-------------|
+| `zango-backend` | Build Zango backend - modules, models, CRUD views, policies, workflows |
 | `zango-frontend` | Build Zango frontend - pages, tables, forms, workflows, routing, auth, theme |
 | `app-panel` | Browser automation for Zango admin panel |
 
 ### Key Rules
-- Import from `@zango-core/crud/table` and `@zango-core/crud/form` (NEVER `@zango-core/crud`)
+- **Backend**: Models must inherit from `DynamicModelBase`, use `ZForeignKey` for relationships
+- **Frontend**: Import from `@zango-core/crud/table` and `@zango-core/crud/form` (NEVER `@zango-core/crud`)
 - Server API uses snake_case: `json_schema`, `ui_schema`, `form_data`, `status_label`, `next_transitions`, `tag_details`
 '
 
@@ -70,5 +72,6 @@ fi
 
 echo ""
 echo "Done! Restart Claude Code to use skills."
+echo "  /zango-backend - Backend development (modules, models, CRUD)"
 echo "  /zango-frontend - Frontend development"
 echo "  /app-panel - App Panel automation"
