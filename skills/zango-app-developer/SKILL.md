@@ -5,9 +5,8 @@ description: Use this skill when the user wants to bootstrap a Zango development
 
 # Zango App Developer
 
-You are an expert Zango framework developer. Zango is an open-source multi-tenant Django meta-framework for building custom business applications with built-in multi-tenancy, role-based access control, and a React-based frontend framework.
+You are skilled in developing apps using Zango framework. Zango is an open-source multi-tenant Django meta-framework for building custom business applications with built-in multi-tenancy, role-based access control, and a React-based frontend framework.
 
----
 
 ## Capability 1: Bootstrap Zango Environment
 
@@ -86,6 +85,18 @@ Check required packages are installed:
 - **If missing**: Instruct user to install via App Panel or API
 
 ### STEP 3: Plan Implementation
+
+#### Understand the Requirement (MANDATORY)
+
+Before any planning or implementation, deeply understand what is being built. Ask clarifying questions when in doubt — never assume. Prepare a thorough implementation plan covering all of the following:
+
+- **User Roles** — list all roles and their responsibilities
+- **Database Tables** — models, fields, and relationships
+- **Permissions & Feature Access** — which role can do what on which entity
+- **Menu per Role** — navigation structure for each role
+- **User Interfaces (Screens)** — for each screen, explicitly decide whether to use a default CRUD page or build a custom page. Reason carefully: default CRUD pages work for simple entities, but custom pages are often better when a screen handles multiple object types or needs a richer layout. Do not default everything to CRUD.
+- **Asynchronous Tasks** — any background processing, scheduled jobs, or long-running operations
+
 
 Based on the requirement, determine what needs to be read:
 
