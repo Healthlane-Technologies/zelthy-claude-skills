@@ -903,6 +903,23 @@ class Meta:
 
 **CRITICAL**: The `fields` list must **only contain model field names** (fields mapped to `ModelCol`). Do NOT include custom columns like `StringCol`, `StatusCol`, `TagsCol`, etc.
 
+**⚠️ Reserved / Auto-injected Names — NEVER include in `Meta.fields`:**
+
+The following names are automatically injected by the CRUD package at runtime. Including any of them in `Meta.fields` will raise a `rest_framework` serializer error:
+
+| Name | Reason |
+|------|--------|
+| `actions` | Auto-injected row actions list |
+| `row_actions` | Alias for row actions |
+| `status` | Conflicts with workflow status injection |
+| `workflow_status` | Auto-injected workflow status dict |
+| `object_uuid` | Auto-injected object UUID |
+| `detail_url` | Auto-injected detail URL |
+| `field_title` | Auto-injected title field |
+| `pk` | Auto-injected primary key |
+
+If you need to display workflow status as a column, declare it as a `StatusCol` (a custom column) and **exclude** it from `Meta.fields`.
+
 **Correct**:
 ```python
 class PatientTable(ModelTable):
@@ -912,11 +929,11 @@ class PatientTable(ModelTable):
 
     # Custom columns - DO NOT include in Meta.fields
     is_active = StringCol(display_as="Status", searchable=True)
-    status = StatusCol(display_as="Workflow Status", searchable=True)
+    workflow_status = StatusCol(display_as="Workflow Status", searchable=True)
 
     class Meta:
         model = Patient
-        fields = ['id', 'name']  # ✅ Only model fields
+        fields = ['id', 'name']  # ✅ Only model fields — no 'actions', 'status', 'workflow_status' etc.
         row_selector = {}
 ```
 
@@ -924,7 +941,7 @@ class PatientTable(ModelTable):
 ```python
 class Meta:
     model = Patient
-    fields = ['id', 'name', 'is_active', 'status']  # ❌ Includes custom columns
+    fields = ['id', 'name', 'actions', 'status', 'workflow_status']  # ❌ Reserved names cause serializer errors
 ```
 
 ### Core Options

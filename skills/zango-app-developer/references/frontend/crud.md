@@ -17,10 +17,16 @@ import type { TableCustomClasses, TableCustomStyles } from '@zango-core/crud/tab
 { "success": true, "response": { "table_metadata": { "columns": [{ "name": "field", "display_name": "Field", "type": "string", "sortable": true }], "filters": [...], "page_title": "Title", "has_add_perm": true, "has_upload_perm": false, "has_download_perm": true, "utilities_config": { "show_search": true, "show_filters_button": true, "show_column_options": true }, "form_config": { "drawer_size": "md" }, "actions": [{ "name": "Edit", "key": "edit", "type": "form" }] } } }
 ```
 
-### Table Data (GET ?action=get_table_data)
+### Table Data (GET ?action=get_table_data&view=table)
+
+> **⚠️ `&view=table` is required.** Calling `?action=get_table_data` without `&view=table` returns a partial or incorrect response. Always include it when fetching table data directly.
+
+The raw endpoint returns **DataTables format** (not a `response.table_data` wrapper):
 ```json
-{ "success": true, "response": { "table_data": [{ "id": 1, "object_uuid": "uuid", "workflow_status": { "status_label": "Active", "status_color": "#12B76A" }, "row_actions": [{ "name": "Edit", "key": "edit", "type": "form" }] }], "recordsTotal": 25 } }
+{ "draw": 0, "recordsTotal": 25, "recordsFiltered": 25, "data": [{ "id": 1, "object_uuid": "uuid", "workflow_status": { "status_label": "Active", "status_color": "#12B76A" }, "row_actions": [{ "name": "Edit", "key": "edit", "type": "form" }] }] }
 ```
+
+> **Note:** `CrudHandler` internally normalizes this — the DataTables format only matters when calling the endpoint directly (e.g. in a custom `fetch` inside `customTableBody`). Read from `data.data` (the array), not `data.response.table_data`.
 
 ### Detail View (GET ?action=fetch_item_details&object_uuid=UUID)
 ```json
@@ -970,6 +976,56 @@ import CustomMainDetail from './CustomMainDetail';
     <TableBody defaultDetailView="navigate" />
   }
 />
+```
+
+> **VERIFIED WORKING PATTERN** — all 3 props are required together:
+> - `enableDetailViewRoute={true}` — registers the `/detail-view/:object_uuid` route
+> - `customMainDetail={MyDetail}` — your component rendered at that route
+> - `customTableBody={NavigateTableBody}` — makes rows navigate on click
+>
+> ⚠️ `customTableBody` must be a **component reference**, NOT a JSX element. Passing `<TableBody ... />` (an object) crashes with "Element type is invalid: got object". Wrap it in a named component.
+>
+> ⚠️ Props received by `customMainDetail` are **camelCase** (verified from source): `generalDetails` (not `general_details`), `workflowDetails` (not `workflow_details`).
+
+```jsx
+import { useNavigate } from 'react-router-dom';
+import { CrudHandler, TableBody } from '@zango-core/crud/table';
+
+// Must be a named component — NOT inline JSX passed to customTableBody
+const NavigateTableBody = () => <TableBody defaultDetailView="navigate" />;
+
+// Actual props: data, generalDetails, objectUuid, workflowDetails, sections, rowActions, pk, onRefresh, apiUrl
+const MyDetail = ({ data, generalDetails, objectUuid }) => {
+  const navigate = useNavigate();
+  if (!data) return null;
+  const fields = generalDetails?.fields || {};
+  return (
+    <div style={{ padding: 32 }}>
+      <button onClick={() => navigate(-1)}>← Back</button>
+      <h1>{data.title}</h1>
+      {Object.entries(fields).map(([key, field]) => (
+        <div key={key}>
+          <div style={{ fontSize: 12, color: '#9CA3AF' }}>{field.display_name}</div>
+          <div dangerouslySetInnerHTML={{ __html: field.value || '—' }} />
+        </div>
+      ))}
+      {/* Embed related child records — requires get_table_data_queryset override on backend */}
+      {objectUuid && (
+        <CrudHandler api_endpoint={`/child/records/?parent_uuid=${objectUuid}`} showHeader={false} />
+      )}
+    </div>
+  );
+};
+
+const MyPage = () => (
+  <CrudHandler
+    api_endpoint="/my/records/"
+    headerProps={{ title: 'My Records' }}
+    enableDetailViewRoute={true}
+    customMainDetail={MyDetail}
+    customTableBody={NavigateTableBody}
+  />
+);
 ```
 
 ```jsx

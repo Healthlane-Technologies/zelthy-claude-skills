@@ -317,14 +317,19 @@ This policy allows viewing and downloading but NOT adding new records.
 
 ### Syncing Policies
 
-**CRITICAL**: After creating or updating `policies.json`, you MUST sync policies from the App Panel for changes to take effect.
+**CRITICAL**: After creating or updating `policies.json`, you MUST sync policies via the API for changes to take effect.
 
-**Steps to Sync**:
-1. Open browser and navigate to App Panel
-2. Go to your application
-3. Navigate to **Code** → **Policies**
-4. Click **"Sync Policies"** button
-5. Verify policies appear in the list
+**Sync via API**:
+```bash
+curl -s -b /tmp/zango_cookies -X POST \
+  "http://localhost:8000/api/v1/apps/$APP_UUID/policies/?action=sync_policies" \
+  -H "X-CSRFToken: $CSRF" \
+  -H "Referer: http://localhost:8000/platform/" \
+  -H "Content-Type: multipart/form-data; boundary=----WebKitFormBoundary" \
+  --data-raw '------WebKitFormBoundary--'
+```
+
+See [app-panel-api.md](../app-panel-api.md) for full details on the sync policies API.
 
 **What Happens During Sync**:
 - Policies from `policies.json` files are loaded
@@ -562,7 +567,7 @@ Separate policies per module:
 **Problem**: Policy defined but permissions not applying
 
 **Solutions**:
-- **Sync policies** from App Panel (most common issue!)
+- **Call sync policies API** (most common issue!)
 - Check policy is assigned to the role in App Panel
 - Verify policy name matches exactly in code
 - Confirm role is active
@@ -574,7 +579,7 @@ Separate policies per module:
 
 **Solutions**:
 - Verify features are correct for the package (see package docs)
-- Sync policies from App Panel
+- Call sync policies API
 - Check role has the policy assigned
 - Confirm user has active role
 
@@ -598,6 +603,6 @@ Separate policies per module:
 - [ ] Specify full view path in permissions
 - [ ] List package-specific features (see package docs)
 - [ ] Assign to appropriate roles
-- [ ] **Sync policies from App Panel** (CRITICAL!)
+- [ ] **Call sync policies API** (CRITICAL!)
 - [ ] Test with different roles
 - [ ] Verify policies are loaded and assigned in App Panel

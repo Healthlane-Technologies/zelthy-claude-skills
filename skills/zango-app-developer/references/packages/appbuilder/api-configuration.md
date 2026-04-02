@@ -35,15 +35,16 @@ curl -s -b /tmp/zango_cookies \
 }
 ```
 
-**IMPORTANT:** The returned URL includes an authentication token in the query string (e.g., `?token=abc123xyz`). Save this as `CONFIG_URL` and use it for all subsequent configuration API calls.
+**IMPORTANT:** The returned URL includes an authentication token in the query string (e.g., `?token=abc123xyz`). Extract the base URL and token separately — the `token` must be passed as a query parameter in every subsequent API call.
 
 ```bash
-CONFIG_URL="http://yourdomain.com/app/configure?token=abc123xyz"
+CONFIG_BASE_URL="http://yourdomain.com/app/configure"
+TOKEN="abc123xyz"
 ```
 
-The configuration endpoints:
-- Routes API: `$CONFIG_URL/routes/api/`
-- Menu API: `$CONFIG_URL/api/`
+The configuration endpoints (always pass `token` as a query param):
+- Routes API: `$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=<action>`
+- Menu API: `$CONFIG_BASE_URL/api/?token=$TOKEN&action=<action>`
 
 ---
 
@@ -56,7 +57,7 @@ Routes define all available pages in your application. They are global (not role
 Get the current routes configuration:
 
 ```bash
-curl "$CONFIG_URL/routes/api/?action=get_routes" \
+curl "$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=get_routes" \
   -H 'Content-Type: application/json'
 ```
 
@@ -90,7 +91,7 @@ To add a route after creating a new CRUD view, **include all existing routes plu
 **Example: Adding "Country" route when "Patients" route already exists:**
 
 ```bash
-curl "$CONFIG_URL/routes/api/?action=save_routes" \
+curl "$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=save_routes" \
   -H 'Content-Type: application/json' \
   --data-raw '{
     "routes": [
@@ -165,7 +166,7 @@ The `menus_synced` field indicates how many menu configurations were updated.
 Update an existing routes configuration (use the `id` from the get_routes response):
 
 ```bash
-curl "$CONFIG_URL/routes/api/?action=update_routes&pk=1" \
+curl "$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=update_routes&pk=1" \
   -X PUT \
   -H 'Content-Type: application/json' \
   --data-raw '{
@@ -273,7 +274,7 @@ Menu configurations are role-specific. Each user role can have different menu it
 Get all menu configurations for all roles:
 
 ```bash
-curl "$CONFIG_URL/api/?action=get_configs" \
+curl "$CONFIG_BASE_URL/api/?token=$TOKEN&action=get_configs" \
   -H 'Content-Type: application/json'
 ```
 
@@ -308,7 +309,7 @@ curl "$CONFIG_URL/api/?action=get_configs" \
 Get roles that don't have menu configuration yet:
 
 ```bash
-curl "$CONFIG_URL/api/?action=get_available_roles" \
+curl "$CONFIG_BASE_URL/api/?token=$TOKEN&action=get_available_roles" \
   -H 'Content-Type: application/json'
 ```
 
@@ -334,7 +335,7 @@ curl "$CONFIG_URL/api/?action=get_available_roles" \
 Get available routes to add to menus:
 
 ```bash
-curl "$CONFIG_URL/api/?action=get_routes_list" \
+curl "$CONFIG_BASE_URL/api/?token=$TOKEN&action=get_routes_list" \
   -H 'Content-Type: application/json'
 ```
 
@@ -364,7 +365,7 @@ curl "$CONFIG_URL/api/?action=get_routes_list" \
 After creating a CRUD view, add it to a role's menu:
 
 ```bash
-curl "$CONFIG_URL/api/?action=create_config" \
+curl "$CONFIG_BASE_URL/api/?token=$TOKEN&action=create_config" \
   -X POST \
   -H 'Content-Type: application/json' \
   --data-raw '{
@@ -423,7 +424,7 @@ curl "$CONFIG_URL/api/?action=create_config" \
 Update an existing menu configuration (use the `pk` from the list response):
 
 ```bash
-curl "$CONFIG_URL/api/?action=update_config&pk=1" \
+curl "$CONFIG_BASE_URL/api/?token=$TOKEN&action=update_config&pk=1" \
   -X PUT \
   -H 'Content-Type: application/json' \
   --data-raw '{
@@ -449,7 +450,7 @@ curl "$CONFIG_URL/api/?action=update_config&pk=1" \
 ### Delete Menu Configuration
 
 ```bash
-curl "$CONFIG_URL/api/?action=delete_config&pk=1" \
+curl "$CONFIG_BASE_URL/api/?token=$TOKEN&action=delete_config&pk=1" \
   -X DELETE \
   -H 'Content-Type: application/json'
 ```
@@ -515,7 +516,7 @@ You've created a CRUD view for "Appointments" and now need to add it to AppBuild
 
 **Step 1: Get existing routes**
 ```bash
-curl "$CONFIG_URL/routes/api/?action=get_routes" \
+curl "$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=get_routes" \
   -H 'Content-Type: application/json' \
   > routes.json
 ```
@@ -543,7 +544,7 @@ ALL_ROUTES=$(echo $EXISTING_ROUTES | jq ". += [$NEW_ROUTE]")
 
 **Step 3: Save updated routes**
 ```bash
-curl "$CONFIG_URL/routes/api/?action=save_routes" \
+curl "$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=save_routes" \
   -H 'Content-Type: application/json' \
   --data-raw "{\"routes\": $ALL_ROUTES}" \
   > updated_routes.json
@@ -558,7 +559,7 @@ echo "New route_id: $ROUTE_ID"
 **Step 5: Get existing menu config**
 ```bash
 # List all configs
-curl "$CONFIG_URL/api/?action=get_configs" \
+curl "$CONFIG_BASE_URL/api/?token=$TOKEN&action=get_configs" \
   -H 'Content-Type: application/json' \
   > configs.json
 
@@ -585,7 +586,7 @@ NEW_MENU_ITEM="{
 ALL_MENU=$(echo $EXISTING_MENU | jq ". += [$NEW_MENU_ITEM]")
 
 # Update menu config
-curl "$CONFIG_URL/api/?action=update_config&pk=$MENU_PK" \
+curl "$CONFIG_BASE_URL/api/?token=$TOKEN&action=update_config&pk=$MENU_PK" \
   -X PUT \
   -H 'Content-Type: application/json' \
   --data-raw "{\"menu\": $ALL_MENU}"
@@ -594,7 +595,7 @@ curl "$CONFIG_URL/api/?action=update_config&pk=$MENU_PK" \
 **Step 7: Verify**
 ```bash
 # Check the updated config
-curl "$CONFIG_URL/api/?action=get_configs" \
+curl "$CONFIG_BASE_URL/api/?token=$TOKEN&action=get_configs" \
   -H 'Content-Type: application/json' \
   | jq ".response[] | select(.pk == $MENU_PK)"
 ```
@@ -649,10 +650,10 @@ For custom SVG icons, use 32x32 viewBox with simple, clear designs.
 
 ### Authentication
 
-The `$CONFIG_URL` includes an authentication token, so all requests only need:
+The `token` from the config URL response must be passed as a query parameter in every API call. All requests only need:
 - `Content-Type: application/json` header
 
-No additional CSRF tokens or Referer headers are required when using the config URL with token.
+No additional CSRF tokens or Referer headers are required when passing the token as a query param.
 
 ### Error Handling
 
@@ -671,22 +672,22 @@ No additional CSRF tokens or Referer headers are required when using the config 
 
 | Action | Method | Endpoint | Description |
 |--------|--------|----------|-------------|
-| List routes | GET | `/configure/routes/api/?action=get_routes` | Get active routes |
-| List all | GET | `/configure/routes/api/?action=get_all_routes` | Get all route configs |
-| Save routes | POST | `/configure/routes/api/?action=save_routes` | Create/replace routes |
-| Update routes | PUT | `/configure/routes/api/?action=update_routes&pk=<id>` | Update specific config |
+| List routes | GET | `$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=get_routes` | Get active routes |
+| List all | GET | `$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=get_all_routes` | Get all route configs |
+| Save routes | POST | `$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=save_routes` | Create/replace routes |
+| Update routes | PUT | `$CONFIG_BASE_URL/routes/api/?token=$TOKEN&action=update_routes&pk=<id>` | Update specific config |
 
 ### Menu Config API Endpoints
 
 | Action | Method | Endpoint | Description |
 |--------|--------|----------|-------------|
-| List configs | GET | `/configure/api/?action=get_configs` | Get all menu configs |
-| Available roles | GET | `/configure/api/?action=get_available_roles` | Get unconfigured roles |
-| Routes list | GET | `/configure/api/?action=get_routes_list` | Get routes for dropdown |
-| Get for edit | GET | `/configure/api/?action=get_edit_config&pk=<pk>` | Get specific config |
-| Create config | POST | `/configure/api/?action=create_config` | Create menu for role |
-| Update config | PUT | `/configure/api/?action=update_config&pk=<pk>` | Update menu config |
-| Delete config | DELETE | `/configure/api/?action=delete_config&pk=<pk>` | Delete menu config |
+| List configs | GET | `$CONFIG_BASE_URL/api/?token=$TOKEN&action=get_configs` | Get all menu configs |
+| Available roles | GET | `$CONFIG_BASE_URL/api/?token=$TOKEN&action=get_available_roles` | Get unconfigured roles |
+| Routes list | GET | `$CONFIG_BASE_URL/api/?token=$TOKEN&action=get_routes_list` | Get routes for dropdown |
+| Get for edit | GET | `$CONFIG_BASE_URL/api/?token=$TOKEN&action=get_edit_config&pk=<pk>` | Get specific config |
+| Create config | POST | `$CONFIG_BASE_URL/api/?token=$TOKEN&action=create_config` | Create menu for role |
+| Update config | PUT | `$CONFIG_BASE_URL/api/?token=$TOKEN&action=update_config&pk=<pk>` | Update menu config |
+| Delete config | DELETE | `$CONFIG_BASE_URL/api/?token=$TOKEN&action=delete_config&pk=<pk>` | Delete menu config |
 
 ### Required Headers
 
@@ -694,4 +695,4 @@ No additional CSRF tokens or Referer headers are required when using the config 
 -H 'Content-Type: application/json'
 ```
 
-The `$CONFIG_URL` includes the authentication token, so no additional headers are needed.
+The `token` query param handles authentication — no additional headers are needed.

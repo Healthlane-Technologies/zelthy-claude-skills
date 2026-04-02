@@ -7,7 +7,7 @@ Condition methods check if a transition is allowed before executing.
 ### Method Signature
 
 ```python
-def condition_<transition_name>(self, request, obj):
+def <transition_name>_condition(self, request, object_instance, **kwargs):
     """
     Check if transition can be performed.
 
@@ -21,25 +21,25 @@ def condition_<transition_name>(self, request, obj):
 ### Example Conditions
 
 ```python
-def condition_draft_to_active(self, request, obj):
+def draft_to_active_condition(self, request, object_instance, **kwargs):
     """Check if record can be activated"""
     # Check required fields
-    if not obj.name:
+    if not object_instance.name:
         return False, "Name is required before activation"
 
-    if not obj.email:
+    if not object_instance.email:
         return False, "Email is required before activation"
 
     # Check business rules
-    if not obj.is_valid_for_activation():
+    if not object_instance.is_valid_for_activation():
         return False, "Record must meet all validation criteria"
 
     return True, "Transition allowed"
 
-def condition_active_to_closed(self, request, obj):
+def active_to_closed_condition(self, request, object_instance, **kwargs):
     """Check if record can be closed"""
     # Check dependencies
-    if obj.has_pending_tasks():
+    if object_instance.has_pending_tasks():
         return False, "Cannot close - pending tasks exist"
 
     return True, "Ready to close"
@@ -54,13 +54,14 @@ Done methods execute logic after a transition completes successfully.
 ### Method Signature
 
 ```python
-def done_<transition_name>(self, request, obj):
+def <transition_name>_done(self, request, object_instance, transaction_obj):
     """
     Execute logic after transition completes.
 
     Args:
         request: HTTP request object
-        obj: The model instance that transitioned
+        object_instance: The model instance that transitioned
+        transaction_obj: The workflow transaction record for this transition
     """
     # Post-transition logic
     pass
@@ -69,35 +70,35 @@ def done_<transition_name>(self, request, obj):
 ### Example Done Methods
 
 ```python
-def done_draft_to_active(self, request, obj):
+def draft_to_active_done(self, request, object_instance, transaction_obj):
     """Execute after activation"""
     from django.utils import timezone
 
     # Update activation metadata
-    obj.activated_at = timezone.now()
-    obj.activated_by = request.user
-    obj.save()
+    object_instance.activated_at = timezone.now()
+    object_instance.activated_by = request.user
+    object_instance.save()
 
     # Send notification
-    send_activation_notification(obj)
+    send_activation_notification(object_instance)
 
     # Log the event
-    log_status_change(obj, "draft", "active", request.user)
+    log_status_change(object_instance, "draft", "active", request.user)
 
-def done_active_to_closed(self, request, obj):
+def active_to_closed_done(self, request, object_instance, transaction_obj):
     """Execute after closure"""
     from django.utils import timezone
 
     # Update closure metadata
-    obj.closed_at = timezone.now()
-    obj.closed_by = request.user
-    obj.save()
+    object_instance.closed_at = timezone.now()
+    object_instance.closed_by = request.user
+    object_instance.save()
 
     # Trigger cleanup tasks
-    cleanup_related_records(obj)
+    cleanup_related_records(object_instance)
 
     # Send closure notifications
-    notify_stakeholders(obj)
+    notify_stakeholders(object_instance)
 ```
 
 ---
@@ -206,50 +207,50 @@ class PatientWorkflow(WorkflowBase):
     ]
 
     # Condition methods
-    def condition_draft_to_pending(self, request, obj):
+    def draft_to_pending_condition(self, request, object_instance, **kwargs):
         """Check if ready for submission"""
-        if not obj.name:
+        if not object_instance.name:
             return False, "Patient name is required"
 
-        if not obj.email and not obj.phone:
+        if not object_instance.email and not object_instance.phone:
             return False, "Either email or phone is required"
 
         return True, "Ready for submission"
 
-    def condition_pending_to_approved(self, request, obj):
+    def pending_to_approved_condition(self, request, object_instance, **kwargs):
         """Check if can be approved"""
-        if not obj.is_complete():
+        if not object_instance.is_complete():
             return False, "All required fields must be filled"
 
         return True, "Ready for approval"
 
     # Done methods
-    def done_pending_to_approved(self, request, obj):
+    def pending_to_approved_done(self, request, object_instance, transaction_obj):
         """Execute after approval"""
-        obj.approved_at = timezone.now()
-        obj.approved_by = request.user
-        obj.save()
+        object_instance.approved_at = timezone.now()
+        object_instance.approved_by = request.user
+        object_instance.save()
 
         # Send approval notification
-        send_approval_email(obj)
+        send_approval_email(object_instance)
 
-    def done_pending_to_rejected(self, request, obj):
+    def pending_to_rejected_done(self, request, object_instance, transaction_obj):
         """Execute after rejection"""
-        obj.rejected_at = timezone.now()
-        obj.rejected_by = request.user
-        obj.save()
+        object_instance.rejected_at = timezone.now()
+        object_instance.rejected_by = request.user
+        object_instance.save()
 
         # Send rejection notification
-        send_rejection_email(obj)
+        send_rejection_email(object_instance)
 
-    def done_approved_to_active(self, request, obj):
+    def approved_to_active_done(self, request, object_instance, transaction_obj):
         """Execute after activation"""
-        obj.activated_at = timezone.now()
-        obj.activated_by = request.user
-        obj.save()
+        object_instance.activated_at = timezone.now()
+        object_instance.activated_by = request.user
+        object_instance.save()
 
         # Trigger activation processes
-        activate_patient_services(obj)
+        activate_patient_services(object_instance)
 
     class Meta:
         on_create_status = "draft"
@@ -319,13 +320,13 @@ status_transitions = [
 
 **Problem**: Method name doesn't match transition name
 
-**Solution**: Use exact format `condition_<transition_name>`
+**Solution**: Use exact format `<transition_name>_condition`
 
 ### Done Method Not Executing
 
 **Problem**: Transition failed or method name incorrect
 
-**Solution**: Check condition passes and method name matches `done_<transition_name>`
+**Solution**: Check condition passes and method name matches `<transition_name>_done`
 
 ### Transition Failing Silently
 
@@ -346,9 +347,9 @@ return False, "Error message"
 
 **Solution**:
 ```python
-def done_draft_to_active(self, request, obj):
-    obj.activated_at = timezone.now()
-    obj.save()  # Don't forget this!
+def draft_to_active_done(self, request, object_instance, transaction_obj):
+    object_instance.activated_at = timezone.now()
+    object_instance.save()  # Don't forget this!
 ```
 
 ---
@@ -395,7 +396,7 @@ status_transitions = [
 System transitions can only be executed programmatically:
 
 ```python
-def approved_to_active_done(self, request, object_instance, transaction_obj, **kwargs):
+def approved_to_active_done(self, request, object_instance, transaction_obj):
     """After manual activation, trigger auto transitions"""
     # Check if there are follow-up system transitions
     if should_auto_transition(object_instance):
@@ -431,7 +432,7 @@ status_transitions = [
     }
 ]
 
-def reviewing_to_approved_done(self, request, object_instance, transaction_obj, **kwargs):
+def reviewing_to_approved_done(self, request, object_instance, transaction_obj):
     """After approval, automatically activate"""
     # Trigger system transition
     self.execute_transition("auto_activate_after_approval", allow_system=True)
@@ -462,7 +463,7 @@ def auto_close_expired_programs():
 **3. Conditional Auto-Transitions**
 
 ```python
-def active_to_suspended_done(self, request, object_instance, transaction_obj, **kwargs):
+def active_to_suspended_done(self, request, object_instance, transaction_obj):
     """After suspension, check if should auto-reactivate"""
     # Check conditions
     if object_instance.suspension_reason == "temporary":
@@ -484,7 +485,7 @@ def active_to_suspended_done(self, request, object_instance, transaction_obj, **
 
 ```python
 # ✅ Good - Clear naming and error handling
-def approved_to_active_done(self, request, object_instance, transaction_obj, **kwargs):
+def approved_to_active_done(self, request, object_instance, transaction_obj):
     """After approval, automatically activate if eligible"""
     try:
         # Check condition
