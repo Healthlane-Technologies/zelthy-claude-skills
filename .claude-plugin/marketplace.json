@@ -14,7 +14,7 @@
       "name": "zango-app-developer",
       "source": "./skills/zango-app-developer",
       "description": "Full-stack Zango app development — bootstrap environments, create apps, build modules with CRUD, workflows, and React frontend",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "Healthlane Technologies"
       },
