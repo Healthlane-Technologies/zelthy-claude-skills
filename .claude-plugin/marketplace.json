@@ -1,0 +1,24 @@
+{
+  "name": "zelthy",
+  "owner": {
+    "name": "Healthlane Technologies",
+    "email": "connect@zelthy.com"
+  },
+  "metadata": {
+    "description": "Claude Code skills for Zango app development",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "zango-app-developer",
+      "source": "./skills/zango-app-developer",
+      "description": "Full-stack Zango app development — bootstrap environments, create apps, build modules with CRUD, workflows, and React frontend",
+      "version": "1.0.0",
+      "author": {
+        "name": "Healthlane Technologies"
+      },
+      "keywords": ["zango", "django", "crud", "workflow", "react"],
+      "category": "development"
+    }
+  ]
+}
