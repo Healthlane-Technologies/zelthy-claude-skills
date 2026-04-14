@@ -6,7 +6,8 @@
   },
   "metadata": {
     "description": "Claude Code skills for Zango app development",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "autoUpdate": true
   },
   "plugins": [
     {
