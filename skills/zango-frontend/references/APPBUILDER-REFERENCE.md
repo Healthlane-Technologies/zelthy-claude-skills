@@ -619,7 +619,7 @@ AppMenuModel.objects.create(
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `title` | string | ReactNode | Sign In | Login page title. |
-| `subtitle` | string | ReactNode | Sign In | Text displayed below the title. |
+| `subtitle` | string | ReactNode | - | Text displayed below the title. |
 | `submitButtonText` | string | Sign In | Submit button label. |
 | `rememberMeText` | string | Remember me | Remember me checkbox label. |
 | `forgotPasswordText` | string | Forgot password? | Forgot password link text. |
@@ -647,15 +647,15 @@ AppMenuModel.objects.create(
 | `url` | string | - | Logo image URL. |
 | `width` | string | - | Logo width. |
 | `height` | string | - | Logo height. |
-| `title` | string | ReactNode | Continue | Role selection page title. |
-| `subtitle` | string | ReactNode | Continue | Subtitle text below the title. |
-| `instructionText` | string | Continue | Instruction text for the user. |
+| `title` | string | ReactNode | - | Role selection page title. |
+| `subtitle` | string | ReactNode | - | Subtitle text below the title. |
+| `instructionText` | string | - | Instruction text for the user. |
 | `continueButtonText` | string | Continue | Continue button label. |
 | `gridColumns` | 2 | 3 | 2 | Number of columns in grid layout. |
 | `customRoleCard` | ReactNode | - | Custom component for rendering individual role cards. |
 | `customEmptyState` | ReactNode | - | Custom component shown when no roles are available. |
-| `title` | string | ReactNode | 6 | 2FA page title. |
-| `subtitle` | string | ReactNode | 6 | Subtitle text below the title. |
+| `title` | string | ReactNode | - | 2FA page title. |
+| `subtitle` | string | ReactNode | - | Subtitle text below the title. |
 | `codeLength` | number | 6 | Number of digits in the OTP code. |
 | `resendCountdown` | number | 60 | Seconds before the resend button becomes available. |
 | `submitButtonText` | string | Verify | Submit button label. |

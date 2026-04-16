@@ -25,17 +25,17 @@ Note: Server uses `json_schema`, `ui_schema`, `form_data`. Local `rjsf_schema` p
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `api_endpoint` | string | { action: initialize_form | Enables server-driven mode. The endpoint used to GET the form schema and POST form submissions. When provided, rjsf_schema and onSubmit are ignored. |
+| `api_endpoint` | string | - | Enables server-driven mode. The endpoint used to GET the form schema and POST form submissions. When provided, rjsf_schema and onSubmit are ignored. |
 | `getParams` | object | { action: initialize_form | Query parameters appended to the GET request when fetching the form schema in server-driven mode. Override to load edit forms or pass context. |
 | `postParams` | object | { form_type: create_form | Query parameters appended to the POST request when submitting the form in server-driven mode. Typically set to { form_type:  |
 | `showConfirmAlert` | boolean | false | When true, displays a confirmation dialog before submitting the form. Uses the browser default unless customConfirmAlert is provided. |
-| `customConfirmAlert` | ReactNode | Function | false | Custom confirmation UI rendered when showConfirmAlert is true. Receives { onConfirm, onCancel } props. Return a React element that calls onConfirm to proceed or onCancel to abort. |
-| `rjsf_schema` | object | false | Local RJSF schema object with shape { schema, uiSchema, formData }. Enables local mode for client-side form rendering without any server calls. Ignored if api_endpoint is provided. |
-| `onSubmit` | function | false | Client-side submit handler for local mode. Receives the validated formData as its argument. Can return a promise. Ignored if api_endpoint is provided. |
-| `onResponse` | function | false | Callback invoked after a successful form submission. Receives the full server response object (server mode) or the return value of onSubmit (local mode). |
-| `onError` | function | false | Callback invoked when form submission fails. Receives the error object. Use this for toast notifications or error logging. |
-| `customWidgets` | object | false | Map of custom RJSF widget names to React components. Merged with the default widget set. Reference a custom widget in ui_schema via  |
-| `submitButtonContainerId` | string | false | DOM element ID where the submit button should be portaled via React.createPortal. Useful for placing the submit button outside the form, e.g., in a dialog footer. The target element must exist in the DOM when the form mounts. |
+| `customConfirmAlert` | ReactNode | Function | - | Custom confirmation UI rendered when showConfirmAlert is true. Receives { onConfirm, onCancel } props. Return a React element that calls onConfirm to proceed or onCancel to abort. |
+| `rjsf_schema` | object | - | Local RJSF schema object with shape { schema, uiSchema, formData }. Enables local mode for client-side form rendering without any server calls. Ignored if api_endpoint is provided. |
+| `onSubmit` | function | - | Client-side submit handler for local mode. Receives the validated formData as its argument. Can return a promise. Ignored if api_endpoint is provided. |
+| `onResponse` | function | - | Callback invoked after a successful form submission. Receives the full server response object (server mode) or the return value of onSubmit (local mode). |
+| `onError` | function | - | Callback invoked when form submission fails. Receives the error object. Use this for toast notifications or error logging. |
+| `customWidgets` | object | - | Map of custom RJSF widget names to React components. Merged with the default widget set. Reference a custom widget in ui_schema via  |
+| `submitButtonContainerId` | string | - | DOM element ID where the submit button should be portaled via React.createPortal. Useful for placing the submit button outside the form, e.g., in a dialog footer. The target element must exist in the DOM when the form mounts. |
 | `skipAutoRefresh` | boolean | false | When true, prevents the automatic table refresh that normally occurs after a successful form submission in CrudHandler integration. Useful when you want to handle refresh logic manually. |
 
 ### Code Examples

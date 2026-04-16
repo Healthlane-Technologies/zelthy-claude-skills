@@ -261,15 +261,20 @@ function extractProps(src) {
     }
 
     const propRe = /\{\s*name:\s*['"]([^'"]+)['"]\s*,\s*type:\s*['"]([^'"]+)['"]/g;
+    const propStarts = [];
     let pm;
     while ((pm = propRe.exec(blockContent)) !== null) {
-      const name = pm[1];
-      const type = pm[2];
-      const defMatch = blockContent.substring(pm.index).match(/default:\s*([^,}]+)/);
-      const descMatch = blockContent.substring(pm.index).match(/description:\s*['"]([^'"]+)['"]/);
+      propStarts.push({ index: pm.index, name: pm[1], type: pm[2] });
+    }
+    for (let k = 0; k < propStarts.length; k++) {
+      const start = propStarts[k].index;
+      const end = k + 1 < propStarts.length ? propStarts[k + 1].index : blockContent.length;
+      const slice = blockContent.slice(start, end);
+      const defMatch = slice.match(/default:\s*([^,}\n]+)/);
+      const descMatch = slice.match(/description:\s*['"]([^'"]+)['"]/);
       allProps.push({
-        name,
-        type,
+        name: propStarts[k].name,
+        type: propStarts[k].type,
         default: defMatch ? defMatch[1].trim().replace(/['"]/g, '') : '',
         description: descMatch ? descMatch[1] : '',
       });

@@ -167,9 +167,9 @@ Note: `to_state_meta` only appears on audit-log / workflow-transaction entries, 
 | `renderWorkflowTransitions` | (params) => ReactNode | - | Override workflow transition buttons per row. |
 | `customClass` | TableCustomClasses | - | CSS class overrides for table elements. |
 | `customStyle` | TableCustomStyles | - | Style function overrides for table elements. |
-| `apiUrl` | string | false | API endpoint for table data. |
-| `columns` | any[] | false | Optional explicit column definitions. When omitted, columns are derived from the API metadata. |
-| `tableId` | string | false | Stable identifier used for persisted view state. Defaults to apiUrl. |
+| `apiUrl` | string | - | API endpoint for table data. |
+| `columns` | any[] | - | Optional explicit column definitions. When omitted, columns are derived from the API metadata. |
+| `tableId` | string | - | Stable identifier used for persisted view state. Defaults to apiUrl. |
 | `enableDetailViewRoute` | boolean | false | Enable detail view route and  |
 | `renderActions` | (params) => ReactNode | - | Forwarded to every actions cell rendered under this provider. |
 | `renderStatus` | (params) => ReactNode | - | Forwarded to every status cell rendered under this provider. |
@@ -179,9 +179,9 @@ Note: `to_state_meta` only appears on audit-log / workflow-transaction entries, 
 | `customStyle` | TableCustomStyles | - | Inline style function overrides for elements rendered inside the provider. |
 | `formProps` | FormProps | - | Props forwarded to every FormRenderer rendered inside the provider (add button, row-action forms). |
 | `children` | ReactNode | - | Components that should consume the table context. |
-| `children` | ReactNode | default | Table content to render inside the layout shell. |
+| `children` | ReactNode | - | Table content to render inside the layout shell. |
 | `className` | string | default | Additional CSS classes applied on top of the variant classes. |
-| `children` | ReactNode | default | Toolbar content (search, filter, buttons, etc.). |
+| `children` | ReactNode | - | Toolbar content (search, filter, buttons, etc.). |
 | `className` | string | default | Additional CSS classes. |
 | `children` | ReactNode | - | Content rendered when data is available (not loading, not empty, no error). |
 | `className` | string | - | Additional CSS classes applied to the wrapper. |
@@ -961,13 +961,13 @@ const DetailNavigator = () => {
 | `sections` | array | - | Array of section objects, each with key, name, title, data (object), optional extra_html, and optional form ({ is_multistep, form: { json_schema, ui_schema } }). |
 | `row_actions` | array | - | Array of available row-level actions for the current record. |
 | `configurations` | object | - | Additional configuration metadata for the detail view. |
-| `apiUrl` | string | /api/crud | Full API URL already containing object_uuid, action, and view query params. Use for standalone pages. |
-| `objectUuid` | string | /api/crud | Object UUID only. The component builds the full URL from baseApiUrl + objectUuid. |
+| `apiUrl` | string | - | Full API URL already containing object_uuid, action, and view query params. Use for standalone pages. |
+| `objectUuid` | string | - | Object UUID only. The component builds the full URL from baseApiUrl + objectUuid. |
 | `baseApiUrl` | string | /api/crud | Base API URL used when objectUuid is provided. |
 | `onClose` | () => void | - | Close handler forwarded to the detail component (used in drawer contexts). |
 | `customComponent` | React.ComponentType | - | Custom component rendered instead of the default Detail. Receives all context data plus any extra props passed to StandaloneDetailView. |
-| `apiUrl` | string | /api/crud | Full API URL containing object_uuid. Takes priority over objectUuid + baseApiUrl. |
-| `objectUuid` | string | /api/crud | Object UUID. Combined with baseApiUrl to build the fetch URL when apiUrl is not provided. |
+| `apiUrl` | string | - | Full API URL containing object_uuid. Takes priority over objectUuid + baseApiUrl. |
+| `objectUuid` | string | - | Object UUID. Combined with baseApiUrl to build the fetch URL when apiUrl is not provided. |
 | `baseApiUrl` | string | /api/crud | Base API URL used to build the fetch URL. |
 | `children` | React.ReactNode | - | Child components that will have access to the detail view context. |
 | `apiUrl` | string | - | Base API URL. The component appends object_uuid from route params plus action and view query params. |
@@ -978,9 +978,9 @@ const DetailNavigator = () => {
 | `apiUrl` | string | - | Base API URL forwarded to StandaloneDetailView as baseApiUrl. |
 | `selectedRow` | object | - | The full row data object. Forwarded to the custom component. |
 | `customComponent` | React.ComponentType | - | Custom component to render inside the drawer instead of the default Detail. |
-| `open` | boolean | right | Whether the drawer is visible. |
-| `onClose` | () => void | right | Callback invoked when the drawer requests to be closed. |
-| `selectedRow` | Row<any> \\| null | right | The currently selected TanStack table row. Used to derive the default title when no title prop is provided. |
+| `open` | boolean | - | Whether the drawer is visible. |
+| `onClose` | () => void | - | Callback invoked when the drawer requests to be closed. |
+| `selectedRow` | Row<any> \\| null | - | The currently selected TanStack table row. Used to derive the default title when no title prop is provided. |
 | `position` | right \\| left \\| bottom \\| top | right | Side of the screen the drawer slides in from. |
 | `size` | sm \\| md \\| lg \\| xl \\| full | lg | Width (for left/right) or height (for top/bottom) of the drawer (500px for left/right when lg). |
 | `title` | React.ReactNode | - | Custom drawer title. Falls back to UIStore drawerTitle then to an auto-generated title from row data (name, title, email, id, object_uuid, pk). |
@@ -1392,7 +1392,7 @@ const { data, refreshDetail } = useDetailViewContext();
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `table` | TanstackTable<any> | drawer | TanStack table instance that provides row models, column definitions, and table state. |
+| `table` | TanstackTable<any> | - | TanStack table instance that provides row models, column definitions, and table state. |
 | `defaultDetailView` | RowClickAction | RowClickConfig | drawer | Row click behavior configuration. Can be a string ( |
 | `selectedRow` | Row | null | - | Currently selected row object. Used to highlight the active row in the table. |
 | `drawerOpen` | boolean | - | Whether the detail drawer is currently open. Controls visual state of selected row. |
@@ -1441,15 +1441,15 @@ const { data, refreshDetail } = useDetailViewContext();
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `title` | string | ReactNode | true | Header title text or custom React element. Supports plain strings or JSX for rich formatting. |
-| `totalCount` | number | true | Total number of items in the dataset. Displayed as a badge next to the title. |
+| `title` | string | ReactNode | - | Header title text or custom React element. Supports plain strings or JSX for rich formatting. |
+| `totalCount` | number | - | Total number of items in the dataset. Displayed as a badge next to the title. |
 | `showCount` | boolean | true | Show or hide the total count badge next to the title. |
-| `showAddButton` | boolean | true | Show or hide the add/create button in the header actions area. |
-| `addButtonTitle` | string | ReactNode | true | Custom text or element for the add button. Defaults to a standard  |
-| `onAddClick` | function | true | Custom click handler for the add button. Overrides the default behavior of opening the built-in form drawer. |
-| `extraActions` | ReactNode | true | Additional action elements rendered alongside the default add button. Useful for export, import, or bulk action buttons. |
-| `children` | ReactNode | true | Content rendered between the title area and the action buttons. Commonly used for filters, status tabs, or date range selectors. |
-| `api_endpoint` | string | true | API endpoint for the default add form. Used by the built-in form drawer to submit new records. |
+| `showAddButton` | boolean | - | Show or hide the add/create button in the header actions area. |
+| `addButtonTitle` | string | ReactNode | - | Custom text or element for the add button. Defaults to a standard  |
+| `onAddClick` | function | - | Custom click handler for the add button. Overrides the default behavior of opening the built-in form drawer. |
+| `extraActions` | ReactNode | - | Additional action elements rendered alongside the default add button. Useful for export, import, or bulk action buttons. |
+| `children` | ReactNode | - | Content rendered between the title area and the action buttons. Commonly used for filters, status tabs, or date range selectors. |
+| `api_endpoint` | string | - | API endpoint for the default add form. Used by the built-in form drawer to submit new records. |
 | `enableDefaultAddForm` | boolean | true | Enable or disable the built-in form drawer that opens when the add button is clicked. Set to false when using a custom add flow. |
 
 ### Code Examples
@@ -1518,10 +1518,10 @@ const { data, refreshDetail } = useDetailViewContext();
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `searchTerm` | string | Search | Current search input value. Use this for controlled search state. |
-| `onSearchChange` | function | Search | Callback invoked when the search input value changes. Receives the new search string as an argument. |
-| `onUploadClick` | function | Search | Custom handler for the upload button click. Overrides the default upload behavior. |
-| `onDownloadClick` | function | Search | Custom handler for the download button click. Overrides the default download behavior. |
+| `searchTerm` | string | - | Current search input value. Use this for controlled search state. |
+| `onSearchChange` | function | - | Callback invoked when the search input value changes. Receives the new search string as an argument. |
+| `onUploadClick` | function | - | Custom handler for the upload button click. Overrides the default upload behavior. |
+| `onDownloadClick` | function | - | Custom handler for the download button click. Overrides the default download behavior. |
 | `searchPlaceholder` | string | Search | Placeholder text for the search input field. |
 | `showFiltersButton` | boolean | true | Show or hide the filter toggle button that opens the filters panel. |
 | `showSearch` | boolean | true | Show or hide the search input field. |
@@ -1583,7 +1583,7 @@ const { data, refreshDetail } = useDetailViewContext();
 |------|------|---------|-------------|
 | `showRowsPerPage` | boolean | true | Show or hide the rows-per-page selector dropdown. When hidden, the default page size is used. |
 | `rowsPerPageOptions` | number[] | [10 | Array of available page size options displayed in the rows-per-page dropdown. |
-| `className` | string | true | Additional CSS classes applied to the pagination container for custom styling. |
+| `className` | string | - | Additional CSS classes applied to the pagination container for custom styling. |
 | `showPageInfo` | boolean | true | Show or hide the  |
 
 ### Code Examples
@@ -1661,15 +1661,15 @@ import { Filter, XCircle } from 'lucide-react';
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `buttonText` | string | ReactNode | primary | Button label text or custom React element. Supports plain strings or JSX for rich content. |
-| `onClick` | function | primary | Custom click handler. When provided, the built-in drawer behavior is disabled and your handler is called instead. |
+| `buttonText` | string | ReactNode | - | Button label text or custom React element. Supports plain strings or JSX for rich content. |
+| `onClick` | function | - | Custom click handler. When provided, the built-in drawer behavior is disabled and your handler is called instead. |
 | `variant` | string | primary | Button style variant. Controls the visual appearance (color scheme) of the button. |
 | `size` | string | md | Button size. Affects padding, font size, and overall dimensions. |
-| `className` | string | false | Additional CSS classes for custom styling on the button element. |
+| `className` | string | - | Additional CSS classes for custom styling on the button element. |
 | `showIcon` | boolean | false | Show or hide an icon alongside the button text. |
 | `icon` | ReactNode | left | Custom icon element. Only displayed when showIcon is true. |
-| `onFormSuccess` | function | md | Callback invoked after the built-in form is submitted successfully. Useful for triggering data refresh or showing notifications. |
-| `drawerTitle` | string | md | Custom title for the form drawer. Overrides the default title derived from the table context. |
+| `onFormSuccess` | function | - | Callback invoked after the built-in form is submitted successfully. Useful for triggering data refresh or showing notifications. |
+| `drawerTitle` | string | - | Custom title for the form drawer. Overrides the default title derived from the table context. |
 | `drawerSize` | string | md | Size of the form drawer panel. Supports standard drawer size values. |
 
 ### Code Examples
