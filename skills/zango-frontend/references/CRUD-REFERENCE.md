@@ -927,10 +927,10 @@ const customStyle: TableCustomStyles = {
 | `flatData` | T[] | - | Flat (non-grouped) view of all fetched rows. |
 | `isLoading` | boolean | - | True while the initial fetch is in flight. |
 | `isFetching` | boolean | - | True during background refetches. |
-| `error` | Error \\| null | - | Last fetch error, or null when healthy. |
+| `error` | Error \| null | - | Last fetch error, or null when healthy. |
 | `totalCount` | number | - | Total row count across all pages. |
 | `totalDBRowCount` | number | - | Raw DB row count before any client filter. |
-| `metadata` | Record<string, unknown> \\| null | - | Extra metadata from API response. |
+| `metadata` | Record<string, unknown> \| null | - | Extra metadata from API response. |
 | `rawResponse` | unknown | - | Unprocessed API response payload. |
 | `rawTableData` | T[] | - | Rows before table transformations. |
 | `isInfiniteScroll` | boolean | - | Whether infinite-scroll mode is active. |
@@ -946,7 +946,7 @@ const customStyle: TableCustomStyles = {
 | `setFilter` | (key: string, value: unknown) => void | - | Set a single filter by key. |
 | `removeFilter` | (key: string) => void | - | Remove a single filter by key. |
 | `hasFilter` | (key: string) => boolean | - | True when filter key has an active value. |
-| `getFilter` | (key: string) => TableFilter \\| undefined | - | Read one filter value by key. |
+| `getFilter` | (key: string) => TableFilter \| undefined | - | Read one filter value by key. |
 | `currentPage` | number | - | Current page number (1-based). |
 | `setCurrentPage` | (page: number) => void | - | Jump to a specific page. |
 | `totalPages` | number | - | Total number of pages. |
@@ -972,15 +972,15 @@ const customStyle: TableCustomStyles = {
 | `isAllSelected` | boolean | - | True when all page rows are selected. |
 | `isSomeSelected` | boolean | - | True when a partial selection exists. |
 | `hasSelection` | boolean | - | True when at least one row is selected. |
-| `selectedRowIds` | (string \\| number)[] | - | IDs extracted from selectedRows. |
+| `selectedRowIds` | (string \| number)[] | - | IDs extracted from selectedRows. |
 | `isRowSelected` | (row: Row<T>) => boolean | - | Check if a specific row is selected. |
 | `toggleRows` | (rows: Row<T>[]) => void | - | Toggle selection for a set of rows. |
-| `selectByIds` | (ids: (string \\| number)[]) => void | - | Select rows matching given IDs. |
-| `deselectByIds` | (ids: (string \\| number)[]) => void | - | Deselect rows matching given IDs. |
+| `selectByIds` | (ids: (string \| number)[]) => void | - | Select rows matching given IDs. |
+| `deselectByIds` | (ids: (string \| number)[]) => void | - | Deselect rows matching given IDs. |
 | `getSelectedData` | () => T[] | - | Return currently selected rows. |
 | `withSelectedRows` | (callback: (rows: T[]) => void) => void | - | Run callback only if selection is non-empty. |
-| `selectedDetailObjectUuid` | string \\| null | - | UUID of the row open in the detail drawer. |
-| `setSelectedDetailObjectUuid` | (uuid: string \\| null) => void | - | Open detail for a specific UUID. |
+| `selectedDetailObjectUuid` | string \| null | - | UUID of the row open in the detail drawer. |
+| `setSelectedDetailObjectUuid` | (uuid: string \| null) => void | - | Open detail for a specific UUID. |
 | `detailDrawerOpen` | boolean | - | True when the detail drawer is visible. |
 | `setDetailDrawerOpen` | (open: boolean) => void | - | Programmatically show/hide the drawer. |
 | `handleRowClick` | (row: Row<T>, event?: React.MouseEvent) => void | - | Default row-click handler (opens drawer). |
@@ -1010,7 +1010,7 @@ const customStyle: TableCustomStyles = {
 | `pinColumnLeft` | (columnId: string) => void | - | Pin a column to the left. |
 | `pinColumnRight` | (columnId: string) => void | - | Pin a column to the right. |
 | `unpinColumn` | (columnId: string) => void | - | Remove a column from pinning. |
-| `table` | TanstackTable<T> \\| null | - | Raw TanStack Table instance (context mode only). |
+| `table` | TanstackTable<T> \| null | - | Raw TanStack Table instance (context mode only). |
 | `columns` | ColumnDef<T>[] | - | Active column definition array. |
 | `refresh` | () => void | - | Trigger a data refresh. |
 | `refetch` | () => void | - | Alias for refresh (React Query style). |
@@ -1018,7 +1018,7 @@ const customStyle: TableCustomStyles = {
 | `isRefreshing` | boolean | - | True while a background refetch runs. |
 | `canRefresh` | boolean | - | True when not loading or fetching. |
 | `hasError` | boolean | - | True when error is non-null. |
-| `exportData` | (format?: json \\| csv \\| xlsx) => void | - | Download current page data as a file. |
+| `exportData` | (format?: json \| csv \| xlsx) => void | - | Download current page data as a file. |
 | `printData` | () => void | - | Open a print-friendly table window. |
 | `performBulkAction` | (action: string, selectedRows?: T[]) => void | - | Execute a named bulk action on rows. |
 | `resetTable` | () => void | - | Clear filters, selection, sort, go to page 1. |
@@ -1245,10 +1245,10 @@ const {
 | `data` | object | - | Complete detail response from the API, containing all fields and nested data for the record. |
 | `api_endpoint` | string | - | The API endpoint used to fetch the detail data. |
 | `loading` | boolean | - | Whether the detail data is currently being fetched. |
-| `error` | string \\| null | - | Error message if the data fetch failed, or null if successful. |
+| `error` | string \| null | - | Error message if the data fetch failed, or null if successful. |
 | `onRefresh` | function | - | Callback to re-fetch the detail data. Useful after performing mutations like status transitions or edits. |
 | `objectUuid` | string | - | The unique object UUID of the current record. |
-| `pk` | string \\| number | - | The primary key of the current record. |
+| `pk` | string \| number | - | The primary key of the current record. |
 | `title` | string | - | The display title for the detail view, derived from the record data. |
 | `general_details` | object | - | General details section. fields is an object keyed by field_name; each entry is { display_name, value } only. |
 | `workflow_details` | object | - | Workflow data including current_status (string), current_status_meta ({ status_label, status_color }), next_transitions (array of { name, display_name, is_form_based, confirmation_message, description, from, to }), and tag_details (array of { name, state, enable, disable, is_enable_allowed, is_disable_allowed }). |
@@ -1274,9 +1274,9 @@ const {
 | `customComponent` | React.ComponentType | - | Custom component to render inside the drawer instead of the default Detail. |
 | `open` | boolean | - | Whether the drawer is visible. |
 | `onClose` | () => void | - | Callback invoked when the drawer requests to be closed. |
-| `selectedRow` | Row<any> \\| null | - | The currently selected TanStack table row. Used to derive the default title when no title prop is provided. |
-| `position` | right \\| left \\| bottom \\| top | right | Side of the screen the drawer slides in from. |
-| `size` | sm \\| md \\| lg \\| xl \\| full | lg | Width (for left/right) or height (for top/bottom) of the drawer (500px for left/right when lg). |
+| `selectedRow` | Row<any> \| null | - | The currently selected TanStack table row. Used to derive the default title when no title prop is provided. |
+| `position` | right \| left \| bottom \| top | right | Side of the screen the drawer slides in from. |
+| `size` | sm \| md \| lg \| xl \| full | lg | Width (for left/right) or height (for top/bottom) of the drawer (500px for left/right when lg). |
 | `title` | React.ReactNode | - | Custom drawer title. Falls back to UIStore drawerTitle then to an auto-generated title from row data (name, title, email, id, object_uuid, pk). |
 | `children` | React.ReactNode | - | Drawer content. When omitted the drawer renders a default key/value list from selectedRow.original. |
 | `className` | string | - | Additional CSS classes merged onto the drawer container. |
@@ -2062,7 +2062,7 @@ import { Filter, XCircle } from 'lucide-react';
 | `menuOpen` | boolean | - | Current state of the dropdown menu. Use this to control visual state of custom menus. |
 | `setMenuOpen` | (open: boolean) => void | - | Control the dropdown menu visibility. Call with true to open, false to close. |
 | `value` | any | - | The raw status value from the API response. Can be a string, object, or HTML string. |
-| `statusValue` | { status_label: string; status_color?: string } | undefined | - | The resolved status object when value is an object with status_label. Undefined when value is a plain string or HTML. |
+| `statusValue` | { status_label: string; status_color?: string } \| undefined | - | The resolved status object when value is an object with status_label. Undefined when value is a plain string or HTML. |
 | `isObject` | boolean | - | True if the raw value is an object with a status_label field (e.g., status_label Active, status_color 12B76A). |
 | `isString` | boolean | - | True if the raw value is a plain string. |
 | `isHtml` | boolean | - | True if the raw value contains HTML markup that needs special rendering. |
@@ -2075,7 +2075,7 @@ import { Filter, XCircle } from 'lucide-react';
 | `visibleTransitions` | Transition[] | - | First two transitions shown inline (default behavior splits at index 2). |
 | `dropdownTransitions` | Transition[] | - | Remaining transitions beyond the first two, intended for a dropdown overflow menu. |
 | `row` | any | - | The resolved row data object (row.original unwrapped). |
-| `onTransitionClick` | (transition: Transition, e?: MouseEvent) => void | - | Trigger the transition execution pipeline. Handles form-based drawers, simple confirmation dialogs, and table refresh. |
+| `onTransitionClick` | (transition: Transition, e?: React.MouseEvent) => void | - | Trigger the transition execution pipeline. Handles form-based drawers, simple confirmation dialogs, and table refresh. |
 | `menuOpen` | boolean | - | Current state of the overflow dropdown menu. |
 | `setMenuOpen` | (open: boolean) => void | - | Control the overflow dropdown visibility. |
 | `row` | any | - | The TanStack row object or raw row data. Actions are read from row.original.actions_col or row.original.row_actions. |
@@ -2088,30 +2088,30 @@ import { Filter, XCircle } from 'lucide-react';
 | `status` | string | - | The status key used for default color lookup (e.g., active, pending, rejected). Case-insensitive. |
 | `label` | string | - | Display label shown in the badge. Defaults to the status key with underscores replaced by spaces. |
 | `color` | string | - | Custom hex or CSS color that overrides the built-in status color map. |
-| `showDot` | boolean | - | Show a small colored dot before the label. Defaults to true. |
-| `size` | sm \\| md \\| lg | - | Size variant controlling padding and font size. Defaults to md. |
+| `showDot` | boolean | true | Show a small colored dot before the label. |
+| `size` | sm \| md \| lg | md | Size variant controlling padding and font size. |
 | `className` | string | - | Additional CSS classes applied to the badge container. |
 | `transition` | Transition | - | The transition object with name and display_name. Drives the API call and button label. |
 | `apiUrl` | string | - | API endpoint URL. The component extracts object_uuid or pk from the URL automatically. |
 | `onSuccess` | () => void | - | Called after a successful transition. |
 | `onError` | (error: Error) => void | - | Called when the transition fails. |
-| `beforeClick` | () => Promise<void> \\| void | - | Hook called before executing the transition. Throw to abort. |
+| `beforeClick` | () => Promise<void> \| void | - | Hook called before executing the transition. Throw to abort. |
 | `afterClick` | (success: boolean) => void | - | Hook called after execution regardless of outcome. |
-| `showConfirmation` | boolean | - | Force a confirmation dialog before executing. Defaults to false. |
+| `showConfirmation` | boolean | false | Force a confirmation dialog before executing. |
 | `confirmationMessage` | string | - | Custom message shown in the confirmation dialog. |
-| `variant` | primary \\| secondary \\| outline \\| ghost \\| danger | - | Button visual variant. Defaults to primary. |
-| `size` | sm \\| md \\| lg | - | Button size variant. Defaults to md. |
-| `disabled` | boolean | - | Disable the button. Defaults to false. |
+| `variant` | primary \| secondary \| outline \| ghost \| danger | primary | Button visual variant. |
+| `size` | sm \| md \| lg | md | Button size variant. |
+| `disabled` | boolean | false | Disable the button. |
 | `className` | string | - | Additional CSS classes applied to the button. |
-| `tag` | TagDetail | - | The tag detail object from the workflow API. Contains name, state (enabled \\| disabled), enable/disable configs, and permission flags. |
+| `tag` | TagDetail | - | The tag detail object from the workflow API. Contains name, state (enabled \| disabled), enable/disable configs, and permission flags. |
 | `apiUrl` | string | - | API endpoint URL. object_uuid or pk is extracted from the URL automatically. |
 | `onToggle` | (newState: boolean) => void | - | Called with the new enabled state after a successful toggle. |
 | `onError` | (error: Error) => void | - | Called when the toggle operation fails. |
-| `beforeToggle` | () => Promise<void> \\| void | - | Hook called before toggling. Throw to abort. |
+| `beforeToggle` | () => Promise<void> \| void | - | Hook called before toggling. Throw to abort. |
 | `afterToggle` | (success: boolean) => void | - | Hook called after toggle regardless of outcome. |
 | `label` | string | - | Label displayed next to the switch. Defaults to the tag name with underscores replaced by spaces. |
-| `size` | sm \\| md \\| lg | - | Size variant for the switch. Defaults to md. |
-| `disabled` | boolean | - | Disable the switch. Permission flags from TagDetail also prevent toggling when not allowed. |
+| `size` | sm \| md \| lg | md | Size variant for the switch. |
+| `disabled` | boolean | false | Disable the switch. Permission flags from TagDetail also prevent toggling when not allowed. |
 | `className` | string | - | Additional CSS classes applied to the outer container. |
 
 ### Code Examples

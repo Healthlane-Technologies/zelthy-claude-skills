@@ -180,7 +180,7 @@ import { MoreHorizontal } from "lucide-react";
             },
             {
               name: 'statusValue',
-              type: '{ status_label: string; status_color?: string } | undefined',
+              type: '{ status_label: string; status_color?: string } \| undefined',
               description: 'The resolved status object when value is an object with status_label. Undefined when value is a plain string or HTML.',
             },
             {
@@ -407,7 +407,7 @@ import { MoreHorizontal } from "lucide-react";
             },
             {
               name: 'onTransitionClick',
-              type: '(transition: Transition, e?: MouseEvent) => void',
+              type: '(transition: Transition, e?: React.MouseEvent) => void',
               description: 'Trigger the transition execution pipeline. Handles form-based drawers, simple confirmation dialogs, and table refresh.',
             },
             {
@@ -655,12 +655,14 @@ import { MoreHorizontal } from "lucide-react";
               {
                 name: 'showDot',
                 type: 'boolean',
-                description: 'Show a small colored dot before the label. Defaults to true.',
+                default: 'true',
+                description: 'Show a small colored dot before the label.',
               },
               {
                 name: 'size',
-                type: 'sm \\| md \\| lg',
-                description: 'Size variant controlling padding and font size. Defaults to md.',
+                type: 'sm \| md \| lg',
+                default: 'md',
+                description: 'Size variant controlling padding and font size.',
               },
               {
                 name: 'className',
@@ -732,7 +734,7 @@ import { MoreHorizontal } from "lucide-react";
               },
               {
                 name: 'beforeClick',
-                type: '() => Promise<void> \\| void',
+                type: '() => Promise<void> \| void',
                 description: 'Hook called before executing the transition. Throw to abort.',
               },
               {
@@ -743,7 +745,8 @@ import { MoreHorizontal } from "lucide-react";
               {
                 name: 'showConfirmation',
                 type: 'boolean',
-                description: 'Force a confirmation dialog before executing. Defaults to false.',
+                default: 'false',
+                description: 'Force a confirmation dialog before executing.',
               },
               {
                 name: 'confirmationMessage',
@@ -752,18 +755,21 @@ import { MoreHorizontal } from "lucide-react";
               },
               {
                 name: 'variant',
-                type: 'primary \\| secondary \\| outline \\| ghost \\| danger',
-                description: 'Button visual variant. Defaults to primary.',
+                type: 'primary \| secondary \| outline \| ghost \| danger',
+                default: 'primary',
+                description: 'Button visual variant.',
               },
               {
                 name: 'size',
-                type: 'sm \\| md \\| lg',
-                description: 'Button size variant. Defaults to md.',
+                type: 'sm \| md \| lg',
+                default: 'md',
+                description: 'Button size variant.',
               },
               {
                 name: 'disabled',
                 type: 'boolean',
-                description: 'Disable the button. Defaults to false.',
+                default: 'false',
+                description: 'Disable the button.',
               },
               {
                 name: 'className',
@@ -803,13 +809,19 @@ import { MoreHorizontal } from "lucide-react";
             calls the Zango API to enable or disable the tag, handles confirmation dialogs, and
             fires lifecycle hooks. Intended for use in detail views or custom tag column renderers.
           </p>
+          <p className="mb-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            Note: TagSwitch expects a full tag detail object (with enable/disable metadata), while{' '}
+            <InlineCode>renderTags</InlineCode> receives only <InlineCode>string[]</InlineCode>.
+            Use TagSwitch inside <InlineCode>renderWorkflowTransitions</InlineCode> or{' '}
+            <InlineCode>DetailWrapper</InlineCode>&apos;s custom component where the full tag shape is available.
+          </p>
           <PropsTable
             props={[
               {
                 name: 'tag',
                 type: 'TagDetail',
                 required: true,
-                description: 'The tag detail object from the workflow API. Contains name, state (enabled \\| disabled), enable/disable configs, and permission flags.',
+                description: 'The tag detail object from the workflow API. Contains name, state (enabled \| disabled), enable/disable configs, and permission flags.',
               },
               {
                 name: 'apiUrl',
@@ -829,7 +841,7 @@ import { MoreHorizontal } from "lucide-react";
               },
               {
                 name: 'beforeToggle',
-                type: '() => Promise<void> \\| void',
+                type: '() => Promise<void> \| void',
                 description: 'Hook called before toggling. Throw to abort.',
               },
               {
@@ -844,12 +856,14 @@ import { MoreHorizontal } from "lucide-react";
               },
               {
                 name: 'size',
-                type: 'sm \\| md \\| lg',
-                description: 'Size variant for the switch. Defaults to md.',
+                type: 'sm \| md \| lg',
+                default: 'md',
+                description: 'Size variant for the switch.',
               },
               {
                 name: 'disabled',
                 type: 'boolean',
+                default: 'false',
                 description: 'Disable the switch. Permission flags from TagDetail also prevent toggling when not allowed.',
               },
               {

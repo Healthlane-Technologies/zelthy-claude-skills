@@ -38,10 +38,10 @@ const UseTableDocs = () => {
             { name: 'flatData', type: 'T[]', description: 'Flat (non-grouped) view of all fetched rows.' },
             { name: 'isLoading', type: 'boolean', description: 'True while the initial fetch is in flight.' },
             { name: 'isFetching', type: 'boolean', description: 'True during background refetches.' },
-            { name: 'error', type: 'Error \\| null', description: 'Last fetch error, or null when healthy.' },
+            { name: 'error', type: 'Error \| null', description: 'Last fetch error, or null when healthy.' },
             { name: 'totalCount', type: 'number', description: 'Total row count across all pages.' },
             { name: 'totalDBRowCount', type: 'number', description: 'Raw DB row count before any client filter.' },
-            { name: 'metadata', type: 'Record<string, unknown> \\| null', description: 'Extra metadata from API response.' },
+            { name: 'metadata', type: 'Record<string, unknown> \| null', description: 'Extra metadata from API response.' },
             { name: 'rawResponse', type: 'unknown', description: 'Unprocessed API response payload.' },
             { name: 'rawTableData', type: 'T[]', description: 'Rows before table transformations.' },
             { name: 'isInfiniteScroll', type: 'boolean', description: 'Whether infinite-scroll mode is active.' },
@@ -105,7 +105,7 @@ return (
             { name: 'setFilter', type: '(key: string, value: unknown) => void', description: 'Set a single filter by key.' },
             { name: 'removeFilter', type: '(key: string) => void', description: 'Remove a single filter by key.' },
             { name: 'hasFilter', type: '(key: string) => boolean', description: 'True when filter key has an active value.' },
-            { name: 'getFilter', type: '(key: string) => TableFilter \\| undefined', description: 'Read one filter value by key.' },
+            { name: 'getFilter', type: '(key: string) => TableFilter \| undefined', description: 'Read one filter value by key.' },
           ]}
         />
         <CodeBlock
@@ -192,11 +192,11 @@ return (
             { name: 'isAllSelected', type: 'boolean', description: 'True when all page rows are selected.' },
             { name: 'isSomeSelected', type: 'boolean', description: 'True when a partial selection exists.' },
             { name: 'hasSelection', type: 'boolean', description: 'True when at least one row is selected.' },
-            { name: 'selectedRowIds', type: '(string \\| number)[]', description: 'IDs extracted from selectedRows.' },
+            { name: 'selectedRowIds', type: '(string \| number)[]', description: 'IDs extracted from selectedRows.' },
             { name: 'isRowSelected', type: '(row: Row<T>) => boolean', description: 'Check if a specific row is selected.' },
             { name: 'toggleRows', type: '(rows: Row<T>[]) => void', description: 'Toggle selection for a set of rows.' },
-            { name: 'selectByIds', type: '(ids: (string \\| number)[]) => void', description: 'Select rows matching given IDs.' },
-            { name: 'deselectByIds', type: '(ids: (string \\| number)[]) => void', description: 'Deselect rows matching given IDs.' },
+            { name: 'selectByIds', type: '(ids: (string \| number)[]) => void', description: 'Select rows matching given IDs.' },
+            { name: 'deselectByIds', type: '(ids: (string \| number)[]) => void', description: 'Deselect rows matching given IDs.' },
             { name: 'getSelectedData', type: '() => T[]', description: 'Return currently selected rows.' },
             { name: 'withSelectedRows', type: '(callback: (rows: T[]) => void) => void', description: 'Run callback only if selection is non-empty.' },
           ]}
@@ -224,8 +224,8 @@ return (
         </p>
         <PropsTable
           props={[
-            { name: 'selectedDetailObjectUuid', type: 'string \\| null', description: 'UUID of the row open in the detail drawer.' },
-            { name: 'setSelectedDetailObjectUuid', type: '(uuid: string \\| null) => void', description: 'Open detail for a specific UUID.' },
+            { name: 'selectedDetailObjectUuid', type: 'string \| null', description: 'UUID of the row open in the detail drawer.' },
+            { name: 'setSelectedDetailObjectUuid', type: '(uuid: string \| null) => void', description: 'Open detail for a specific UUID.' },
             { name: 'detailDrawerOpen', type: 'boolean', description: 'True when the detail drawer is visible.' },
             { name: 'setDetailDrawerOpen', type: '(open: boolean) => void', description: 'Programmatically show/hide the drawer.' },
             { name: 'handleRowClick', type: '(row: Row<T>, event?: React.MouseEvent) => void', description: 'Default row-click handler (opens drawer).' },
@@ -324,7 +324,7 @@ return (
         </p>
         <PropsTable
           props={[
-            { name: 'table', type: 'TanstackTable<T> \\| null', description: 'Raw TanStack Table instance (context mode only).' },
+            { name: 'table', type: 'TanstackTable<T> \| null', description: 'Raw TanStack Table instance (context mode only).' },
             { name: 'columns', type: 'ColumnDef<T>[]', description: 'Active column definition array.' },
           ]}
         />
@@ -342,7 +342,7 @@ return (
             { name: 'isRefreshing', type: 'boolean', description: 'True while a background refetch runs.' },
             { name: 'canRefresh', type: 'boolean', description: 'True when not loading or fetching.' },
             { name: 'hasError', type: 'boolean', description: 'True when error is non-null.' },
-            { name: 'exportData', type: '(format?: json \\| csv \\| xlsx) => void', description: 'Download current page data as a file.' },
+            { name: 'exportData', type: '(format?: json \| csv \| xlsx) => void', description: 'Download current page data as a file.' },
             { name: 'printData', type: '() => void', description: 'Open a print-friendly table window.' },
             { name: 'performBulkAction', type: '(action: string, selectedRows?: T[]) => void', description: 'Execute a named bulk action on rows.' },
             { name: 'resetTable', type: '() => void', description: 'Clear filters, selection, sort, go to page 1.' },

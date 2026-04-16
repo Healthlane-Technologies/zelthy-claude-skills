@@ -88,7 +88,7 @@ const DetailViewsDocs = () => {
             },
             {
               name: 'error',
-              type: 'string \\| null',
+              type: 'string \| null',
               description: 'Error message if the data fetch failed, or null if successful.',
             },
             {
@@ -103,7 +103,7 @@ const DetailViewsDocs = () => {
             },
             {
               name: 'pk',
-              type: 'string \\| number',
+              type: 'string \| number',
               description: 'The primary key of the current record.',
             },
             {
@@ -689,19 +689,19 @@ export default CustomMainDetail;`}
             },
             {
               name: 'selectedRow',
-              type: 'Row<any> \\| null',
+              type: 'Row<any> \| null',
               required: true,
               description: 'The currently selected TanStack table row. Used to derive the default title when no title prop is provided.',
             },
             {
               name: 'position',
-              type: 'right \\| left \\| bottom \\| top',
+              type: 'right \| left \| bottom \| top',
               default: 'right',
               description: 'Side of the screen the drawer slides in from.',
             },
             {
               name: 'size',
-              type: 'sm \\| md \\| lg \\| xl \\| full',
+              type: 'sm \| md \| lg \| xl \| full',
               default: 'lg',
               description: 'Width (for left/right) or height (for top/bottom) of the drawer (500px for left/right when lg).',
             },
