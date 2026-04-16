@@ -2050,27 +2050,69 @@ import { Filter, XCircle } from 'lucide-react';
 
 ## Render Props (Advanced)
 
-**Sections:** Overview | Actions Column | Status Column | Tags Column
+**Sections:** Overview | Actions Column | Status Column | Tags Column | Workflow Transitions Column | Default Render Targets | ActionsCell | StatusCell | WorkflowTransitionsCell | StatusBadge | StatusButton | TagSwitch
 
 ### Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `actions` | any[] | - | Array of available action objects for the current row, each containing name, label, and configuration. |
-| `row` | any | - | The full table row data object. Access fields via row.original for raw API data. |
-| `onActionClick` | (action) => void | - | Trigger the action execution pipeline for a given action. Handles confirmations, API calls, and table refresh. |
+| `actions` | RowAction[] | - | Array of available action objects for the current row. Each action has key, name, type, and optional description, confirmation_message, and icon fields. |
+| `row` | any | - | The resolved row data object (row.original unwrapped). Access fields directly — no need for row.original. |
+| `onActionClick` | (action: RowAction) => void | - | Trigger the action execution pipeline for a given action. Handles confirmations, API calls, and table refresh. |
 | `menuOpen` | boolean | - | Current state of the dropdown menu. Use this to control visual state of custom menus. |
-| `setMenuOpen` | (open) => void | - | Control the dropdown menu visibility. Call with true to open, false to close. |
+| `setMenuOpen` | (open: boolean) => void | - | Control the dropdown menu visibility. Call with true to open, false to close. |
 | `value` | any | - | The raw status value from the API response. Can be a string, object, or HTML string. |
-| `statusValue` | string | - | The resolved status string ready for display. Extracted from value regardless of its original format. |
-| `isObject` | boolean | - | True if the raw value is an object (e.g., { status_label:  |
+| `statusValue` | { status_label: string; status_color?: string } | undefined | - | The resolved status object when value is an object with status_label. Undefined when value is a plain string or HTML. |
+| `isObject` | boolean | - | True if the raw value is an object with a status_label field (e.g., status_label Active, status_color 12B76A). |
 | `isString` | boolean | - | True if the raw value is a plain string. |
 | `isHtml` | boolean | - | True if the raw value contains HTML markup that needs special rendering. |
-| `tags` | any[] | - | The complete array of all tags assigned to the row. |
-| `visibleTags` | any[] | - | Subset of tags displayed inline, sliced to fit within the maxVisible limit. |
-| `remainingTags` | any[] | - | Tags that overflow beyond the visible limit. Display these in a popover or tooltip. |
+| `tags` | string[] | - | The complete array of all tag strings assigned to the row. |
+| `visibleTags` | string[] | - | Subset of tags displayed inline, sliced to fit within the maxVisible limit. |
+| `remainingTags` | string[] | - | Tags that overflow beyond the visible limit. Display these in a popover or tooltip. |
 | `hasMoreTags` | boolean | - | True if there are more tags than the maxVisible count allows. Use to conditionally render overflow UI. |
-| `maxVisible` | number | - | The maximum number of tags shown inline before overflow. Determined by the table column configuration. |
+| `maxVisible` | number | - | The maximum number of tags shown inline before overflow. Default is 2, determined by the table column configuration. |
+| `transitions` | Transition[] | - | Full array of available workflow transitions for the row. Each transition has name, display_name, is_form_based, confirmation_message, and description fields. |
+| `visibleTransitions` | Transition[] | - | First two transitions shown inline (default behavior splits at index 2). |
+| `dropdownTransitions` | Transition[] | - | Remaining transitions beyond the first two, intended for a dropdown overflow menu. |
+| `row` | any | - | The resolved row data object (row.original unwrapped). |
+| `onTransitionClick` | (transition: Transition, e?: MouseEvent) => void | - | Trigger the transition execution pipeline. Handles form-based drawers, simple confirmation dialogs, and table refresh. |
+| `menuOpen` | boolean | - | Current state of the overflow dropdown menu. |
+| `setMenuOpen` | (open: boolean) => void | - | Control the overflow dropdown visibility. |
+| `row` | any | - | The TanStack row object or raw row data. Actions are read from row.original.actions_col or row.original.row_actions. |
+| `renderActions` | (params) => ReactNode | - | Optional nested render prop passed through to customize the action layout while keeping the drawer and confirmation logic. |
+| `value` | any | - | The raw status value from the API — string, HTML string, or object with status_label. |
+| `renderStatus` | (params) => ReactNode | - | Optional nested render prop for custom rendering inside the cell. |
+| `transitions` | Transition[] | - | Array of available transitions. Each has name, display_name, is_form_based, confirmation_message, and description. |
+| `row` | any | - | The row data object used to extract object_uuid for API calls. |
+| `renderWorkflowTransitions` | (params) => ReactNode | - | Optional nested render prop for custom button layout while keeping execution logic. |
+| `status` | string | - | The status key used for default color lookup (e.g., active, pending, rejected). Case-insensitive. |
+| `label` | string | - | Display label shown in the badge. Defaults to the status key with underscores replaced by spaces. |
+| `color` | string | - | Custom hex or CSS color that overrides the built-in status color map. |
+| `showDot` | boolean | - | Show a small colored dot before the label. Defaults to true. |
+| `size` | sm \\| md \\| lg | - | Size variant controlling padding and font size. Defaults to md. |
+| `className` | string | - | Additional CSS classes applied to the badge container. |
+| `transition` | Transition | - | The transition object with name and display_name. Drives the API call and button label. |
+| `apiUrl` | string | - | API endpoint URL. The component extracts object_uuid or pk from the URL automatically. |
+| `onSuccess` | () => void | - | Called after a successful transition. |
+| `onError` | (error: Error) => void | - | Called when the transition fails. |
+| `beforeClick` | () => Promise<void> \\| void | - | Hook called before executing the transition. Throw to abort. |
+| `afterClick` | (success: boolean) => void | - | Hook called after execution regardless of outcome. |
+| `showConfirmation` | boolean | - | Force a confirmation dialog before executing. Defaults to false. |
+| `confirmationMessage` | string | - | Custom message shown in the confirmation dialog. |
+| `variant` | primary \\| secondary \\| outline \\| ghost \\| danger | - | Button visual variant. Defaults to primary. |
+| `size` | sm \\| md \\| lg | - | Button size variant. Defaults to md. |
+| `disabled` | boolean | - | Disable the button. Defaults to false. |
+| `className` | string | - | Additional CSS classes applied to the button. |
+| `tag` | TagDetail | - | The tag detail object from the workflow API. Contains name, state (enabled \\| disabled), enable/disable configs, and permission flags. |
+| `apiUrl` | string | - | API endpoint URL. object_uuid or pk is extracted from the URL automatically. |
+| `onToggle` | (newState: boolean) => void | - | Called with the new enabled state after a successful toggle. |
+| `onError` | (error: Error) => void | - | Called when the toggle operation fails. |
+| `beforeToggle` | () => Promise<void> \\| void | - | Hook called before toggling. Throw to abort. |
+| `afterToggle` | (success: boolean) => void | - | Hook called after toggle regardless of outcome. |
+| `label` | string | - | Label displayed next to the switch. Defaults to the tag name with underscores replaced by spaces. |
+| `size` | sm \\| md \\| lg | - | Size variant for the switch. Defaults to md. |
+| `disabled` | boolean | - | Disable the switch. Permission flags from TagDetail also prevent toggling when not allowed. |
+| `className` | string | - | Additional CSS classes applied to the outer container. |
 
 ### Code Examples
 
@@ -2080,14 +2122,17 @@ import { Table } from "@zango-core/crud/table";
 <Table
   apiUrl="/api/users"
   tableMetadataObj={metadata}
-  renderActions={({ actions, row, onActionClick }) => (
+  renderActions={({ actions, row, onActionClick, menuOpen, setMenuOpen }) => (
     // Custom actions UI
   )}
-  renderStatus={({ statusValue, isObject }) => (
+  renderStatus={({ value, statusValue, isObject, isString, isHtml }) => (
     // Custom status badge
   )}
-  renderTags={({ visibleTags, remainingTags, hasMoreTags }) => (
+  renderTags={({ tags, visibleTags, remainingTags, hasMoreTags, maxVisible }) => (
     // Custom tag layout
+  )}
+  renderWorkflowTransitions={({ transitions, visibleTransitions, dropdownTransitions, row, onTransitionClick, menuOpen, setMenuOpen }) => (
+    // Custom workflow transition buttons
   )}
 />
 ```
@@ -2114,7 +2159,7 @@ import { MoreHorizontal } from "lucide-react";
         {/* Inline action buttons */}
         {inlineActions.map((action) => (
           <Button
-            key={action.name}
+            key={action.key}
             variant="ghost"
             size="sm"
             onClick={(e) => {
@@ -2122,7 +2167,7 @@ import { MoreHorizontal } from "lucide-react";
               onActionClick(action);
             }}
           >
-            {action.label}
+            {action.name}
           </Button>
         ))}
 
@@ -2141,10 +2186,10 @@ import { MoreHorizontal } from "lucide-react";
             <DropdownMenuContent align="end">
               {overflowActions.map((action) => (
                 <DropdownMenuItem
-                  key={action.name}
+                  key={action.key}
                   onClick={() => onActionClick(action)}
                 >
-                  {action.label}
+                  {action.name}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -2169,9 +2214,6 @@ import { MoreHorizontal } from "lucide-react";
       rejected: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
     };
 
-    const key = statusValue?.toLowerCase() || 'inactive';
-    const colors = statusColors[key] || statusColors.inactive;
-
     // Handle HTML status values
     if (isHtml) {
       return (
@@ -2182,12 +2224,29 @@ import { MoreHorizontal } from "lucide-react";
       );
     }
 
+    // Handle object status values
+    if (isObject && statusValue) {
+      const key = statusValue.status_label?.toLowerCase() || 'inactive';
+      const colors = statusColors[key] || statusColors.inactive;
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
+          {statusValue.status_label}
+        </span>
+      );
+    }
+
+    // Handle plain string status
+    const key = (isString ? value : '').toLowerCase();
+    const colors = statusColors[key] || statusColors.inactive;
     return (
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}
       >
         <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
-        {statusValue}
+        {value}
       </span>
     );
   }}
@@ -2223,7 +2282,7 @@ import {
             key={index}
             className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${tagColors[index % tagColors.length]}`}
           >
-            {typeof tag === 'object' ? tag.label || tag.name : tag}
+            {tag}
           </span>
         ))}
 
@@ -2243,7 +2302,7 @@ import {
                       key={index}
                       className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-white border"
                     >
-                      {typeof tag === 'object' ? tag.label || tag.name : tag}
+                      {tag}
                     </span>
                   ))}
                 </div>
@@ -2255,6 +2314,189 @@ import {
     );
   }}
 />
+```
+
+```jsx
+import { MoreHorizontal } from "lucide-react";
+
+<Table
+  apiUrl="/api/cases"
+  tableMetadataObj={metadata}
+  renderWorkflowTransitions={({
+    transitions,
+    visibleTransitions,
+    dropdownTransitions,
+    row,
+    onTransitionClick,
+    menuOpen,
+    setMenuOpen,
+  }) => (
+    <div className="flex items-center gap-1">
+      {visibleTransitions.map((t) => (
+        <button
+          key={t.name}
+          className="px-3 py-1 text-xs font-medium rounded-md bg-brand-50 text-brand-700 hover:bg-brand-100 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTransitionClick(t, e);
+          }}
+        >
+          {t.display_name}
+        </button>
+      ))}
+
+      {dropdownTransitions.length > 0 && (
+        <div className="relative">
+          <button
+            className="p-1 hover:bg-gray-100 rounded-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(!menuOpen);
+            }}
+          >
+            <MoreHorizontal className="w-4 h-4 text-gray-500" />
+          </button>
+
+          {menuOpen && (
+            <div className="absolute right-0 mt-1 w-44 bg-white border shadow-lg rounded-sm z-50">
+              {dropdownTransitions.map((t) => (
+                <button
+                  key={t.name}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTransitionClick(t, e);
+                    setMenuOpen(false);
+                  }}
+                >
+                  {t.display_name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )}
+/>
+```
+
+```jsx
+import { ActionsCell } from "@zango-core/crud/table";
+
+// Use as the direct return of renderActions to compose with a wrapper
+<Table
+  apiUrl="/api/users"
+  tableMetadataObj={metadata}
+  renderActions={(args) => (
+    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+      <ActionsCell row={args.row} />
+    </div>
+  )}
+/>
+```
+
+```jsx
+import { StatusCell } from "@zango-core/crud/table";
+
+// Wrap StatusCell with a fixed-width container
+<Table
+  apiUrl="/api/orders"
+  tableMetadataObj={metadata}
+  renderStatus={(args) => (
+    <div className="w-28">
+      <StatusCell value={args.value} />
+    </div>
+  )}
+/>
+```
+
+```jsx
+import { WorkflowTransitionsCell } from "@zango-core/crud/table";
+
+// Re-use default cell inside a render prop wrapper
+<Table
+  apiUrl="/api/cases"
+  tableMetadataObj={metadata}
+  renderWorkflowTransitions={(args) => (
+    <div className="min-w-[160px]">
+      <WorkflowTransitionsCell
+        transitions={args.transitions}
+        row={args.row}
+      />
+    </div>
+  )}
+/>
+```
+
+```jsx
+import { StatusBadge } from "@zango-core/crud/table";
+
+// Use default colors from built-in map
+<StatusBadge status="active" />
+
+// Override color for a custom status
+<StatusBadge status="under_review" label="Under Review" color="#6366F1" />
+
+// Use inside renderStatus
+<Table
+  apiUrl="/api/orders"
+  tableMetadataObj={metadata}
+  renderStatus={({ value, statusValue, isObject, isString }) => {
+    if (isObject && statusValue) {
+      return (
+        <StatusBadge
+          status={statusValue.status_label}
+          color={statusValue.status_color}
+        />
+      );
+    }
+    return <StatusBadge status={isString ? value : String(value)} />;
+  }}
+/>
+```
+
+```jsx
+import { StatusButton } from "@zango-core/crud/table";
+
+// Inside renderWorkflowTransitions
+<Table
+  apiUrl="/api/cases"
+  tableMetadataObj={metadata}
+  renderWorkflowTransitions={({ transitions, row, onTransitionClick }) =>
+    transitions.map((t) => (
+      <StatusButton
+        key={t.name}
+        transition={t}
+        apiUrl={`/api/cases/${row.object_uuid}/`}
+        variant="outline"
+        size="sm"
+        onSuccess={() => console.log("Transition complete")}
+      />
+    ))
+  }
+/>
+```
+
+```jsx
+import { TagSwitch } from "@zango-core/crud/table";
+import { WorkflowTags } from "@zango-core/crud/table";
+
+// Use TagSwitch directly in a detail view
+function CaseDetail({ caseData }) {
+  return (
+    <div className="space-y-3">
+      {caseData.workflow_details?.tag_details?.map((tag) => (
+        <TagSwitch
+          key={tag.name}
+          tag={tag}
+          apiUrl={`/api/cases/${caseData.object_uuid}/`}
+          onToggle={(enabled) => console.log(tag.name, enabled)}
+        />
+      ))}
+    </div>
+  );
+}
 ```
 
 ---
