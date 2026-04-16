@@ -48,6 +48,29 @@ const TableBodyDocs = () => {
               type: 'boolean',
               description: 'Loading state for subsequent data updates (e.g., pagination, filtering). Shows a subtle loading indicator without replacing content.',
             },
+            {
+              name: 'isInfiniteScroll',
+              type: 'boolean',
+              default: 'false',
+              description: 'Enables infinite-scroll mode. Removes the top border separator and shows a spinner row at the bottom while fetching more pages.',
+            },
+            {
+              name: 'onScroll',
+              type: '(e: React.UIEvent<HTMLDivElement>) => void',
+              description: 'Scroll event handler on the table container div. In infinite-scroll mode the context wires this to fetchMoreOnBottomReached automatically; pass a custom handler to override.',
+            },
+            {
+              name: 'hideControls',
+              type: 'boolean',
+              default: 'false',
+              description: 'Hides the table control bar (search, filters, pagination) when true. Applied via ContainerState styling to the outer wrapper.',
+            },
+            {
+              name: 'enableEmptyStateCreate',
+              type: 'boolean',
+              default: 'false',
+              description: 'Shows a Create button inside the empty-state overlay. Requires the table context apiUrl and metadata.show_add_button to be truthy; opens a FormRenderer drawer on click.',
+            },
           ]}
         />
       </Section>
@@ -119,6 +142,33 @@ const TableBodyDocs = () => {
           In the custom handler, <InlineCode>row.original</InlineCode> contains the raw data object
           for that row, giving you access to all fields returned by the API.
         </Callout>
+      </Section>
+
+      <Section title="Infinite Scroll Setup">
+        <p className="mb-4">
+          Enable infinite scroll by passing <InlineCode>isInfiniteScroll</InlineCode> and an{' '}
+          <InlineCode>onScroll</InlineCode> handler that triggers the next-page fetch when the user
+          reaches the bottom of the container. When used inside a{' '}
+          <InlineCode>TableProvider</InlineCode> the context wires these automatically.
+        </p>
+        <CodeBlock
+          language="jsx"
+          title="infinite-scroll.jsx"
+          code={`const handleScroll = (e) => {
+  const target = e.target;
+  const nearBottom =
+    target.scrollHeight - target.scrollTop <= target.clientHeight + 100;
+  if (nearBottom && hasNextPage && !isFetchingNextPage) {
+    fetchNextPage();
+  }
+};
+
+<TableBody
+  isInfiniteScroll={true}
+  onScroll={handleScroll}
+  isFetching={isFetchingNextPage}
+/>`}
+        />
       </Section>
     </DocPage>
   );
