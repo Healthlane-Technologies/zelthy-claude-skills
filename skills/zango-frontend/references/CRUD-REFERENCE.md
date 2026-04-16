@@ -1764,8 +1764,12 @@ const handleScroll = (e) => {
 | `onAddClick` | function | - | Custom click handler for the add button. Overrides the default behavior of opening the built-in form drawer. |
 | `extraActions` | ReactNode | - | Additional action elements rendered alongside the default add button. Useful for export, import, or bulk action buttons. |
 | `children` | ReactNode | - | Content rendered between the title area and the action buttons. Commonly used for filters, status tabs, or date range selectors. |
-| `api_endpoint` | string | - | API endpoint for the default add form. Used by the built-in form drawer to submit new records. |
+| `apiUrl` | string | - | API URL for the default add form drawer. When omitted, falls back to the URL from TableProvider context. |
 | `enableDefaultAddForm` | boolean | true | Enable or disable the built-in form drawer that opens when the add button is clicked. Set to false when using a custom add flow. |
+| `className` | string | - | Extra CSS classes applied to the inner flex row (title + actions). Default empty string. |
+| `containerClassName` | string | - | Extra CSS classes applied to the outermost container div. Default empty string. |
+| `titleClassName` | string | - | Extra CSS classes applied to the h1 title element. Default empty string. |
+| `buttonClassName` | string | - | Extra CSS classes applied to the add button element. Default empty string. |
 
 ### Code Examples
 
