@@ -46,8 +46,18 @@ const WorkflowStatusDocs = () => {
             },
             {
               name: 'workflowDetails',
-              type: 'object',
+              type: 'WorkflowDetails',
               description: 'Direct workflow data object. When provided, skips the API fetch and uses this data directly.',
+            },
+            {
+              name: 'staticData',
+              type: 'object',
+              description: 'Static workflow data that bypasses API calls. Accepts raw workflow details, a response wrapper with workflow_details, or an object with next_transitions/current_status.',
+            },
+            {
+              name: 'objectUuid',
+              type: 'string',
+              description: 'Explicit object UUID. When provided alongside apiUrl, overrides UUID extraction from the URL query params.',
             },
             {
               name: 'formContainerId',
@@ -60,28 +70,33 @@ const WorkflowStatusDocs = () => {
               description: 'Callback invoked after a successful status transition completes. Use for refreshing data or updating UI.',
             },
             {
+              name: 'onShowStatusForm',
+              type: '(transition, apiUrl) => void',
+              description: 'Callback to show the status form at the parent level. Fires instead of the internal drawer for form-based transitions.',
+            },
+            {
               name: 'beforeTransition',
-              type: '(transition) => Promise<void>',
-              description: 'Async callback invoked before a transition starts. Useful for opening dialogs, validating state, or showing custom UI.',
+              type: '(transition: Transition) => Promise<void> \| void',
+              description: 'Async callback invoked before a transition starts. Throw an error to cancel the transition.',
             },
             {
               name: 'afterTransition',
-              type: '(transition, success) => Promise<void>',
-              description: 'Async callback invoked after a transition completes. Receives the transition object and a boolean indicating success.',
+              type: '(transition: Transition, success: boolean) => Promise<void> \| void',
+              description: 'Async callback invoked after a transition completes. Receives the transition object and a boolean indicating success. Fires on both success and failure.',
             },
             {
               name: 'confirmationAlert',
-              type: 'Function',
-              description: 'Custom confirmation UI function. Replaces the default browser confirmation dialog before executing a transition.',
+              type: '(props: ConfirmationAlertProps) => ReactNode',
+              description: 'Custom confirmation UI function. Replaces the default dialog for non-form transitions. Receives onConfirm, onCancel, title, and message.',
             },
             {
               name: 'renderTransitions',
-              type: 'Function',
-              description: 'Custom render function for the transitions UI. Receives the available transitions and allows complete control over their presentation.',
+              type: '(params) => ReactNode',
+              description: 'Custom render function for the transitions UI. Receives an object with transitions, onTransitionClick, currentStatus, statusLabel, statusTransitionForm, and onFormCancel.',
             },
             {
               name: 'onFormCancel',
-              type: 'React.Ref',
+              type: 'React.MutableRefObject<(() => void) \| null>',
               description: 'Ref that receives a function to programmatically close/cancel the active form. The ref value is a function when a form is shown, null otherwise.',
             },
           ]}
@@ -197,21 +212,15 @@ function OrderDetail({ objectUuid }) {
           title="custom-rendering.jsx"
           code={`<WorkflowStatus
   apiUrl="/api/orders/?object_uuid=123"
-  renderTransitions={({ currentStatus, currentStatusMeta, transitions, onTransition }) => (
+  renderTransitions={({ transitions, onTransitionClick, currentStatus, statusLabel }) => (
     <div className="flex items-center gap-3">
-      <span
-        className="px-3 py-1 rounded-full text-sm font-medium"
-        style={{
-          backgroundColor: currentStatusMeta?.status_color || '#e0e7ff',
-          color: '#1e40af',
-        }}
-      >
-        {currentStatusMeta?.status_label || currentStatus}
+      <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
+        {statusLabel}
       </span>
       {transitions.map((t) => (
         <button
           key={t.name}
-          onClick={() => onTransition(t)}
+          onClick={() => onTransitionClick(t)}
           className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm
                      hover:bg-indigo-700 transition-colors"
         >
@@ -267,6 +276,116 @@ function OrderWorkflow() {
           see the <a href="/app/workflow-hooks" style={{ color: '#4f46e5', fontWeight: 600, textDecoration: 'underline' }}>Hooks Reference</a> —
           specifically <InlineCode>useWorkflow()</InlineCode> and <InlineCode>useDetailView()</InlineCode>.
         </Callout>
+      </Section>
+
+      <Section title="Cancelling Transitions with beforeTransition">
+        <p className="mb-4">
+          The <InlineCode>beforeTransition</InlineCode> callback can prevent a transition from
+          executing by throwing an error. The error message is displayed to the user.
+        </p>
+        <CodeBlock
+          language="jsx"
+          title="cancel-transition.jsx"
+          code={`<WorkflowStatus
+  apiUrl="/api/orders/?object_uuid=123"
+  beforeTransition={async (transition) => {
+    if (transition.name === 'archive' && !window.confirm('Really archive?')) {
+      throw new Error('Transition cancelled by user');
+    }
+    // Throwing an error prevents the transition
+  }}
+/>`}
+        />
+        <Callout type="info" title="Error Handling">
+          When <InlineCode>beforeTransition</InlineCode> throws, the error message is caught and displayed
+          inline. The transition does not execute and <InlineCode>afterTransition</InlineCode> is not called.
+        </Callout>
+      </Section>
+
+      <Section title="WorkflowFormRenderer">
+        <p className="mb-4">
+          <InlineCode>WorkflowFormRenderer</InlineCode> handles form-based workflow transitions.
+          It renders <InlineCode>FormRenderer</InlineCode> inside a drawer by default, or into a
+          portal container when <InlineCode>containerId</InlineCode> is provided. Supports both
+          status and tag transitions.
+        </p>
+        <PropsTable
+          props={[
+            {
+              name: 'transition',
+              type: 'Transition',
+              description: 'Workflow transition to process. Required when transitionType is status.',
+            },
+            {
+              name: 'tag',
+              type: 'TagDetail',
+              description: 'Tag detail for tag transitions. Required when transitionType is tag.',
+            },
+            {
+              name: 'apiUrl',
+              type: 'string',
+              description: 'API URL for the workflow endpoint.',
+            },
+            {
+              name: 'transitionType',
+              type: 'status \| tag',
+              description: 'Type of transition being rendered.',
+            },
+            {
+              name: 'actionType',
+              type: 'enabled \| disabled',
+              description: 'Action type for tag transitions. Required when transitionType is tag.',
+            },
+            {
+              name: 'containerId',
+              type: 'string',
+              description: 'DOM element ID where the form should render via portal. When omitted, renders with drawer-style animations.',
+            },
+            {
+              name: 'onSuccess',
+              type: '() => void',
+              description: 'Called when form is successfully submitted.',
+            },
+            {
+              name: 'onError',
+              type: '(error: Error) => void',
+              description: 'Called when form submission fails.',
+            },
+            {
+              name: 'onCancel',
+              type: '() => void',
+              description: 'Called when user cancels the form.',
+            },
+          ]}
+        />
+      </Section>
+
+      <Section title="WorkflowTransitionsCell">
+        <p className="mb-4">
+          <InlineCode>WorkflowTransitionsCell</InlineCode> renders inline transition buttons for table
+          rows. The first two transitions appear as visible links; additional transitions overflow into
+          a three-dot dropdown menu. Requires <InlineCode>TableProvider</InlineCode> context for API
+          URL and table refresh.
+        </p>
+        <PropsTable
+          props={[
+            {
+              name: 'transitions',
+              type: 'Transition[]',
+              description: 'Array of available transitions for the row.',
+            },
+            {
+              name: 'row',
+              type: 'object',
+              description: 'Table row data. Accepts either a raw row object or an object with an original property containing the row data.',
+            },
+            {
+              name: 'renderWorkflowTransitions',
+              type: '(params) => ReactNode',
+              description: 'Custom render function. Receives transitions, visibleTransitions, dropdownTransitions, row, onTransitionClick, menuOpen, and setMenuOpen.',
+            },
+          ]}
+        />
       </Section>
     </DocPage>
   );
