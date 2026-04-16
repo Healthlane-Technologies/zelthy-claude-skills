@@ -2044,49 +2044,67 @@ function CustomPagination() {
 
 ---
 
-## TableSearch (Component)
+## TableSearch (Component + Hook)
 
-**Sections:** Props | Usage Examples
+**Sections:** TableSearchField Props | useTableSearch Hook | Usage Examples
 
 ### Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `placeholder` | string | Search... | Placeholder text displayed when the search input is empty. |
-| `className` | string | - | Additional CSS classes applied to the search input element for custom styling. |
-| `containerClassName` | string | - | Additional CSS classes applied to the outer container wrapping the search input and icons. |
-| `leftIcon` | ReactNode | - | Custom left icon element. Defaults to a magnifying glass search icon. |
-| `rightIcon` | ReactNode | - | Custom right icon element. Useful for adding a clear button or secondary action. |
+| `searchTerm` | string | - | Controlled search value. Falls back to context searchTerm when omitted. |
+| `onSearchChange` | (e: ChangeEvent<HTMLInputElement>) => void | - | Change handler. When omitted, the field calls context.setSearchTerm automatically. |
+| `placeholder` | string | - | Placeholder text. Falls back to metadata.utilities_config.search_placeholder then Search. |
+| `inputSize` | sm \| md \| lg | sm | Height variant forwarded to the underlying Input component. |
+| `className` | string | - | Extra classes merged onto the outer wrapper div. |
+| `style` | CSSProperties | - | Inline style applied to the outer wrapper div. |
+| `containerClassName` | string | - | Extra classes concatenated before the max-w-sm wrapper classes. |
+| `showSearch` | boolean | true | When false the field returns null. Falls back to metadata.utilities_config.show_search. |
+| `searchTerm` | string | - | Current raw search value typed by the user. |
+| `setSearchTerm` | (value: string) => void | - | Updates the raw search term. The context debounces this before firing list requests. |
+| `debouncedSearchTerm` | string | - | Debounced search value used by the provider when fetching rows. |
 
 ### Code Examples
 
 ```jsx
-// Default search with automatic table context sync
-<TableSearch />
+// Default search — placeholder and handler come from context
+<TableSearchField />
 ```
 
 ```jsx
-<TableSearch
-  placeholder="Search by name, email, or ID..."
-  className="text-sm font-medium"
+<TableSearchField
+  searchTerm={searchTerm}
+  onSearchChange={(e) => setSearchTerm(e.target.value)}
+  placeholder="Search products..."
+  inputSize="md"
 />
 ```
 
 ```jsx
-import { Filter, XCircle } from 'lucide-react';
+import { useTableSearch } from '@zango-core/crud/table';
 
-<TableSearch
-  placeholder="Filter results..."
-  leftIcon={<Filter size={16} className="text-gray-400" />}
-  rightIcon={
-    <button
-      onClick={handleClearSearch}
-      className="text-gray-400 hover:text-gray-600"
-    >
-      <XCircle size={16} />
-    </button>
-  }
-/>
+function CommandBarSearch() {
+  const { searchTerm, setSearchTerm, debouncedSearchTerm } = useTableSearch();
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder="Type to search..."
+      />
+      {debouncedSearchTerm && (
+        <span className="text-xs text-gray-500">
+          Searching for: {debouncedSearchTerm}
+        </span>
+      )}
+    </div>
+  );
+}
+```
+
+```jsx
+<TableSearchField showSearch={userRole === 'admin'} />
 ```
 
 ---

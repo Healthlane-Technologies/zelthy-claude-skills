@@ -9,94 +9,161 @@ const TableSearchDocs = () => {
   return (
     <DocPage
       title="TableSearch"
-      subtitle="Standalone search input that syncs with table context."
-      badge="Component"
+      subtitle="Standalone search input that syncs with table context, plus the useTableSearch hook for custom search UIs."
+      badge="Component + Hook"
     >
-      <Section title="Props">
+      <Section title="TableSearchField Props">
         <PropsTable
           props={[
             {
+              name: 'searchTerm',
+              type: 'string',
+              description: 'Controlled search value. Falls back to context searchTerm when omitted.',
+            },
+            {
+              name: 'onSearchChange',
+              type: '(e: ChangeEvent<HTMLInputElement>) => void',
+              description: 'Change handler. When omitted, the field calls context.setSearchTerm automatically.',
+            },
+            {
               name: 'placeholder',
               type: 'string',
-              default: '"Search..."',
-              description: 'Placeholder text displayed when the search input is empty.',
+              description: 'Placeholder text. Falls back to metadata.utilities_config.search_placeholder then Search.',
+            },
+            {
+              name: 'inputSize',
+              type: 'sm \| md \| lg',
+              default: 'sm',
+              description: 'Height variant forwarded to the underlying Input component.',
             },
             {
               name: 'className',
               type: 'string',
-              description: 'Additional CSS classes applied to the search input element for custom styling.',
+              description: 'Extra classes merged onto the outer wrapper div.',
+            },
+            {
+              name: 'style',
+              type: 'CSSProperties',
+              description: 'Inline style applied to the outer wrapper div.',
             },
             {
               name: 'containerClassName',
               type: 'string',
-              description: 'Additional CSS classes applied to the outer container wrapping the search input and icons.',
+              description: 'Extra classes concatenated before the max-w-sm wrapper classes.',
             },
             {
-              name: 'leftIcon',
-              type: 'ReactNode',
-              description: 'Custom left icon element. Defaults to a magnifying glass search icon.',
-            },
-            {
-              name: 'rightIcon',
-              type: 'ReactNode',
-              description: 'Custom right icon element. Useful for adding a clear button or secondary action.',
+              name: 'showSearch',
+              type: 'boolean',
+              default: 'true',
+              description: 'When false the field returns null. Falls back to metadata.utilities_config.show_search.',
             },
           ]}
         />
         <Callout type="info" title="Table Context">
-          <InlineCode>TableSearch</InlineCode> automatically syncs with the table context. The search
-          value is debounced and triggers a server-side search request, so there is no need to
-          manage search state manually.
+          <InlineCode>TableSearchField</InlineCode> auto-syncs with the nearest <InlineCode>TableProvider</InlineCode>. When used inside a provider you can omit <InlineCode>searchTerm</InlineCode> and <InlineCode>onSearchChange</InlineCode> entirely — the field reads and writes context state for you.
+        </Callout>
+      </Section>
+
+      <Section title="useTableSearch Hook">
+        <p className="mb-3">
+          Lightweight hook that exposes the search slice of <InlineCode>TableContext</InlineCode>.
+          Use it when you want to build a fully custom search UI while still syncing with the
+          shared table state.
+        </p>
+        <PropsTable
+          title="Return Value"
+          props={[
+            {
+              name: 'searchTerm',
+              type: 'string',
+              default: "''",
+              description: 'Current raw search value typed by the user.',
+            },
+            {
+              name: 'setSearchTerm',
+              type: '(value: string) => void',
+              description: 'Updates the raw search term. The context debounces this before firing list requests.',
+            },
+            {
+              name: 'debouncedSearchTerm',
+              type: 'string',
+              default: "''",
+              description: 'Debounced search value used by the provider when fetching rows.',
+            },
+          ]}
+        />
+        <Callout type="warning" title="Requires TableProvider">
+          <InlineCode>useTableSearch</InlineCode> must be called inside a <InlineCode>TableProvider</InlineCode> subtree. Calling it outside a provider throws from <InlineCode>useTableContext</InlineCode>.
         </Callout>
       </Section>
 
       <Section title="Usage Examples">
         <h3 className="text-base font-semibold text-gray-800 mb-3">Basic Usage</h3>
         <p className="mb-3">
-          Renders a search input with default placeholder and the built-in search icon.
+          Renders a search input that binds to the surrounding table context automatically.
         </p>
         <CodeBlock
           language="jsx"
           title="basic.jsx"
-          code={`// Default search with automatic table context sync
-<TableSearch />`}
+          code={`// Default search — placeholder and handler come from context
+<TableSearchField />`}
         />
 
-        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-8">Customized Search</h3>
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-8">Controlled Standalone</h3>
         <p className="mb-3">
-          Customize the placeholder text and apply additional styles via class names.
+          Use outside a provider by passing <InlineCode>searchTerm</InlineCode> and
+          <InlineCode> onSearchChange</InlineCode> directly.
         </p>
         <CodeBlock
           language="jsx"
-          title="customized.jsx"
-          code={`<TableSearch
-  placeholder="Search by name, email, or ID..."
-  className="text-sm font-medium"
+          title="standalone.jsx"
+          code={`<TableSearchField
+  searchTerm={searchTerm}
+  onSearchChange={(e) => setSearchTerm(e.target.value)}
+  placeholder="Search products..."
+  inputSize="md"
 />`}
         />
 
-        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-8">Custom Icons</h3>
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-8">Custom UI with Hook</h3>
         <p className="mb-3">
-          Replace the default icons with custom elements. A common pattern is adding a clear button
-          as the right icon.
+          Build your own search surface while keeping the list in sync via
+          <InlineCode> useTableSearch</InlineCode>.
         </p>
         <CodeBlock
           language="jsx"
-          title="custom-icons.jsx"
-          code={`import { Filter, XCircle } from 'lucide-react';
+          title="custom-search.jsx"
+          code={`import { useTableSearch } from '@zango-core/crud/table';
 
-<TableSearch
-  placeholder="Filter results..."
-  leftIcon={<Filter size={16} className="text-gray-400" />}
-  rightIcon={
-    <button
-      onClick={handleClearSearch}
-      className="text-gray-400 hover:text-gray-600"
-    >
-      <XCircle size={16} />
-    </button>
-  }
-/>`}
+function CommandBarSearch() {
+  const { searchTerm, setSearchTerm, debouncedSearchTerm } = useTableSearch();
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        placeholder="Type to search..."
+      />
+      {debouncedSearchTerm && (
+        <span className="text-xs text-gray-500">
+          Searching for: {debouncedSearchTerm}
+        </span>
+      )}
+    </div>
+  );
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-8">Hide Search Conditionally</h3>
+        <p className="mb-3">
+          Set <InlineCode>showSearch</InlineCode> to false to unmount the field (or let
+          backend metadata drive this via <InlineCode>utilities_config.show_search</InlineCode>).
+        </p>
+        <CodeBlock
+          language="jsx"
+          title="hide.jsx"
+          code={`<TableSearchField showSearch={userRole === 'admin'} />`}
         />
       </Section>
     </DocPage>
