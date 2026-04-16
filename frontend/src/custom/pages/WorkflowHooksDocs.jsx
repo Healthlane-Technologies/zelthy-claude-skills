@@ -43,7 +43,7 @@ const WorkflowHooksDocs = () => {
             { name: 'hasNextPage', type: 'boolean', description: 'Whether a next page exists.' },
             { name: 'setCurrentPage', type: '(page: number) => void', description: 'Navigate to a specific page.' },
             { name: 'setRowsPerPage', type: '(size: number) => void', description: 'Change the page size.' },
-            { name: 'selectedDetailRow', type: 'object | null', description: 'The row currently open in the detail drawer.' },
+            { name: 'selectedDetailRow', type: 'object \| null', description: 'The row currently open in the detail drawer.' },
             { name: 'openDetailDrawer', type: '(row) => void', description: 'Open the detail drawer for a row.' },
             { name: 'closeDetailDrawer', type: '() => void', description: 'Close the detail drawer.' },
             { name: 'navigateToNextEntry', type: '() => void', description: 'Move the detail drawer to the next row.' },
@@ -96,7 +96,7 @@ function OrdersPage() {
             { name: 'totalPages', type: 'number', description: 'Computed total pages based on row count and page size.' },
             { name: 'isLoading', type: 'boolean', description: 'True during the initial data load.' },
             { name: 'isFetching', type: 'boolean', description: 'True during any fetch, including background refetches.' },
-            { name: 'error', type: 'Error | null', description: 'Error object if the fetch failed.' },
+            { name: 'error', type: 'Error \| null', description: 'Error object if the fetch failed.' },
             { name: 'searchTerm', type: 'string', description: 'Current search term sent to the server.' },
             { name: 'setSearchTerm', type: '(term: string) => void', description: 'Update the search term.' },
             { name: 'filterObj', type: 'object', description: 'Current filter state sent to the server.' },
@@ -381,7 +381,7 @@ function Toolbar() {
         <PropsTable
           props={[
             { name: 'handleRowClick', type: '(row) => void', description: 'Default handler that opens the detail drawer for the clicked row.' },
-            { name: 'selectedDetailRow', type: 'object | null', description: 'The row currently displayed in the detail drawer.' },
+            { name: 'selectedDetailRow', type: 'object \| null', description: 'The row currently displayed in the detail drawer.' },
             { name: 'openDetailDrawer', type: '(row) => void', description: 'Programmatically open the detail drawer for a row.' },
             { name: 'closeDetailDrawer', type: '() => void', description: 'Close the detail drawer.' },
             { name: 'navigateToNextEntry', type: '() => void', description: 'Move the detail drawer to the next row in the list.' },
@@ -430,7 +430,7 @@ function DetailDrawerNav() {
           props={[
             { name: 'data', type: 'object', description: 'The fetched detail data for the current object.' },
             { name: 'loading', type: 'boolean', description: 'True while detail data is being fetched.' },
-            { name: 'error', type: 'string | null', description: 'Error message if the detail fetch failed.' },
+            { name: 'error', type: 'string \| null', description: 'Error message if the detail fetch failed.' },
             { name: 'refresh', type: '() => Promise<void>', description: 'Re-fetch the detail data from the API.' },
             { name: 'objectUuid', type: 'string', description: 'UUID of the current detail object.' },
             { name: 'workflowDetails', type: 'object', description: 'Workflow data for the object (current_status, current_status_meta, next_transitions, tag_details).' },
@@ -471,7 +471,7 @@ function UserProfile() {
           props={[
             { name: 'data', type: 'object', description: 'Detail data from the shared context.' },
             { name: 'loading', type: 'boolean', description: 'True while the shared detail fetch is in progress.' },
-            { name: 'error', type: 'string | null', description: 'Error from the shared detail fetch.' },
+            { name: 'error', type: 'string \| null', description: 'Error from the shared detail fetch.' },
             { name: 'refresh', type: '() => Promise<void>', description: 'Re-fetch detail data for the entire context.' },
             { name: 'objectUuid', type: 'string', description: 'UUID of the current detail object.' },
             { name: 'workflowDetails', type: 'object', description: 'Workflow data from the shared context.' },

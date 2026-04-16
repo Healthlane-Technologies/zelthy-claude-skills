@@ -17,7 +17,7 @@ const TableHeaderDocs = () => {
           props={[
             {
               name: 'title',
-              type: 'string | ReactNode',
+              type: 'string \| ReactNode',
               description: 'Header title text or custom React element. Supports plain strings or JSX for rich formatting.',
             },
             {
@@ -38,7 +38,7 @@ const TableHeaderDocs = () => {
             },
             {
               name: 'addButtonTitle',
-              type: 'string | ReactNode',
+              type: 'string \| ReactNode',
               description: 'Custom text or element for the add button. Defaults to a standard "Add" label.',
             },
             {

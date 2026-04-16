@@ -1756,11 +1756,11 @@ const handleScroll = (e) => {
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `title` | string | ReactNode | - | Header title text or custom React element. Supports plain strings or JSX for rich formatting. |
+| `title` | string \| ReactNode | - | Header title text or custom React element. Supports plain strings or JSX for rich formatting. |
 | `totalCount` | number | - | Total number of items in the dataset. Displayed as a badge next to the title. |
 | `showCount` | boolean | true | Show or hide the total count badge next to the title. |
 | `showAddButton` | boolean | - | Show or hide the add/create button in the header actions area. |
-| `addButtonTitle` | string | ReactNode | - | Custom text or element for the add button. Defaults to a standard  |
+| `addButtonTitle` | string \| ReactNode | - | Custom text or element for the add button. Defaults to a standard  |
 | `onAddClick` | function | - | Custom click handler for the add button. Overrides the default behavior of opening the built-in form drawer. |
 | `extraActions` | ReactNode | - | Additional action elements rendered alongside the default add button. Useful for export, import, or bulk action buttons. |
 | `children` | ReactNode | - | Content rendered between the title area and the action buttons. Commonly used for filters, status tabs, or date range selectors. |
@@ -2687,7 +2687,7 @@ function CaseDetail({ caseData }) {
 | `hasNextPage` | boolean | - | Whether a next page exists. |
 | `setCurrentPage` | (page: number) => void | - | Navigate to a specific page. |
 | `setRowsPerPage` | (size: number) => void | - | Change the page size. |
-| `selectedDetailRow` | object | null | - | The row currently open in the detail drawer. |
+| `selectedDetailRow` | object \| null | - | The row currently open in the detail drawer. |
 | `openDetailDrawer` | (row) => void | - | Open the detail drawer for a row. |
 | `closeDetailDrawer` | () => void | - | Close the detail drawer. |
 | `navigateToNextEntry` | () => void | - | Move the detail drawer to the next row. |
@@ -2706,7 +2706,7 @@ function CaseDetail({ caseData }) {
 | `totalPages` | number | - | Computed total pages based on row count and page size. |
 | `isLoading` | boolean | - | True during the initial data load. |
 | `isFetching` | boolean | - | True during any fetch, including background refetches. |
-| `error` | Error | null | - | Error object if the fetch failed. |
+| `error` | Error \| null | - | Error object if the fetch failed. |
 | `searchTerm` | string | - | Current search term sent to the server. |
 | `setSearchTerm` | (term: string) => void | - | Update the search term. |
 | `filterObj` | object | - | Current filter state sent to the server. |
@@ -2757,7 +2757,7 @@ function CaseDetail({ caseData }) {
 | `refetch` | () => void | - | Re-fetch the table data from the server. |
 | `exportTable` | () => void | - | Trigger an export of the current table data. |
 | `handleRowClick` | (row) => void | - | Default handler that opens the detail drawer for the clicked row. |
-| `selectedDetailRow` | object | null | - | The row currently displayed in the detail drawer. |
+| `selectedDetailRow` | object \| null | - | The row currently displayed in the detail drawer. |
 | `openDetailDrawer` | (row) => void | - | Programmatically open the detail drawer for a row. |
 | `closeDetailDrawer` | () => void | - | Close the detail drawer. |
 | `navigateToNextEntry` | () => void | - | Move the detail drawer to the next row in the list. |
@@ -2765,14 +2765,14 @@ function CaseDetail({ caseData }) {
 | `apiUrl` | string | - | API endpoint for the detail record. Automatically resolved from context if inside a DetailViewProvider. |
 | `data` | object | - | The fetched detail data for the current object. |
 | `loading` | boolean | - | True while detail data is being fetched. |
-| `error` | string | null | - | Error message if the detail fetch failed. |
+| `error` | string \| null | - | Error message if the detail fetch failed. |
 | `refresh` | () => Promise<void> | - | Re-fetch the detail data from the API. |
 | `objectUuid` | string | - | UUID of the current detail object. |
 | `workflowDetails` | object | - | Workflow data for the object (current_status, current_status_meta, next_transitions, tag_details). |
 | `rowActions` | array | - | Available row-level actions for the current object. |
 | `data` | object | - | Detail data from the shared context. |
 | `loading` | boolean | - | True while the shared detail fetch is in progress. |
-| `error` | string | null | - | Error from the shared detail fetch. |
+| `error` | string \| null | - | Error from the shared detail fetch. |
 | `refresh` | () => Promise<void> | - | Re-fetch detail data for the entire context. |
 | `objectUuid` | string | - | UUID of the current detail object. |
 | `workflowDetails` | object | - | Workflow data from the shared context. |
