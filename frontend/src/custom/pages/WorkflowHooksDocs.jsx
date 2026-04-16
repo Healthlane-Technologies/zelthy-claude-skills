@@ -500,34 +500,44 @@ function StatusBadge() {
         <p className="mb-4">
           Provides full programmatic access to workflow state and operations. Use it when
           you need direct control over transitions, tags, or workflow data outside of the
-          built-in workflow components.
+          built-in workflow components. Automatically reads from{' '}
+          <InlineCode>DetailViewContext</InlineCode> when no <InlineCode>apiUrl</InlineCode> is
+          provided.
         </p>
 
         <h3 className="text-base font-semibold text-gray-800 mb-3">Configuration</h3>
         <PropsTable
           props={[
-            { name: 'apiUrl', type: 'string', required: true, description: 'API endpoint for fetching workflow data.' },
-            { name: 'beforeTransition', type: '(transition) => Promise<void>', description: 'Async callback invoked before executing a transition.' },
-            { name: 'afterTransition', type: '(transition, success) => Promise<void>', description: 'Async callback invoked after a transition completes.' },
+            { name: 'apiUrl', type: 'string', description: 'API endpoint for fetching and mutating workflow data. Optional — resolved from context when omitted. Required for executeTransition / toggleTag in static data mode.' },
+            { name: 'initialWorkflowDetails', type: 'WorkflowDetails', description: 'Seed the hook with known workflow data. Overridden by staticData when both are supplied.' },
+            { name: 'staticData', type: 'any', description: 'Pre-fetched payload that already contains workflow details. Accepts { workflow_details }, { response: { workflow_details } }, or a bare WorkflowDetails object. Bypasses the initial API fetch; apiUrl is still needed for mutations.' },
+            { name: 'objectUuid', type: 'string', description: 'Explicit object UUID used in API calls. Extracted from apiUrl automatically when omitted.' },
+            { name: 'beforeTransition', type: '(transition: Transition) => Promise<void> \| void', description: 'Async callback invoked before executing a status transition. Throw to abort.' },
+            { name: 'afterTransition', type: '(transition: Transition, success: boolean) => Promise<void> \| void', description: 'Async callback invoked after a transition completes.' },
+            { name: 'beforeTagChange', type: '(tag: TagDetail, newState: string) => Promise<void> \| void', description: 'Async callback invoked before toggling a tag.' },
+            { name: 'afterTagChange', type: '(tag: TagDetail, success: boolean) => Promise<void> \| void', description: 'Async callback invoked after a tag toggle completes.' },
           ]}
         />
 
         <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">Return Values</h3>
         <PropsTable
           props={[
-            { name: 'workflowDetails', type: 'object', description: 'Full workflow data: current_status, current_status_meta, next_transitions, and tag_details.' },
-            { name: 'loading', type: 'boolean', description: 'True while workflow data is being fetched.' },
-            { name: 'error', type: 'string | null', description: 'Error message if the workflow fetch or operation failed.' },
-            { name: 'refreshWorkflow', type: '() => Promise<void>', description: 'Re-fetch workflow data from the API.' },
-            { name: 'executeTransition', type: '(transition, formData?) => Promise<boolean>', description: 'Execute a status transition. Optionally pass form data. Returns success boolean.' },
-            { name: 'toggleTag', type: '(tag) => Promise<boolean>', description: 'Toggle a tag on or off. Returns success boolean.' },
+            { name: 'workflowDetails', type: 'WorkflowDetails \| undefined', description: 'Full workflow data: current_status, current_status_meta, next_transitions, and tag_details.' },
+            { name: 'loading', type: 'boolean', description: 'True while workflow data is being fetched or a mutation is in-flight.' },
+            { name: 'error', type: 'Error \| null', description: 'Error object if the workflow fetch or operation failed.' },
+            { name: 'executeTransition', type: '(transition: Transition) => Promise<boolean>', description: 'Execute a status transition. Refreshes workflow data on success. Returns success boolean.' },
+            { name: 'toggleTag', type: '(tag: TagDetail) => Promise<boolean>', description: 'Toggle a tag between enabled and disabled. Returns success boolean.' },
+            { name: 'refreshWorkflow', type: '() => Promise<void>', description: 'Re-fetch workflow data from the API. No-op in static data mode without apiUrl.' },
+            { name: 'handleFormSubmit', type: '() => Promise<void>', description: 'Call after a form-based transition submits; triggers refreshWorkflow internally.' },
+            { name: 'setWorkflowDetails', type: '(details: WorkflowDetails) => void', description: 'Directly overwrite local workflow state — useful for optimistic updates.' },
+            { name: 'onCancel', type: '() => void', description: 'Reset workflow to initialWorkflowDetails and re-fetch from API.' },
           ]}
         />
 
-        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">Example</h3>
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">Example — API mode</h3>
         <CodeBlock
           language="jsx"
-          title="use-workflow.jsx"
+          title="use-workflow-api.jsx"
           code={`import { useWorkflow } from "@zango-core/crud/table";
 
 function ApproveButton({ objectUuid }) {
@@ -538,6 +548,42 @@ function ApproveButton({ objectUuid }) {
   const approveTransition = workflowDetails.next_transitions.find((t) => t.name === "approve");
   if (!approveTransition) return null;
   return <button onClick={() => executeTransition(approveTransition)}>Approve</button>;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">Example — static data mode</h3>
+        <CodeBlock
+          language="jsx"
+          title="use-workflow-static.jsx"
+          code={`import { useDetailView, useWorkflow } from "@zango-core/crud/table";
+
+// Use when workflow data is already fetched as part of a detail view.
+// Pass staticData to skip the extra API call; supply apiUrl for mutations.
+function WorkflowPanel({ apiUrl }) {
+  const { data, loading: detailLoading } = useDetailView({ apiUrl });
+
+  const {
+    workflowDetails,
+    executeTransition,
+    toggleTag,
+    loading,
+  } = useWorkflow({
+    staticData: data,          // extracts data.workflow_details automatically
+    apiUrl,                    // still required for executeTransition / toggleTag
+  });
+
+  if (detailLoading || !workflowDetails) return <p>Loading…</p>;
+
+  return (
+    <div>
+      <p>Status: {workflowDetails.current_status_meta?.status_label}</p>
+      {workflowDetails.next_transitions.map((t) => (
+        <button key={t.name} disabled={loading} onClick={() => executeTransition(t)}>
+          {t.display_name}
+        </button>
+      ))}
+    </div>
+  );
 }`}
         />
       </Section>

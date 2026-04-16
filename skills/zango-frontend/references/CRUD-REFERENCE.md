@@ -2609,15 +2609,23 @@ function CaseDetail({ caseData }) {
 | `objectUuid` | string | - | UUID of the current detail object. |
 | `workflowDetails` | object | - | Workflow data from the shared context. |
 | `rowActions` | array | - | Row-level actions from the shared context. |
-| `apiUrl` | string | - | API endpoint for fetching workflow data. |
-| `beforeTransition` | (transition) => Promise<void> | - | Async callback invoked before executing a transition. |
-| `afterTransition` | (transition, success) => Promise<void> | - | Async callback invoked after a transition completes. |
-| `workflowDetails` | object | - | Full workflow data: current_status, current_status_meta, next_transitions, and tag_details. |
-| `loading` | boolean | - | True while workflow data is being fetched. |
-| `error` | string | null | - | Error message if the workflow fetch or operation failed. |
-| `refreshWorkflow` | () => Promise<void> | - | Re-fetch workflow data from the API. |
-| `executeTransition` | (transition, formData?) => Promise<boolean> | - | Execute a status transition. Optionally pass form data. Returns success boolean. |
-| `toggleTag` | (tag) => Promise<boolean> | - | Toggle a tag on or off. Returns success boolean. |
+| `apiUrl` | string | - | API endpoint for fetching and mutating workflow data. Optional — resolved from context when omitted. Required for executeTransition / toggleTag in static data mode. |
+| `initialWorkflowDetails` | WorkflowDetails | - | Seed the hook with known workflow data. Overridden by staticData when both are supplied. |
+| `staticData` | any | - | Pre-fetched payload that already contains workflow details. Accepts { workflow_details }, { response: { workflow_details } }, or a bare WorkflowDetails object. Bypasses the initial API fetch; apiUrl is still needed for mutations. |
+| `objectUuid` | string | - | Explicit object UUID used in API calls. Extracted from apiUrl automatically when omitted. |
+| `beforeTransition` | (transition: Transition) => Promise<void> \| void | - | Async callback invoked before executing a status transition. Throw to abort. |
+| `afterTransition` | (transition: Transition, success: boolean) => Promise<void> \| void | - | Async callback invoked after a transition completes. |
+| `beforeTagChange` | (tag: TagDetail, newState: string) => Promise<void> \| void | - | Async callback invoked before toggling a tag. |
+| `afterTagChange` | (tag: TagDetail, success: boolean) => Promise<void> \| void | - | Async callback invoked after a tag toggle completes. |
+| `workflowDetails` | WorkflowDetails \| undefined | - | Full workflow data: current_status, current_status_meta, next_transitions, and tag_details. |
+| `loading` | boolean | - | True while workflow data is being fetched or a mutation is in-flight. |
+| `error` | Error \| null | - | Error object if the workflow fetch or operation failed. |
+| `executeTransition` | (transition: Transition) => Promise<boolean> | - | Execute a status transition. Refreshes workflow data on success. Returns success boolean. |
+| `toggleTag` | (tag: TagDetail) => Promise<boolean> | - | Toggle a tag between enabled and disabled. Returns success boolean. |
+| `refreshWorkflow` | () => Promise<void> | - | Re-fetch workflow data from the API. No-op in static data mode without apiUrl. |
+| `handleFormSubmit` | () => Promise<void> | - | Call after a form-based transition submits; triggers refreshWorkflow internally. |
+| `setWorkflowDetails` | (details: WorkflowDetails) => void | - | Directly overwrite local workflow state — useful for optimistic updates. |
+| `onCancel` | () => void | - | Reset workflow to initialWorkflowDetails and re-fetch from API. |
 
 ### Code Examples
 
@@ -2783,6 +2791,39 @@ function ApproveButton({ objectUuid }) {
   const approveTransition = workflowDetails.next_transitions.find((t) => t.name === "approve");
   if (!approveTransition) return null;
   return <button onClick={() => executeTransition(approveTransition)}>Approve</button>;
+}
+```
+
+```jsx
+import { useDetailView, useWorkflow } from "@zango-core/crud/table";
+
+// Use when workflow data is already fetched as part of a detail view.
+// Pass staticData to skip the extra API call; supply apiUrl for mutations.
+function WorkflowPanel({ apiUrl }) {
+  const { data, loading: detailLoading } = useDetailView({ apiUrl });
+
+  const {
+    workflowDetails,
+    executeTransition,
+    toggleTag,
+    loading,
+  } = useWorkflow({
+    staticData: data,          // extracts data.workflow_details automatically
+    apiUrl,                    // still required for executeTransition / toggleTag
+  });
+
+  if (detailLoading || !workflowDetails) return <p>Loading…</p>;
+
+  return (
+    <div>
+      <p>Status: {workflowDetails.current_status_meta?.status_label}</p>
+      {workflowDetails.next_transitions.map((t) => (
+        <button key={t.name} disabled={loading} onClick={() => executeTransition(t)}>
+          {t.display_name}
+        </button>
+      ))}
+    </div>
+  );
 }
 ```
 
