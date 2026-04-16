@@ -88,7 +88,7 @@ const DetailViewsDocs = () => {
             },
             {
               name: 'error',
-              type: 'string | null',
+              type: 'string \\| null',
               description: 'Error message if the data fetch failed, or null if successful.',
             },
             {
@@ -103,7 +103,7 @@ const DetailViewsDocs = () => {
             },
             {
               name: 'pk',
-              type: 'string | number',
+              type: 'string \\| number',
               description: 'The primary key of the current record.',
             },
             {
@@ -114,12 +114,12 @@ const DetailViewsDocs = () => {
             {
               name: 'general_details',
               type: 'object',
-              description: 'General details section with a fields object. Each field is keyed by field_name and has { name, display_name, type, value, searchable, sortable }.',
+              description: 'General details section. fields is an object keyed by field_name; each entry is { display_name, value } only.',
             },
             {
               name: 'workflow_details',
               type: 'object',
-              description: 'Workflow data including current_status (string key), current_status_meta ({ name, from, to, status_label, status_color, is_form_based, is_manual }), next_transitions (array), and tag_details (array).',
+              description: 'Workflow data including current_status (string), current_status_meta ({ status_label, status_color }), next_transitions (array of { name, display_name, is_form_based, confirmation_message, description, from, to }), and tag_details (array of { name, state, enable, disable, is_enable_allowed, is_disable_allowed }).',
             },
             {
               name: 'sections',
@@ -137,6 +137,81 @@ const DetailViewsDocs = () => {
               description: 'Additional configuration metadata for the detail view.',
             },
           ]}
+        />
+        <p className="mt-4 mb-2 font-medium">API response shape (ground truth):</p>
+        <CodeBlock
+          language="json"
+          title="detail-view-response.json"
+          code={`{
+  "success": true,
+  "response": {
+    "object_uuid": "uuid-001",
+    "pk": 1,
+    "title": "Alice Johnson",
+    "general_details": {
+      "fields": {
+        "name":       { "display_name": "Name",       "value": "Alice Johnson" },
+        "email":      { "display_name": "Email",      "value": "alice@example.com" },
+        "department": { "display_name": "Department", "value": "Engineering" }
+      }
+    },
+    "workflow_details": {
+      "current_status": "active",
+      "current_status_meta": {
+        "status_label": "Active",
+        "status_color": "#22c55e"
+      },
+      "next_transitions": [
+        {
+          "name": "deactivate",
+          "display_name": "Deactivate",
+          "is_form_based": false,
+          "confirmation_message": "Are you sure you want to deactivate this record?",
+          "from": "active",
+          "to": "inactive"
+        },
+        {
+          "name": "suspend",
+          "display_name": "Suspend",
+          "is_form_based": true,
+          "description": "Temporarily suspend this record",
+          "from": "active",
+          "to": "suspended"
+        }
+      ],
+      "tag_details": [
+        {
+          "name": "priority",
+          "state": "enabled",
+          "enable":  { "is_form_based": false, "confirmation_message": "Enable priority tag?" },
+          "disable": { "is_form_based": false, "confirmation_message": "Disable priority tag?" },
+          "is_enable_allowed": true,
+          "is_disable_allowed": true
+        },
+        {
+          "name": "verified",
+          "state": "disabled",
+          "enable":  { "is_form_based": false, "confirmation_message": "Mark as verified?" },
+          "disable": { "is_form_based": false },
+          "is_enable_allowed": true,
+          "is_disable_allowed": false
+        }
+      ]
+    },
+    "row_actions": [
+      { "name": "Edit",   "key": "edit",   "icon": "edit",  "type": "form" },
+      { "name": "Delete", "key": "delete", "icon": "trash", "type": "simple" }
+    ],
+    "sections": [
+      {
+        "key": "personal_info",
+        "name": "personal_info",
+        "title": "Personal Information",
+        "data": { "name": "Alice Johnson", "email": "alice@example.com", "age": 28 }
+      }
+    ]
+  }
+}`}
         />
       </Section>
 
@@ -328,7 +403,7 @@ const CustomMainDetail = ({
             <div className="flex gap-2 mt-4">
               {workflow_details.next_transitions.map((t) => (
                 <span key={t.name} className="text-sm text-gray-600">
-                  {t.display_name} &rarr; {t.to_state_meta?.status_label}
+                  {t.display_name}: {t.from} &rarr; {t.to}
                 </span>
               ))}
             </div>
@@ -378,39 +453,345 @@ export default CustomMainDetail;`}
         </Callout>
       </Section>
 
+      <Section title="StandaloneDetailView">
+        <p className="mb-4">
+          Renders a complete detail view independently — no <InlineCode>CrudHandler</InlineCode> needed.
+          Internally wraps children with <InlineCode>DetailViewProvider</InlineCode> and renders the
+          default Detail UI (or a <InlineCode>customComponent</InlineCode> if supplied). Accepts either
+          a full <InlineCode>apiUrl</InlineCode> or an <InlineCode>objectUuid</InlineCode> plus a{' '}
+          <InlineCode>baseApiUrl</InlineCode>.
+        </p>
+        <PropsTable
+          props={[
+            {
+              name: 'apiUrl',
+              type: 'string',
+              description: 'Full API URL already containing object_uuid, action, and view query params. Use for standalone pages.',
+            },
+            {
+              name: 'objectUuid',
+              type: 'string',
+              description: 'Object UUID only. The component builds the full URL from baseApiUrl + objectUuid.',
+            },
+            {
+              name: 'baseApiUrl',
+              type: 'string',
+              default: '/api/crud',
+              description: 'Base API URL used when objectUuid is provided.',
+            },
+            {
+              name: 'onClose',
+              type: '() => void',
+              description: 'Close handler forwarded to the detail component (used in drawer contexts).',
+            },
+            {
+              name: 'customComponent',
+              type: 'React.ComponentType',
+              description: 'Custom component rendered instead of the default Detail. Receives all context data plus any extra props passed to StandaloneDetailView.',
+            },
+          ]}
+        />
+        <CodeBlock
+          language="jsx"
+          title="standalone-detail.jsx"
+          code={`import { StandaloneDetailView } from "@zango-core/crud/table";
+
+// Option 1: full URL
+<StandaloneDetailView
+  apiUrl="/api/users/?object_uuid=uuid-001&action=fetch_item_details&view=detail"
+/>
+
+// Option 2: UUID + base URL (component builds URL)
+<StandaloneDetailView
+  objectUuid="uuid-001"
+  baseApiUrl="/api/users/"
+/>
+
+// Option 3: custom renderer
+<StandaloneDetailView
+  objectUuid="uuid-001"
+  baseApiUrl="/api/users/"
+  onClose={() => setOpen(false)}
+  customComponent={MyDetailPanel}
+/>`}
+        />
+      </Section>
+
       <Section title="DetailViewProvider">
         <p className="mb-4">
-          Wraps child components with shared detail view context. All children can access detail data
-          via <InlineCode>useDetailViewContext()</InlineCode> without prop drilling.
+          Context provider that fetches detail data once and shares it with all descendant components.
+          Use it to avoid prop-drilling when multiple components on the same page need the same
+          record data. Children can call <InlineCode>useDetailViewContext()</InlineCode> to consume
+          the shared data.
         </p>
+        <PropsTable
+          props={[
+            {
+              name: 'apiUrl',
+              type: 'string',
+              description: 'Full API URL containing object_uuid. Takes priority over objectUuid + baseApiUrl.',
+            },
+            {
+              name: 'objectUuid',
+              type: 'string',
+              description: 'Object UUID. Combined with baseApiUrl to build the fetch URL when apiUrl is not provided.',
+            },
+            {
+              name: 'baseApiUrl',
+              type: 'string',
+              default: '/api/crud',
+              description: 'Base API URL used to build the fetch URL.',
+            },
+            {
+              name: 'children',
+              type: 'React.ReactNode',
+              required: true,
+              description: 'Child components that will have access to the detail view context.',
+            },
+          ]}
+        />
         <CodeBlock
           language="jsx"
           title="detail-view-provider.jsx"
           code={`import { DetailViewProvider, WorkflowStatus, WorkflowTags } from "@zango-core/crud/table";
 
 // Wrap components for shared context
-<DetailViewProvider apiUrl="/api/users/?object_uuid=123">
-  <WorkflowStatus />   {/* Automatically uses context */}
-  <WorkflowTags />     {/* Automatically uses context */}
-  <MyCustomComponent /> {/* Can call useDetailViewContext() */}
+<DetailViewProvider
+  objectUuid="uuid-001"
+  baseApiUrl="/api/users/"
+>
+  <WorkflowStatus />    {/* reads context automatically */}
+  <WorkflowTags />      {/* reads context automatically */}
+  <MyCustomComponent /> {/* can call useDetailViewContext() */}
 </DetailViewProvider>`}
         />
       </Section>
 
-      <Section title="StandaloneDetailView">
+      <Section title="DetailWrapper">
         <p className="mb-4">
-          Renders a detail view independently without <InlineCode>CrudHandler</InlineCode>.
-          Useful for custom detail pages or embedding detail views in other layouts.
+          Internal component used by <InlineCode>CrudHandler</InlineCode> to wrap the main
+          (route-based) detail view. Reads <InlineCode>object_uuid</InlineCode> from URL params,
+          builds the full API URL, and provides the <InlineCode>DetailViewProvider</InlineCode>
+          context before rendering the default or custom detail component.
         </p>
+        <PropsTable
+          props={[
+            {
+              name: 'apiUrl',
+              type: 'string',
+              required: true,
+              description: 'Base API URL. The component appends object_uuid from route params plus action and view query params.',
+            },
+            {
+              name: 'customComponent',
+              type: 'React.ComponentType',
+              description: 'Custom detail component to render. Receives data, loading, error, workflowDetails, generalDetails, sections, rowActions, objectUuid, pk, onRefresh, and apiUrl as props.',
+            },
+          ]}
+        />
         <CodeBlock
           language="jsx"
-          title="standalone-detail.jsx"
-          code={`import { StandaloneDetailView } from "@zango-core/crud/table";
+          title="detail-wrapper-usage.jsx"
+          code={`import { DetailWrapper } from "@zango-core/crud/table";
 
-<StandaloneDetailView
+// Used internally by CrudHandler — direct usage only needed in advanced setups
+<DetailWrapper
   apiUrl="/api/users/"
-  objectUuid="550e8400-e29b-41d4-a716-446655440000"
+  customComponent={MyDetailPage}
 />`}
+        />
+      </Section>
+
+      <Section title="DrawerDetailWrapper">
+        <p className="mb-4">
+          Internal component used by <InlineCode>CrudHandler</InlineCode> to wrap the drawer detail
+          view. Delegates to <InlineCode>StandaloneDetailView</InlineCode> with the row's
+          <InlineCode>objectUuid</InlineCode>, rendering nothing when{' '}
+          <InlineCode>open</InlineCode> is false.
+        </p>
+        <PropsTable
+          props={[
+            {
+              name: 'objectUuid',
+              type: 'string',
+              required: true,
+              description: 'UUID of the record to display.',
+            },
+            {
+              name: 'open',
+              type: 'boolean',
+              required: true,
+              description: 'Whether the drawer is visible. Renders null when false.',
+            },
+            {
+              name: 'onClose',
+              type: '() => void',
+              required: true,
+              description: 'Callback to close the drawer.',
+            },
+            {
+              name: 'apiUrl',
+              type: 'string',
+              required: true,
+              description: 'Base API URL forwarded to StandaloneDetailView as baseApiUrl.',
+            },
+            {
+              name: 'selectedRow',
+              type: 'object',
+              description: 'The full row data object. Forwarded to the custom component.',
+            },
+            {
+              name: 'customComponent',
+              type: 'React.ComponentType',
+              description: 'Custom component to render inside the drawer instead of the default Detail.',
+            },
+          ]}
+        />
+        <CodeBlock
+          language="jsx"
+          title="drawer-detail-wrapper-usage.jsx"
+          code={`import { DrawerDetailWrapper } from "@zango-core/crud/table";
+
+// Used internally by CrudHandler — direct usage only needed in advanced setups
+<DrawerDetailWrapper
+  objectUuid={selectedRow?.object_uuid}
+  open={drawerOpen}
+  onClose={() => setDrawerOpen(false)}
+  apiUrl="/api/users/"
+  selectedRow={selectedRow}
+  customComponent={MyDrawerDetail}
+/>`}
+        />
+      </Section>
+
+      <Section title="TableDrawer">
+        <p className="mb-4">
+          The generic drawer primitive exported from <InlineCode>@zango-core/crud/table</InlineCode>.
+          Use <InlineCode>TableDrawer</InlineCode> when you need direct control over the drawer shell —
+          position, size, navigation arrows, and arbitrary children — without tying it to the
+          <InlineCode>CrudHandler</InlineCode> lifecycle. Use{' '}
+          <InlineCode>DrawerDetailWrapper</InlineCode> instead when you want the automatic data-fetch
+          behaviour that <InlineCode>CrudHandler</InlineCode> provides for drawer detail views.
+        </p>
+        <PropsTable
+          props={[
+            {
+              name: 'open',
+              type: 'boolean',
+              required: true,
+              description: 'Whether the drawer is visible.',
+            },
+            {
+              name: 'onClose',
+              type: '() => void',
+              required: true,
+              description: 'Callback invoked when the drawer requests to be closed.',
+            },
+            {
+              name: 'selectedRow',
+              type: 'Row<any> \\| null',
+              required: true,
+              description: 'The currently selected TanStack table row. Used to derive the default title when no title prop is provided.',
+            },
+            {
+              name: 'position',
+              type: 'right \\| left \\| bottom \\| top',
+              default: 'right',
+              description: 'Side of the screen the drawer slides in from.',
+            },
+            {
+              name: 'size',
+              type: 'sm \\| md \\| lg \\| xl \\| full',
+              default: 'lg',
+              description: 'Width (for left/right) or height (for top/bottom) of the drawer (500px for left/right when lg).',
+            },
+            {
+              name: 'title',
+              type: 'React.ReactNode',
+              description: 'Custom drawer title. Falls back to UIStore drawerTitle then to an auto-generated title from row data (name, title, email, id, object_uuid, pk).',
+            },
+            {
+              name: 'children',
+              type: 'React.ReactNode',
+              description: 'Drawer content. When omitted the drawer renders a default key/value list from selectedRow.original.',
+            },
+            {
+              name: 'className',
+              type: 'string',
+              description: 'Additional CSS classes merged onto the drawer container.',
+            },
+            {
+              name: 'apiUrl',
+              type: 'string',
+              description: 'API URL available for the default content slot. Has no effect when children are provided.',
+            },
+            {
+              name: 'showNavigation',
+              type: 'boolean',
+              description: 'Show next/previous row navigation arrows inside the drawer header.',
+            },
+            {
+              name: 'onNavigateNext',
+              type: '() => void',
+              description: 'Handler called when the user clicks the next-row arrow.',
+            },
+            {
+              name: 'onNavigatePrevious',
+              type: '() => void',
+              description: 'Handler called when the user clicks the previous-row arrow.',
+            },
+            {
+              name: 'canNavigateNext',
+              type: 'boolean',
+              description: 'Whether a next row is available; disables the next arrow when false.',
+            },
+            {
+              name: 'canNavigatePrevious',
+              type: 'boolean',
+              description: 'Whether a previous row is available; disables the previous arrow when false.',
+            },
+          ]}
+        />
+        <CodeBlock
+          language="jsx"
+          title="table-drawer-usage.jsx"
+          code={`import { TableDrawer } from "@zango-core/crud/table";
+import { useTableRowActions } from "@zango-core/crud/table";
+
+const MyTable = () => {
+  const { selectedRow, drawerOpen, closeDrawer, navigateNext, navigatePrevious, canNavigateNext, canNavigatePrevious } = useTableRowActions();
+
+  return (
+    <>
+      {/* … your table … */}
+
+      {/* Right drawer (default) */}
+      <TableDrawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        selectedRow={selectedRow}
+      >
+        <MyDetailPanel row={selectedRow?.original} />
+      </TableDrawer>
+
+      {/* Bottom drawer for mobile with navigation */}
+      <TableDrawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        selectedRow={selectedRow}
+        position="bottom"
+        size="lg"
+        showNavigation
+        onNavigateNext={navigateNext}
+        onNavigatePrevious={navigatePrevious}
+        canNavigateNext={canNavigateNext}
+        canNavigatePrevious={canNavigatePrevious}
+      >
+        <MobileDetailView row={selectedRow?.original} />
+      </TableDrawer>
+    </>
+  );
+};`}
         />
       </Section>
 
@@ -435,7 +816,7 @@ const { data, loading, workflowDetails } = useDetailView({
 });
 
 // Context-based - reads from DetailViewProvider
-const { data, refresh } = useDetailViewContext();`}
+const { data, refreshDetail } = useDetailViewContext();`}
         />
         <Callout type="info" title="Full Hook Reference">
           See the <a href="/app/workflow-hooks" style={{ color: '#4f46e5', fontWeight: 600, textDecoration: 'underline' }}>Hooks Reference</a> page for complete documentation on all available hooks including useDetailView, useDetailViewContext, useWorkflow, and more.
