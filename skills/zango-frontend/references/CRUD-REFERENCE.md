@@ -2117,16 +2117,22 @@ function CommandBarSearch() {
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `buttonText` | string | ReactNode | - | Button label text or custom React element. Supports plain strings or JSX for rich content. |
-| `onClick` | function | - | Custom click handler. When provided, the built-in drawer behavior is disabled and your handler is called instead. |
-| `variant` | string | primary | Button style variant. Controls the visual appearance (color scheme) of the button. |
-| `size` | string | md | Button size. Affects padding, font size, and overall dimensions. |
-| `className` | string | - | Additional CSS classes for custom styling on the button element. |
-| `showIcon` | boolean | false | Show or hide an icon alongside the button text. |
-| `icon` | ReactNode | left | Custom icon element. Only displayed when showIcon is true. |
-| `onFormSuccess` | function | - | Callback invoked after the built-in form is submitted successfully. Useful for triggering data refresh or showing notifications. |
-| `drawerTitle` | string | - | Custom title for the form drawer. Overrides the default title derived from the table context. |
-| `drawerSize` | string | md | Size of the form drawer panel. Supports standard drawer size values. |
+| `buttonText` | string | ReactNode | - | Button content. Falls back to API metadata add_btn_title then Add New. |
+| `onClick` | function | - | Custom click handler. When provided, the built-in drawer is not used. |
+| `apiUrl` | string | - | API URL for form initialization and submission. Falls back to context apiUrl. |
+| `showButton` | boolean | - | Whether to show the button. Falls back to API metadata has_add_perm or features.add. |
+| `enableDrawer` | boolean | true | Enable the default form drawer behavior. |
+| `variant` | primary | secondary | outline | ghost | danger | primary | Button style variant controlling visual appearance. |
+| `size` | sm | md | lg | md | Button size affecting padding and font size. |
+| `className` | string | - | Additional CSS classes for the button element. |
+| `style` | object | - | Custom CSS styles for the button element. |
+| `showIcon` | boolean | false | Show an icon alongside the button text. Falls back to API metadata form_config.show_icon. |
+| `icon` | ReactNode | - | Custom icon element replacing the default Plus icon. |
+| `iconPosition` | left | right | left | Position of the icon relative to the button text. |
+| `formConfig` | object | - | Custom form configuration with getDataUrl, postDataUrl, httpMethod, and payloadType fields. |
+| `onFormSuccess` | function | - | Callback after the form is submitted successfully. Table data is automatically refreshed. |
+| `drawerTitle` | string | - | Custom title for the form drawer. Defaults to the effective button text. |
+| `drawerSize` | sm | md | lg | xl | full | md | Size of the form drawer panel. |
 
 ### Code Examples
 
