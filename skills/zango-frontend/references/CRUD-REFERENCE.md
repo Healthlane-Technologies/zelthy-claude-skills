@@ -407,7 +407,7 @@ import { TableProvider, TableLayout, TableToolbar, TableContainer } from "@zango
 
 ## Table Styling (Styling)
 
-**Sections:** Overview | Basic Usage | Customizable Elements | State-Aware Styling | Theme Examples | Advanced Techniques | Best Practices
+**Sections:** Overview | Basic Usage | Customizable Elements | State-Aware Styling | State Type Definitions | Theme Examples | Advanced Techniques | Best Practices
 
 ### Props
 
@@ -416,6 +416,11 @@ import { TableProvider, TableLayout, TableToolbar, TableContainer } from "@zango
 | `container` | string | - | Main table container wrapper |
 | `tableWrapper` | string | - | Table wrapper element |
 | `table` | string | - | The actual table element |
+| `headerContainer` | string | - | Main header wrapper above the table grid |
+| `headerTitle` | string | - | Header title text element |
+| `headerTitleCount` | string | - | Count badge next to the header title |
+| `headerActions` | string | - | Container for header action buttons |
+| `headerAddButton` | string | - | Add-record button in the header |
 | `headerRow` | string | - | Header row container |
 | `headerCell` | string | - | Individual header cells |
 | `headerCellPinned` | string | - | Pinned header cells |
@@ -423,16 +428,32 @@ import { TableProvider, TableLayout, TableToolbar, TableContainer } from "@zango
 | `sortIcon` | string | - | Sort direction icons |
 | `bodyRow` | string | - | Data row containers |
 | `bodyRowSelected` | string | - | Selected row state |
+| `bodyRowHover` | string | - | Hovered row state |
 | `bodyCell` | string | - | Individual data cells |
 | `bodyCellPinned` | string | - | Pinned data cells |
+| `loadingOverlay` | string | - | Full-table loading overlay |
+| `loadingCell` | string | - | Per-cell loading indicator |
+| `emptyStateRow` | string | - | Row shown when table has no data |
+| `skeletonRow` | string | - | Skeleton placeholder row during initial load |
+| `skeletonCell` | string | - | Skeleton placeholder cell |
+| `skeletonBar` | string | - | Animated bar inside skeleton cell |
+| `infiniteScrollLoader` | string | - | Loader shown during infinite scroll fetch |
 | `utilitiesContainer` | string | - | Action bar container |
+| `utilitiesLeft` | string | - | Left slot of the utilities bar |
+| `utilitiesRight` | string | - | Right slot of the utilities bar |
 | `filterButton` | string | - | Filter toggle buttons |
+| `clearFiltersButton` | string | - | Button that clears all active filters |
+| `columnOptionsButton` | string | - | Column visibility/options toggle button |
 | `searchInput` | string | - | Search input field |
 | `uploadButton` | string | - | File upload button |
 | `downloadButton` | string | - | Download/export button |
 | `paginationContainer` | string | - | Pagination wrapper |
+| `paginationControls` | string | - | Controls group inside pagination bar |
 | `paginationButton` | string | - | Page number buttons |
 | `paginationNavButton` | string | - | Previous/next buttons |
+| `paginationButtonDisabled` | string | - | Disabled state of pagination buttons |
+| `paginationButtonActive` | string | - | Active/current page button |
+| `paginationSelect` | string | - | Per-page size select dropdown |
 | `paginationInfo` | string | - | Page info display |
 | `paginationEllipsis` | string | - | Overflow indicators |
 | `filterSidebar` | string | - | Filter panel container |
@@ -441,16 +462,26 @@ import { TableProvider, TableLayout, TableToolbar, TableContainer } from "@zango
 | `filterClearAll` | string | - | Clear filters button |
 | `filterContent` | string | - | Filter content area |
 | `filterAccordion` | string | - | Filter accordion wrapper |
+| `filterItem` | string | - | Individual filter item row |
+| `filterBadge` | string | - | Badge showing active filter count on filter button |
 | `actionsContainer` | string | - | Row actions wrapper |
 | `actionButton` | string | - | Individual action buttons |
 | `actionMenuButton` | string | - | Action menu trigger |
 | `actionDropdown` | string | - | Action dropdown menu |
 | `actionDropdownItem` | string | - | Action menu items |
 | `statusBadge` | string | - | Status display badges |
+| `statusIcon` | string | - | Icon inside a status badge |
 | `tagsContainer` | string | - | Tags wrapper |
+| `tag` | string | - | Individual tag chip |
+| `tagMore` | string | - | Overflow indicator for hidden tags |
 | `workflowContainer` | string | - | Workflow elements wrapper |
 | `workflowButton` | string | - | Workflow action buttons |
 | `workflowDropdown` | string | - | Workflow dropdown menu |
+| `subItemContainer` | string | - | Wrapper for sub-item list inside a cell |
+| `subItemText` | string | - | Text of a single sub-item |
+| `subItemSeparator` | string | - | Separator between sub-items |
+| `subItemShowMore` | string | - | Show-more toggle for collapsed sub-items |
+| `subItemTooltip` | string | - | Tooltip shown over overflowing sub-items |
 
 ### Code Examples
 
@@ -537,6 +568,160 @@ actionButton: (baseStyles, state) => {
     ...baseStyles,
     backgroundColor: state.action.type === 'danger' ? '#fef2f2' : baseStyles.backgroundColor
   };
+}
+```
+
+```typescript
+export interface ContainerState {
+  hideControls: boolean;
+}
+```
+
+```typescript
+export interface HeaderContainerState {
+  hasActions: boolean;
+  totalCount: number;
+}
+```
+
+```typescript
+export interface HeaderTitleState {
+  title: string | React.ReactNode;
+  hasCount: boolean;
+  totalCount: number;
+}
+```
+
+```typescript
+export interface HeaderActionsState {
+  hasAddButton: boolean;
+  hasExtraActions: boolean;
+}
+```
+
+```typescript
+export interface HeaderAddButtonState {
+  isDisabled: boolean;
+  title: string | React.ReactNode;
+}
+```
+
+```typescript
+export interface HeaderCellState {
+  isPinned: boolean;
+  canSort: boolean;
+  columnId: string;
+  pinnedOffset?: number;
+}
+```
+
+```typescript
+export interface SortButtonState {
+  sortDirection: 'asc' | 'desc' | null;
+  isHovered: boolean;
+}
+```
+
+```typescript
+export interface BodyRowState {
+  isSelected: boolean;
+  isHovered: boolean;
+  rowIndex: number;
+  rowData: any;
+}
+```
+
+```typescript
+export interface BodyCellState {
+  isPinned: boolean;
+  columnId: string;
+  rowData: any;
+  cellValue: any;
+  pinnedOffset?: number;
+}
+```
+
+```typescript
+export interface UtilitiesState {
+  activeFilterCount: number;
+  hasSearch: boolean;
+}
+```
+
+```typescript
+export interface FilterButtonState {
+  isActive: boolean;
+  filterCount: number;
+}
+```
+
+```typescript
+export interface PaginationContainerState {
+  compact: boolean;
+  totalPages: number;
+  currentPage: number;
+}
+```
+
+```typescript
+export interface PaginationInfoState {
+  startRow: number;
+  endRow: number;
+  totalCount: number;
+  hasData: boolean;
+}
+```
+
+```typescript
+export interface PaginationButtonState {
+  isActive: boolean;
+  isDisabled: boolean;
+  pageNumber?: number;
+}
+```
+
+```typescript
+export interface FilterSidebarState {
+  isVisible: boolean;
+  activeFilterCount: number;
+}
+```
+
+```typescript
+export interface ActionsState {
+  actionsCount: number;
+  rowData: any;
+}
+```
+
+```typescript
+export interface ActionButtonState {
+  action: any;
+  isFirst: boolean;
+  isInDropdown: boolean;
+}
+```
+
+```typescript
+export interface StatusBadgeState {
+  status: string;
+  statusColor?: string;
+  isObject: boolean;
+}
+```
+
+```typescript
+export interface TagsState {
+  tagsCount: number;
+  visibleCount: number;
+}
+```
+
+```typescript
+export interface TagState {
+  tag: string;
+  index: number;
+  isVisible: boolean;
 }
 ```
 
@@ -726,31 +911,6 @@ const customStyle: TableCustomStyles = {
   customClass={customClass}
   customStyle={customStyle}
 />
-```
-
-```tsx
-// Row state for bodyRow and bodyCell
-interface RowState {
-  rowIndex: number;
-  isSelected: boolean;
-  isHovered: boolean;
-  rowData: any;
-}
-
-// Header state for headerCell and sortButton
-interface HeaderCellState {
-  isPinned: boolean;
-  canSort: boolean;
-  columnId: string;
-  pinnedOffset: number;
-}
-
-// Action state for action buttons
-interface ActionButtonState {
-  action: any;
-  isFirst: boolean;
-  isInDropdown: boolean;
-}
 ```
 
 ---

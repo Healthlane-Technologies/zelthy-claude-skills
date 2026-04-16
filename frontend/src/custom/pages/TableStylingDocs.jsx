@@ -90,9 +90,14 @@ const TableStylingDocs = () => {
           ]}
         />
 
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 mt-6">Headers</h3>
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 mt-6">Header Area</h3>
         <PropsTable
           props={[
+            { name: 'headerContainer', type: 'string', description: 'Main header wrapper above the table grid' },
+            { name: 'headerTitle', type: 'string', description: 'Header title text element' },
+            { name: 'headerTitleCount', type: 'string', description: 'Count badge next to the header title' },
+            { name: 'headerActions', type: 'string', description: 'Container for header action buttons' },
+            { name: 'headerAddButton', type: 'string', description: 'Add-record button in the header' },
             { name: 'headerRow', type: 'string', description: 'Header row container' },
             { name: 'headerCell', type: 'string', description: 'Individual header cells' },
             { name: 'headerCellPinned', type: 'string', description: 'Pinned header cells' },
@@ -106,8 +111,22 @@ const TableStylingDocs = () => {
           props={[
             { name: 'bodyRow', type: 'string', description: 'Data row containers' },
             { name: 'bodyRowSelected', type: 'string', description: 'Selected row state' },
+            { name: 'bodyRowHover', type: 'string', description: 'Hovered row state' },
             { name: 'bodyCell', type: 'string', description: 'Individual data cells' },
             { name: 'bodyCellPinned', type: 'string', description: 'Pinned data cells' },
+          ]}
+        />
+
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 mt-6">Loading & Empty States</h3>
+        <PropsTable
+          props={[
+            { name: 'loadingOverlay', type: 'string', description: 'Full-table loading overlay' },
+            { name: 'loadingCell', type: 'string', description: 'Per-cell loading indicator' },
+            { name: 'emptyStateRow', type: 'string', description: 'Row shown when table has no data' },
+            { name: 'skeletonRow', type: 'string', description: 'Skeleton placeholder row during initial load' },
+            { name: 'skeletonCell', type: 'string', description: 'Skeleton placeholder cell' },
+            { name: 'skeletonBar', type: 'string', description: 'Animated bar inside skeleton cell' },
+            { name: 'infiniteScrollLoader', type: 'string', description: 'Loader shown during infinite scroll fetch' },
           ]}
         />
 
@@ -115,7 +134,11 @@ const TableStylingDocs = () => {
         <PropsTable
           props={[
             { name: 'utilitiesContainer', type: 'string', description: 'Action bar container' },
+            { name: 'utilitiesLeft', type: 'string', description: 'Left slot of the utilities bar' },
+            { name: 'utilitiesRight', type: 'string', description: 'Right slot of the utilities bar' },
             { name: 'filterButton', type: 'string', description: 'Filter toggle buttons' },
+            { name: 'clearFiltersButton', type: 'string', description: 'Button that clears all active filters' },
+            { name: 'columnOptionsButton', type: 'string', description: 'Column visibility/options toggle button' },
             { name: 'searchInput', type: 'string', description: 'Search input field' },
             { name: 'uploadButton', type: 'string', description: 'File upload button' },
             { name: 'downloadButton', type: 'string', description: 'Download/export button' },
@@ -126,8 +149,12 @@ const TableStylingDocs = () => {
         <PropsTable
           props={[
             { name: 'paginationContainer', type: 'string', description: 'Pagination wrapper' },
+            { name: 'paginationControls', type: 'string', description: 'Controls group inside pagination bar' },
             { name: 'paginationButton', type: 'string', description: 'Page number buttons' },
             { name: 'paginationNavButton', type: 'string', description: 'Previous/next buttons' },
+            { name: 'paginationButtonDisabled', type: 'string', description: 'Disabled state of pagination buttons' },
+            { name: 'paginationButtonActive', type: 'string', description: 'Active/current page button' },
+            { name: 'paginationSelect', type: 'string', description: 'Per-page size select dropdown' },
             { name: 'paginationInfo', type: 'string', description: 'Page info display' },
             { name: 'paginationEllipsis', type: 'string', description: 'Overflow indicators' },
           ]}
@@ -142,6 +169,8 @@ const TableStylingDocs = () => {
             { name: 'filterClearAll', type: 'string', description: 'Clear filters button' },
             { name: 'filterContent', type: 'string', description: 'Filter content area' },
             { name: 'filterAccordion', type: 'string', description: 'Filter accordion wrapper' },
+            { name: 'filterItem', type: 'string', description: 'Individual filter item row' },
+            { name: 'filterBadge', type: 'string', description: 'Badge showing active filter count on filter button' },
           ]}
         />
 
@@ -154,10 +183,24 @@ const TableStylingDocs = () => {
             { name: 'actionDropdown', type: 'string', description: 'Action dropdown menu' },
             { name: 'actionDropdownItem', type: 'string', description: 'Action menu items' },
             { name: 'statusBadge', type: 'string', description: 'Status display badges' },
+            { name: 'statusIcon', type: 'string', description: 'Icon inside a status badge' },
             { name: 'tagsContainer', type: 'string', description: 'Tags wrapper' },
+            { name: 'tag', type: 'string', description: 'Individual tag chip' },
+            { name: 'tagMore', type: 'string', description: 'Overflow indicator for hidden tags' },
             { name: 'workflowContainer', type: 'string', description: 'Workflow elements wrapper' },
             { name: 'workflowButton', type: 'string', description: 'Workflow action buttons' },
             { name: 'workflowDropdown', type: 'string', description: 'Workflow dropdown menu' },
+          ]}
+        />
+
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 mt-6">Sub-Item Cells</h3>
+        <PropsTable
+          props={[
+            { name: 'subItemContainer', type: 'string', description: 'Wrapper for sub-item list inside a cell' },
+            { name: 'subItemText', type: 'string', description: 'Text of a single sub-item' },
+            { name: 'subItemSeparator', type: 'string', description: 'Separator between sub-items' },
+            { name: 'subItemShowMore', type: 'string', description: 'Show-more toggle for collapsed sub-items' },
+            { name: 'subItemTooltip', type: 'string', description: 'Tooltip shown over overflowing sub-items' },
           ]}
         />
       </Section>
@@ -217,6 +260,224 @@ const TableStylingDocs = () => {
     ...baseStyles,
     backgroundColor: state.action.type === 'danger' ? '#fef2f2' : baseStyles.backgroundColor
   };
+}`}
+        />
+      </Section>
+
+      <Section title="State Type Definitions">
+        <p className="mb-4">Complete TypeScript interfaces for all state objects passed to customStyle functions.</p>
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3">ContainerState</h3>
+        <CodeBlock
+          language="typescript"
+          title="ContainerState"
+          code={`export interface ContainerState {
+  hideControls: boolean;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">HeaderContainerState</h3>
+        <CodeBlock
+          language="typescript"
+          title="HeaderContainerState"
+          code={`export interface HeaderContainerState {
+  hasActions: boolean;
+  totalCount: number;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">HeaderTitleState</h3>
+        <CodeBlock
+          language="typescript"
+          title="HeaderTitleState"
+          code={`export interface HeaderTitleState {
+  title: string | React.ReactNode;
+  hasCount: boolean;
+  totalCount: number;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">HeaderActionsState</h3>
+        <CodeBlock
+          language="typescript"
+          title="HeaderActionsState"
+          code={`export interface HeaderActionsState {
+  hasAddButton: boolean;
+  hasExtraActions: boolean;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">HeaderAddButtonState</h3>
+        <CodeBlock
+          language="typescript"
+          title="HeaderAddButtonState"
+          code={`export interface HeaderAddButtonState {
+  isDisabled: boolean;
+  title: string | React.ReactNode;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">HeaderCellState</h3>
+        <CodeBlock
+          language="typescript"
+          title="HeaderCellState"
+          code={`export interface HeaderCellState {
+  isPinned: boolean;
+  canSort: boolean;
+  columnId: string;
+  pinnedOffset?: number;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">SortButtonState</h3>
+        <CodeBlock
+          language="typescript"
+          title="SortButtonState"
+          code={`export interface SortButtonState {
+  sortDirection: 'asc' | 'desc' | null;
+  isHovered: boolean;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">BodyRowState</h3>
+        <CodeBlock
+          language="typescript"
+          title="BodyRowState"
+          code={`export interface BodyRowState {
+  isSelected: boolean;
+  isHovered: boolean;
+  rowIndex: number;
+  rowData: any;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">BodyCellState</h3>
+        <CodeBlock
+          language="typescript"
+          title="BodyCellState"
+          code={`export interface BodyCellState {
+  isPinned: boolean;
+  columnId: string;
+  rowData: any;
+  cellValue: any;
+  pinnedOffset?: number;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">UtilitiesState</h3>
+        <CodeBlock
+          language="typescript"
+          title="UtilitiesState"
+          code={`export interface UtilitiesState {
+  activeFilterCount: number;
+  hasSearch: boolean;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">FilterButtonState</h3>
+        <CodeBlock
+          language="typescript"
+          title="FilterButtonState"
+          code={`export interface FilterButtonState {
+  isActive: boolean;
+  filterCount: number;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">PaginationContainerState</h3>
+        <CodeBlock
+          language="typescript"
+          title="PaginationContainerState"
+          code={`export interface PaginationContainerState {
+  compact: boolean;
+  totalPages: number;
+  currentPage: number;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">PaginationInfoState</h3>
+        <CodeBlock
+          language="typescript"
+          title="PaginationInfoState"
+          code={`export interface PaginationInfoState {
+  startRow: number;
+  endRow: number;
+  totalCount: number;
+  hasData: boolean;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">PaginationButtonState</h3>
+        <CodeBlock
+          language="typescript"
+          title="PaginationButtonState"
+          code={`export interface PaginationButtonState {
+  isActive: boolean;
+  isDisabled: boolean;
+  pageNumber?: number;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">FilterSidebarState</h3>
+        <CodeBlock
+          language="typescript"
+          title="FilterSidebarState"
+          code={`export interface FilterSidebarState {
+  isVisible: boolean;
+  activeFilterCount: number;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">ActionsState</h3>
+        <CodeBlock
+          language="typescript"
+          title="ActionsState"
+          code={`export interface ActionsState {
+  actionsCount: number;
+  rowData: any;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">ActionButtonState</h3>
+        <CodeBlock
+          language="typescript"
+          title="ActionButtonState"
+          code={`export interface ActionButtonState {
+  action: any;
+  isFirst: boolean;
+  isInDropdown: boolean;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">StatusBadgeState</h3>
+        <CodeBlock
+          language="typescript"
+          title="StatusBadgeState"
+          code={`export interface StatusBadgeState {
+  status: string;
+  statusColor?: string;
+  isObject: boolean;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">TagsState</h3>
+        <CodeBlock
+          language="typescript"
+          title="TagsState"
+          code={`export interface TagsState {
+  tagsCount: number;
+  visibleCount: number;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">TagState</h3>
+        <CodeBlock
+          language="typescript"
+          title="TagState"
+          code={`export interface TagState {
+  tag: string;
+  index: number;
+  isVisible: boolean;
 }`}
         />
       </Section>
@@ -449,33 +710,6 @@ const customStyle: TableCustomStyles = {
 />`}
         />
 
-        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">State Type Definitions</h3>
-        <CodeBlock
-          language="tsx"
-          title="type-defs.tsx"
-          code={`// Row state for bodyRow and bodyCell
-interface RowState {
-  rowIndex: number;
-  isSelected: boolean;
-  isHovered: boolean;
-  rowData: any;
-}
-
-// Header state for headerCell and sortButton
-interface HeaderCellState {
-  isPinned: boolean;
-  canSort: boolean;
-  columnId: string;
-  pinnedOffset: number;
-}
-
-// Action state for action buttons
-interface ActionButtonState {
-  action: any;
-  isFirst: boolean;
-  isInDropdown: boolean;
-}`}
-        />
       </Section>
     </DocPage>
   );
