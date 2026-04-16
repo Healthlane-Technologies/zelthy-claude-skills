@@ -19,22 +19,23 @@ Note: Server uses `json_schema`, `ui_schema`, `form_data`. Local `rjsf_schema` p
 
 ## FormRenderer (Forms)
 
-**Sections:** Import | Props | Server Response Format | Server-Driven Mode | Local RJSF Mode | Multi-Step Forms | Form Sync | Autocomplete | Integration with CrudHandler | Submit Button Portal | Choosing Between Modes
+**Sections:** Import | Props | Server Response Format | Server-Driven Mode | Local RJSF Mode | Multi-Step Forms | Form Sync | Autocomplete | Integration with CrudHandler | Submit Button Portal | Custom Widgets | Choosing Between Modes
 
 ### Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `api_endpoint` | string | - | Enables server-driven mode. The endpoint used to GET the form schema and POST form submissions. When provided, rjsf_schema and onSubmit are ignored. |
-| `getParams` | object | { action: initialize_form | Query parameters appended to the GET request when fetching the form schema in server-driven mode. Override to load edit forms or pass context. |
-| `postParams` | object | { form_type: create_form | Query parameters appended to the POST request when submitting the form in server-driven mode. Typically set to { form_type:  |
+| `getParams` | Record<string, any> | { action: initialize_form | Query parameters appended to the GET request when fetching the form schema in server-driven mode. Override to load edit forms or pass context. |
+| `postParams` | Record<string, any> | { form_type: create_form | Query parameters appended to the POST request when submitting the form in server-driven mode. Override with form_type and object_uuid for edit flows. |
 | `showConfirmAlert` | boolean | false | When true, displays a confirmation dialog before submitting the form. Uses the browser default unless customConfirmAlert is provided. |
 | `customConfirmAlert` | ReactNode | Function | - | Custom confirmation UI rendered when showConfirmAlert is true. Receives { onConfirm, onCancel } props. Return a React element that calls onConfirm to proceed or onCancel to abort. |
-| `rjsf_schema` | object | - | Local RJSF schema object with shape { schema, uiSchema, formData }. Enables local mode for client-side form rendering without any server calls. Ignored if api_endpoint is provided. |
+| `rjsf_schema` | object | - | Local RJSF schema object with shape { schema, uiSchema, formData, submit_endpoint }. Enables local mode. When submit_endpoint is provided, form submission is POSTed to that URL instead of calling onSubmit. Ignored if api_endpoint is provided. |
 | `onSubmit` | function | - | Client-side submit handler for local mode. Receives the validated formData as its argument. Can return a promise. Ignored if api_endpoint is provided. |
 | `onResponse` | function | - | Callback invoked after a successful form submission. Receives the full server response object (server mode) or the return value of onSubmit (local mode). |
 | `onError` | function | - | Callback invoked when form submission fails. Receives the error object. Use this for toast notifications or error logging. |
-| `customWidgets` | object | - | Map of custom RJSF widget names to React components. Merged with the default widget set. Reference a custom widget in ui_schema via  |
+| `autocompleteParams` | Record<string, any> | - | Query parameters appended to autocomplete API requests in AsyncSelectFieldWidget. Only applies when using api_endpoint or rjsf_schema with submit_endpoint. |
+| `customWidgets` | Record<string, React.ComponentType<any>> | - | Map of widget names to React components that override default RJSF widgets. Reference in ui_schema via ui:widget. Widgets receive all standard RJSF widget props. |
 | `submitButtonContainerId` | string | - | DOM element ID where the submit button should be portaled via React.createPortal. Useful for placing the submit button outside the form, e.g., in a dialog footer. The target element must exist in the DOM when the form mounts. |
 | `skipAutoRefresh` | boolean | false | When true, prevents the automatic table refresh that normally occurs after a successful form submission in CrudHandler integration. Useful when you want to handle refresh logic manually. |
 
@@ -264,6 +265,38 @@ function CreateUserForm() {
     />
   );
 }
+```
+
+```jsx
+<FormRenderer
+  rjsf_schema={{
+    schema: {
+      type: "object",
+      required: ["name", "email"],
+      properties: {
+        name: { type: "string", title: "Full Name" },
+        email: { type: "string", title: "Email", format: "email" },
+      },
+    },
+    uiSchema: {
+      name: { "ui:placeholder": "Enter name" },
+      email: { "ui:placeholder": "user@company.com" },
+      "ui:order": ["name", "email"],
+    },
+    formData: {},
+    submit_endpoint: "/api/users/",
+  }}
+  postParams={{ form_type: "create_form" }}
+  autocompleteParams={{ limit: 20 }}
+  onResponse={(response) => {
+    console.log("User created:", response);
+  }}
+  onError={(error) => {
+    console.error("Failed:", error);
+  }}
+/>
+
+// POST /api/users/?form_type=create_form  --> submits form data
 ```
 
 ```json
@@ -632,6 +665,57 @@ function UserFormDialog({ open, onClose }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+```
+
+```jsx
+import { FormRenderer } from "@zango-core/crud/form";
+
+function PhoneNumberWidget({ value, onChange, schema, options }) {
+  return (
+    <div>
+      <input
+        type="tel"
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={options?.placeholder || schema?.placeholder || ""}
+        className="w-full px-3 py-2 border rounded-lg"
+      />
+      <p className="text-xs text-gray-400 mt-1">Enter with country code</p>
+    </div>
+  );
+}
+
+const myWidgets = {
+  PhoneNumberWidget,
+};
+
+const formSchema = {
+  schema: {
+    type: "object",
+    properties: {
+      phone: { type: "string", title: "Phone Number" },
+      name: { type: "string", title: "Name" },
+    },
+  },
+  uiSchema: {
+    phone: { "ui:widget": "PhoneNumberWidget" },
+    name: { "ui:placeholder": "Full name" },
+    "ui:order": ["name", "phone"],
+  },
+  formData: {},
+  submit_endpoint: "/api/contacts/",
+};
+
+function ContactForm() {
+  return (
+    <FormRenderer
+      rjsf_schema={formSchema}
+      customWidgets={myWidgets}
+      postParams={{ form_type: "create_form" }}
+      onResponse={(res) => console.log("Saved:", res)}
+    />
   );
 }
 ```
