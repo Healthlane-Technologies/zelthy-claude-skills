@@ -7,5 +7,5 @@
   },
   "repository": "https://github.com/Healthlane-Technologies/zelthy-claude-skills",
   "keywords": ["zango", "django", "crud", "workflow", "react"],
-  "skills": ".."
+  "skills": "./"
 }
