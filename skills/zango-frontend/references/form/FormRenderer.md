@@ -1,27 +1,11 @@
-# Zango FormRenderer Reference
+# FormRenderer
+Forms
 
-> Auto-generated from documentation pages. Regenerate with: `node scripts/generate-reference.js`
-
-## Import
-```js
-import { FormRenderer } from '@zango-core/crud/form';
-```
-
-## Server Response Format (snake_case)
-```json
-{ "success": true, "response": { "is_multistep": false, "form": { "json_schema": { "type": "object", "properties": {} }, "ui_schema": {}, "form_data": {} } } }
-```
-
-Note: Server uses `json_schema`, `ui_schema`, `form_data`. Local `rjsf_schema` prop uses camelCase: `schema`, `uiSchema`, `formData`.
-
----
-
-
-## FormRenderer (Forms)
+Dual-mode form engine with server-driven and local RJSF schema support, multi-step forms, autocomplete, and form sync.
 
 **Sections:** Import | Props | Server Response Format | Server-Driven Mode | Local RJSF Mode | Multi-Step Forms | Form Sync | Autocomplete | Integration with CrudHandler | Submit Button Portal | Custom Widgets | Choosing Between Modes
 
-### Props
+## Props
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
@@ -39,12 +23,14 @@ Note: Server uses `json_schema`, `ui_schema`, `form_data`. Local `rjsf_schema` p
 | `submitButtonContainerId` | string | - | DOM element ID where the submit button should be portaled via React.createPortal. Useful for placing the submit button outside the form, e.g., in a dialog footer. The target element must exist in the DOM when the form mounts. |
 | `skipAutoRefresh` | boolean | false | When true, prevents the automatic table refresh that normally occurs after a successful form submission in CrudHandler integration. Useful when you want to handle refresh logic manually. |
 
-### Code Examples
+## Code Examples
 
+### import.jsx
 ```jsx
 import { FormRenderer } from "@zango-core/crud/form";
 ```
 
+### server-response.json
 ```json
 // GET /api/users/?action=initialize_form
 {
@@ -77,6 +63,7 @@ import { FormRenderer } from "@zango-core/crud/form";
 }
 ```
 
+### submit-response.json
 ```json
 // POST /api/users/?form_type=create_form
 // Request body: { "name": "Jane Doe", "email": "jane@acme.com", "role": "Admin" }
@@ -101,6 +88,7 @@ import { FormRenderer } from "@zango-core/crud/form";
 }
 ```
 
+### server-basic.jsx
 ```jsx
 import { FormRenderer } from "@zango-core/crud/form";
 
@@ -114,14 +102,9 @@ function CreateUserForm() {
       onError={(error) => {
         console.error("Form submission failed:", error);
       }}
-    />
-  );
-}
-
-// GET  /api/users/?action=initialize_form      --> fetches schema
-// POST /api/users/?form_type=create_form        --> submits data
 ```
 
+### server-edit-form.jsx
 ```jsx
 <FormRenderer
   api_endpoint="/api/users/"
@@ -140,12 +123,9 @@ function CreateUserForm() {
   onError={(error) => {
     console.error("Update failed:", error);
   }}
-/>
-
-// GET  /api/users/?action=initialize_form&form_type=edit_form&object_uuid=abc-123-def-456
-// POST /api/users/?form_type=edit_form&object_uuid=abc-123-def-456
 ```
 
+### server-confirm.jsx
 ```jsx
 <FormRenderer
   api_endpoint="/api/users/"
@@ -179,9 +159,9 @@ function CreateUserForm() {
   onResponse={(response) => {
     console.log("Submitted with confirmation:", response);
   }}
-/>
 ```
 
+### local-rjsf.jsx
 ```jsx
 import { FormRenderer } from "@zango-core/crud/form";
 
@@ -262,11 +242,9 @@ function CreateUserForm() {
       onError={(error) => {
         console.error("Failed to create user:", error);
       }}
-    />
-  );
-}
 ```
 
+### local-rjsf-submit-endpoint.jsx
 ```jsx
 <FormRenderer
   rjsf_schema={{
@@ -294,11 +272,9 @@ function CreateUserForm() {
   onError={(error) => {
     console.error("Failed:", error);
   }}
-/>
-
-// POST /api/users/?form_type=create_form  --> submits form data
 ```
 
+### multistep-response.json
 ```json
 // GET /api/onboarding/?action=initialize_form
 {
@@ -368,6 +344,7 @@ function CreateUserForm() {
 }
 ```
 
+### multistep-usage.jsx
 ```jsx
 // The same FormRenderer component -- the wizard UI is driven entirely
 // by the server response shape.
@@ -380,9 +357,9 @@ function CreateUserForm() {
   onError={(error) => {
     console.error("Onboarding failed:", error);
   }}
-/>
 ```
 
+### sync-ui-schema.json
 ```json
 {
   "country": {
@@ -399,6 +376,7 @@ function CreateUserForm() {
 }
 ```
 
+### sync-request.json
 ```json
 // User selects "India" in the country dropdown.
 // FormRenderer automatically sends:
@@ -454,6 +432,7 @@ function CreateUserForm() {
 }
 ```
 
+### autocomplete-schema.json
 ```json
 {
   "json_schema": {
@@ -484,6 +463,7 @@ function CreateUserForm() {
 }
 ```
 
+### autocomplete-request.json
 ```json
 // User types "Acm" in the vendor field.
 // FormRenderer sends (after debounce):
@@ -508,6 +488,7 @@ function CreateUserForm() {
 }
 ```
 
+### crud-integration.jsx
 ```jsx
 import { useState } from "react";
 import { CrudHandler } from "@zango-core/crud/table";
@@ -574,63 +555,9 @@ function UserManagement() {
             </tbody>
           </table>
         )}
-      />
-
-      {/* Add/Edit Dialog with FormRenderer */}
-      <Dialog
-        open={formDialog.open}
-        onOpenChange={(open) => !open && closeForm()}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {formDialog.mode === "edit" ? "Edit User" : "Add User"}
-            </DialogTitle>
-          </DialogHeader>
-
-          {formDialog.open && (
-            <FormRenderer
-              api_endpoint="/api/users/"
-              getParams={{
-                action: "initialize_form",
-                ...(formDialog.mode === "edit" && {
-                  form_type: "edit_form",
-                  object_uuid: formDialog.uuid,
-                }),
-              }}
-              postParams={{
-                form_type:
-                  formDialog.mode === "edit" ? "edit_form" : "create_form",
-                ...(formDialog.uuid && { object_uuid: formDialog.uuid }),
-              }}
-              submitButtonContainerId="user-form-footer"
-              onResponse={() => {
-                closeForm();
-                // CrudHandler auto-refreshes the table after submission
-              }}
-              onError={(error) => {
-                console.error("Form error:", error);
-              }}
-            />
-          )}
-
-          <DialogFooter>
-            <button
-              onClick={closeForm}
-              className="px-4 py-2 border rounded-lg"
-            >
-              Cancel
-            </button>
-            {/* Submit button is portaled here */}
-            <div id="user-form-footer" />
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
 ```
 
+### submit-portal.jsx
 ```jsx
 import { FormRenderer } from "@zango-core/crud/form";
 import {
@@ -654,21 +581,9 @@ function UserFormDialog({ open, onClose }) {
           api_endpoint="/api/users/"
           submitButtonContainerId="user-form-footer"
           onResponse={() => onClose()}
-        />
-
-        <DialogFooter>
-          <button onClick={onClose} className="px-4 py-2 border rounded-lg">
-            Cancel
-          </button>
-          {/* The submit button is portaled into this container */}
-          <div id="user-form-footer" />
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 ```
 
+### custom-widgets.jsx
 ```jsx
 import { FormRenderer } from "@zango-core/crud/form";
 
@@ -681,43 +596,5 @@ function PhoneNumberWidget({ value, onChange, schema, options }) {
         onChange={(e) => onChange(e.target.value)}
         placeholder={options?.placeholder || schema?.placeholder || ""}
         className="w-full px-3 py-2 border rounded-lg"
-      />
-      <p className="text-xs text-gray-400 mt-1">Enter with country code</p>
-    </div>
-  );
-}
-
-const myWidgets = {
-  PhoneNumberWidget,
-};
-
-const formSchema = {
-  schema: {
-    type: "object",
-    properties: {
-      phone: { type: "string", title: "Phone Number" },
-      name: { type: "string", title: "Name" },
-    },
-  },
-  uiSchema: {
-    phone: { "ui:widget": "PhoneNumberWidget" },
-    name: { "ui:placeholder": "Full name" },
-    "ui:order": ["name", "phone"],
-  },
-  formData: {},
-  submit_endpoint: "/api/contacts/",
-};
-
-function ContactForm() {
-  return (
-    <FormRenderer
-      rjsf_schema={formSchema}
-      customWidgets={myWidgets}
-      postParams={{ form_type: "create_form" }}
-      onResponse={(res) => console.log("Saved:", res)}
-    />
-  );
-}
 ```
 
----

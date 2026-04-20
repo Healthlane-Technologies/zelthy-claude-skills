@@ -3,12 +3,10 @@
 /**
  * Reference Generator for Zango Skills
  *
- * Reads documentation pages from frontend/src/custom/pages/ and generates
- * 4 focused reference files in skills/zango-frontend/references/:
- *   - CRUD-REFERENCE.md
- *   - WORKFLOW-REFERENCE.md
- *   - FORM-REFERENCE.md
- *   - APPBUILDER-REFERENCE.md
+ * Scans frontend/src/custom/pages/*.jsx for <DocPage category="..."> props.
+ * Generates per-category directories in skills/zango-frontend/references/:
+ *   - <category>/index.md  — imports, API shapes, component listing
+ *   - <category>/<Title>.md — props + code examples per component
  *
  * Usage: node scripts/generate-reference.js
  */
@@ -20,50 +18,130 @@ const ROOT = path.resolve(__dirname, '..');
 const PAGES_DIR = path.join(ROOT, 'frontend', 'src', 'custom', 'pages');
 const REFS_DIR = path.join(ROOT, 'skills', 'zango-frontend', 'references');
 
-// Map each doc page to a reference category
-const PAGE_CATEGORIES = {
-  // CRUD reference
-  'CrudHandlerDocs.jsx': 'crud',
-  'TableStylingDocs.jsx': 'crud',
-  'UseTableDocs.jsx': 'crud',
-  'DetailViewsDocs.jsx': 'crud',
-  'TableBodyDocs.jsx': 'crud',
-  'TableHeaderDocs.jsx': 'crud',
-  'TableUtilitiesDocs.jsx': 'crud',
-  'TablePaginationDocs.jsx': 'crud',
-  'TableSearchDocs.jsx': 'crud',
-  'TableAddButtonDocs.jsx': 'crud',
-  'RenderPropsDocs.jsx': 'crud',
-  'WorkflowHooksDocs.jsx': 'crud', // hooks reference includes table hooks
+const VALID_CATEGORIES = ['crud', 'workflow', 'form', 'appbuilder'];
 
-  // Workflow reference
-  'WorkflowStatusDocs.jsx': 'workflow',
-  'WorkflowTagsDocs.jsx': 'workflow',
-  'AdvancedDocs.jsx': 'workflow',
+// ─── Parsers ───
 
-  // Form reference
-  'FormRendererDocs.jsx': 'form',
+function extractMeta(src) {
+  const title = src.match(/title\s*=\s*"([^"]+)"/)?.[1] || null;
+  const category = src.match(/category\s*=\s*"([^"]+)"/)?.[1] || null;
+  const subtitle = src.match(/subtitle\s*=\s*"([^"]+)"/)?.[1] || null;
+  const badge = src.match(/badge\s*=\s*"([^"]+)"/)?.[1] || null;
+  return { title, category, subtitle, badge };
+}
 
-  // App Builder reference
-  'GettingStarted.jsx': 'appbuilder',
-  'ProjectStructure.jsx': 'appbuilder',
-  'ZangoAppDocs.jsx': 'appbuilder',
-  'AppInitializerDocs.jsx': 'appbuilder',
-  'NavbarTopbarDocs.jsx': 'appbuilder',
-  'RoutingPagesDocs.jsx': 'appbuilder',
-  'AuthDocs.jsx': 'appbuilder',
-  'ThemeBuildDocs.jsx': 'appbuilder',
-  'BackendInfoDocs.jsx': 'appbuilder',
-};
+function extractSections(src) {
+  const sections = [];
+  const re = /<Section\s+title\s*=\s*"([^"]+)"/g;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    sections.push(m[1]);
+  }
+  return sections;
+}
 
-const OUTPUT_FILES = {
-  crud: 'CRUD-REFERENCE.md',
-  workflow: 'WORKFLOW-REFERENCE.md',
-  form: 'FORM-REFERENCE.md',
-  appbuilder: 'APPBUILDER-REFERENCE.md',
-};
+function extractProps(src) {
+  const allProps = [];
+  const blockRe = /props\s*=\s*\{\s*\[/g;
+  let blockMatch;
 
-const HEADERS = {
+  while ((blockMatch = blockRe.exec(src)) !== null) {
+    let depth = 1;
+    let i = blockMatch.index + blockMatch[0].length;
+    let blockContent = '';
+
+    while (i < src.length && depth > 0) {
+      if (src[i] === '[') depth++;
+      if (src[i] === ']') depth--;
+      if (depth > 0) blockContent += src[i];
+      i++;
+    }
+
+    const propRe = /\{\s*name:\s*['"]([^'"]+)['"]\s*,\s*type:\s*['"]([^'"]+)['"]/g;
+    const propStarts = [];
+    let pm;
+    while ((pm = propRe.exec(blockContent)) !== null) {
+      propStarts.push({ index: pm.index, name: pm[1], type: pm[2] });
+    }
+    for (let k = 0; k < propStarts.length; k++) {
+      const start = propStarts[k].index;
+      const end = k + 1 < propStarts.length ? propStarts[k + 1].index : blockContent.length;
+      const slice = blockContent.slice(start, end);
+
+      const defMatch = slice.match(/default:\s*([^,}\n]+)/);
+      const descMatch = slice.match(/description:\s*['"](.+?)['"]\s*[,}]/s);
+
+      allProps.push({
+        name: propStarts[k].name,
+        type: propStarts[k].type,
+        default: defMatch ? defMatch[1].trim().replace(/['"]/g, '') : '',
+        description: descMatch ? descMatch[1].replace(/\n\s*/g, ' ') : '',
+      });
+    }
+  }
+  return allProps;
+}
+
+function extractCodeBlocks(src) {
+  const blocks = [];
+  const tagRe = /<CodeBlock\b/g;
+  let tagMatch;
+
+  while ((tagMatch = tagRe.exec(src)) !== null) {
+    let searchStart = tagMatch.index;
+    let tagEnd = src.indexOf('/>', searchStart);
+    const closingTag = src.indexOf('</CodeBlock>', searchStart);
+    if (closingTag !== -1 && (tagEnd === -1 || closingTag < tagEnd)) {
+      tagEnd = closingTag;
+    }
+    if (tagEnd === -1) continue;
+
+    const tagContent = src.slice(searchStart, tagEnd);
+
+    const lang = tagContent.match(/language\s*=\s*"([^"]+)"/)?.[1] || 'jsx';
+    const title = tagContent.match(/title\s*=\s*"([^"]+)"/)?.[1] || '';
+
+    const codeStart = tagContent.indexOf('code={`');
+    if (codeStart === -1) continue;
+
+    let i = codeStart + 'code={`'.length;
+    let code = '';
+    let escaped = false;
+
+    while (i < tagContent.length) {
+      const ch = tagContent[i];
+      if (escaped) {
+        code += ch;
+        escaped = false;
+        i++;
+        continue;
+      }
+      if (ch === '\\') {
+        escaped = true;
+        i++;
+        continue;
+      }
+      if (ch === '`' && tagContent[i + 1] === '}') {
+        break;
+      }
+      code += ch;
+      i++;
+    }
+
+    if (code.trim()) {
+      blocks.push({
+        language: lang,
+        title: title,
+        code: code.replace(/\\`/g, '`').replace(/\\\$/g, '$'),
+      });
+    }
+  }
+  return blocks;
+}
+
+// ─── Index Headers (imports + API shapes per category) ───
+
+const INDEX_HEADERS = {
   crud: `# Zango CRUD Reference
 
 > Auto-generated from documentation pages. Regenerate with: \`node scripts/generate-reference.js\`
@@ -221,119 +299,61 @@ from zango.apps.appauth.models import UserRoleModel
 `,
 };
 
-// ─── Parsers ───
+// ─── Markdown Generators ───
 
-function extractTitle(src) {
-  const m = src.match(/title\s*=\s*"([^"]+)"/);
-  return m ? m[1] : null;
+function titleToFilename(title) {
+  return title.replace(/\s+/g, '-').replace(/[()]/g, '') + '.md';
 }
 
-function extractBadge(src) {
-  const m = src.match(/badge\s*=\s*"([^"]+)"/);
-  return m ? m[1] : null;
-}
+function generateComponentMd(meta, sections, props, codeBlocks) {
+  let md = `# ${meta.title}\n`;
+  if (meta.badge) md += `${meta.badge}\n`;
+  md += '\n';
+  if (meta.subtitle) md += `${meta.subtitle}\n\n`;
 
-function extractSections(src) {
-  const sections = [];
-  const re = /<Section\s+title\s*=\s*"([^"]+)"/g;
-  let m;
-  while ((m = re.exec(src)) !== null) {
-    sections.push(m[1]);
+  if (sections.length > 0) {
+    md += '**Sections:** ' + sections.join(' | ') + '\n\n';
   }
-  return sections;
-}
 
-function extractProps(src) {
-  const allProps = [];
-  const blockRe = /props\s*=\s*\{\s*\[/g;
-  let blockMatch;
-
-  while ((blockMatch = blockRe.exec(src)) !== null) {
-    let depth = 1;
-    let i = blockMatch.index + blockMatch[0].length;
-    let blockContent = '';
-
-    while (i < src.length && depth > 0) {
-      if (src[i] === '[') depth++;
-      if (src[i] === ']') depth--;
-      if (depth > 0) blockContent += src[i];
-      i++;
+  if (props.length > 0) {
+    md += '## Props\n\n';
+    md += '| Prop | Type | Default | Description |\n';
+    md += '|------|------|---------|-------------|\n';
+    for (const p of props) {
+      md += `| \`${p.name}\` | ${p.type} | ${p.default || '-'} | ${p.description} |\n`;
     }
-
-    const propRe = /\{\s*name:\s*['"]([^'"]+)['"]\s*,\s*type:\s*['"]([^'"]+)['"]/g;
-    const propStarts = [];
-    let pm;
-    while ((pm = propRe.exec(blockContent)) !== null) {
-      propStarts.push({ index: pm.index, name: pm[1], type: pm[2] });
-    }
-    for (let k = 0; k < propStarts.length; k++) {
-      const start = propStarts[k].index;
-      const end = k + 1 < propStarts.length ? propStarts[k + 1].index : blockContent.length;
-      const slice = blockContent.slice(start, end);
-      const defMatch = slice.match(/default:\s*([^,}\n]+)/);
-      const descMatch = slice.match(/description:\s*['"]([^'"]+)['"]/);
-      allProps.push({
-        name: propStarts[k].name,
-        type: propStarts[k].type,
-        default: defMatch ? defMatch[1].trim().replace(/['"]/g, '') : '',
-        description: descMatch ? descMatch[1] : '',
-      });
-    }
+    md += '\n';
   }
-  return allProps;
-}
 
-function extractCodeBlocks(src) {
-  const blocks = [];
-  const re = /code\s*=\s*\{`/g;
-  let m;
-
-  while ((m = re.exec(src)) !== null) {
-    let i = m.index + m[0].length;
-    let depth = 0;
-    let content = '';
-    let escaped = false;
-
-    while (i < src.length) {
-      const ch = src[i];
-      if (escaped) {
-        content += ch;
-        escaped = false;
-        i++;
-        continue;
+  if (codeBlocks.length > 0) {
+    md += '## Code Examples\n\n';
+    for (const block of codeBlocks) {
+      if (block.title) {
+        md += `### ${block.title}\n`;
       }
-      if (ch === '\\') {
-        escaped = true;
-        i++;
-        continue;
-      }
-      if (ch === '`' && src[i + 1] === '}') {
-        break;
-      }
-      content += ch;
-      i++;
-    }
-
-    if (content.trim()) {
-      blocks.push(content.replace(/\\`/g, '`').replace(/\\\$/g, '$'));
+      md += `\`\`\`${block.language}\n${block.code.trim()}\n\`\`\`\n\n`;
     }
   }
 
-  // Also extract language from title
-  const langRe = /language\s*=\s*"([^"]+)"/g;
-  const titleRe = /title\s*=\s*"([^"]+)"/g;
-
-  return blocks;
+  return md;
 }
 
-function extractLanguages(src) {
-  const langs = [];
-  const re = /language\s*=\s*"([^"]+)"/g;
-  let m;
-  while ((m = re.exec(src)) !== null) {
-    langs.push(m[1]);
+function generateIndexMd(category, pages) {
+  let md = INDEX_HEADERS[category] || `# Zango ${category} Reference\n\n`;
+
+  md += '## Components & Hooks\n\n';
+  md += '| Name | Type | Description | Reference |\n';
+  md += '|------|------|-------------|----------|\n';
+
+  for (const page of pages) {
+    const filename = titleToFilename(page.meta.title);
+    const badge = page.meta.badge || '';
+    const desc = page.meta.subtitle || '';
+    md += `| ${page.meta.title} | ${badge} | ${desc} | [${filename}](${filename}) |\n`;
   }
-  return langs;
+
+  md += '\n';
+  return md;
 }
 
 // ─── Main ───
@@ -343,86 +363,85 @@ console.log(`  Source: ${PAGES_DIR}`);
 console.log(`  Output: ${REFS_DIR}`);
 console.log('');
 
-// Ensure output directory exists
-fs.mkdirSync(REFS_DIR, { recursive: true });
+// Clean old flat reference files
+const oldFiles = ['CRUD-REFERENCE.md', 'WORKFLOW-REFERENCE.md', 'FORM-REFERENCE.md', 'APPBUILDER-REFERENCE.md'];
+for (const f of oldFiles) {
+  const p = path.join(REFS_DIR, f);
+  if (fs.existsSync(p)) {
+    fs.unlinkSync(p);
+    console.log(`  Removed old file: ${f}`);
+  }
+}
 
-// Accumulate content per category
-const categoryContent = {
-  crud: HEADERS.crud,
-  workflow: HEADERS.workflow,
-  form: HEADERS.form,
-  appbuilder: HEADERS.appbuilder,
-};
+// Clean existing category subdirectories
+for (const cat of VALID_CATEGORIES) {
+  const catDir = path.join(REFS_DIR, cat);
+  if (fs.existsSync(catDir)) {
+    fs.rmSync(catDir, { recursive: true });
+  }
+}
 
-const stats = { pages: 0, props: 0, codeBlocks: 0, sections: 0 };
+// Scan all .jsx pages
+const files = fs.readdirSync(PAGES_DIR).filter(f => f.endsWith('.jsx'));
+const categoryPages = { crud: [], workflow: [], form: [], appbuilder: [] };
+const stats = { pages: 0, props: 0, codeBlocks: 0, sections: 0, skipped: 0 };
 
-for (const [file, category] of Object.entries(PAGE_CATEGORIES)) {
+for (const file of files) {
   const filePath = path.join(PAGES_DIR, file);
-  if (!fs.existsSync(filePath)) {
-    console.log(`  Skip (not found): ${file}`);
+  const src = fs.readFileSync(filePath, 'utf8');
+  const meta = extractMeta(src);
+
+  if (!meta.category) {
+    console.log(`  Skip (no category): ${file}`);
+    stats.skipped++;
     continue;
   }
 
-  const src = fs.readFileSync(filePath, 'utf8');
-  const title = extractTitle(src);
-  const badge = extractBadge(src);
+  if (!VALID_CATEGORIES.includes(meta.category)) {
+    console.log(`  Skip (invalid category "${meta.category}"): ${file}`);
+    stats.skipped++;
+    continue;
+  }
+
   const sections = extractSections(src);
   const props = extractProps(src);
   const codeBlocks = extractCodeBlocks(src);
-  const languages = extractLanguages(src);
 
   stats.pages++;
   stats.props += props.length;
   stats.codeBlocks += codeBlocks.length;
   stats.sections += sections.length;
 
-  console.log(`  ${file} -> ${category}: ${sections.length} sections, ${props.length} props, ${codeBlocks.length} code blocks`);
+  const componentFilename = titleToFilename(meta.title);
+  console.log(`  ${file} -> ${meta.category}/${componentFilename}: ${sections.length} sections, ${props.length} props, ${codeBlocks.length} code blocks`);
 
-  // Build markdown for this page
-  let md = `\n## ${title || file.replace('.jsx', '')}`;
-  if (badge) md += ` (${badge})`;
-  md += '\n\n';
-
-  // Sections as headers
-  if (sections.length > 0) {
-    md += '**Sections:** ' + sections.join(' | ') + '\n\n';
-  }
-
-  // Props table
-  if (props.length > 0) {
-    md += '### Props\n\n';
-    md += '| Prop | Type | Default | Description |\n';
-    md += '|------|------|---------|-------------|\n';
-    for (const p of props) {
-      md += `| \`${p.name}\` | ${p.type} | ${p.default || '-'} | ${p.description} |\n`;
-    }
-    md += '\n';
-  }
-
-  // Code blocks
-  if (codeBlocks.length > 0) {
-    md += '### Code Examples\n\n';
-    for (let i = 0; i < codeBlocks.length; i++) {
-      const lang = languages[i] || 'jsx';
-      md += `\`\`\`${lang}\n${codeBlocks[i].trim()}\n\`\`\`\n\n`;
-    }
-  }
-
-  md += '---\n';
-  categoryContent[category] += md;
+  categoryPages[meta.category].push({ meta, sections, props, codeBlocks });
 }
 
-// Write output files
-for (const [category, filename] of Object.entries(OUTPUT_FILES)) {
-  const outPath = path.join(REFS_DIR, filename);
-  fs.writeFileSync(outPath, categoryContent[category], 'utf8');
-  const lines = categoryContent[category].split('\n').length;
-  const size = (Buffer.byteLength(categoryContent[category]) / 1024).toFixed(1);
-  console.log(`\n  Written: ${filename} (${lines} lines, ${size} KB)`);
+// Write output
+for (const [category, pages] of Object.entries(categoryPages)) {
+  if (pages.length === 0) continue;
+
+  const catDir = path.join(REFS_DIR, category);
+  fs.mkdirSync(catDir, { recursive: true });
+
+  // Write index.md
+  const indexContent = generateIndexMd(category, pages);
+  fs.writeFileSync(path.join(catDir, 'index.md'), indexContent, 'utf8');
+
+  // Write individual component files
+  for (const page of pages) {
+    const filename = titleToFilename(page.meta.title);
+    const content = generateComponentMd(page.meta, page.sections, page.props, page.codeBlocks);
+    fs.writeFileSync(path.join(catDir, filename), content, 'utf8');
+  }
+
+  console.log(`\n  Written: ${category}/ (index.md + ${pages.length} component files)`);
 }
 
 console.log(`\nDone!`);
-console.log(`  Pages: ${stats.pages}`);
+console.log(`  Pages processed: ${stats.pages}`);
+console.log(`  Pages skipped: ${stats.skipped}`);
 console.log(`  Total Props: ${stats.props}`);
 console.log(`  Total Code Blocks: ${stats.codeBlocks}`);
 console.log(`  Total Sections: ${stats.sections}`);
