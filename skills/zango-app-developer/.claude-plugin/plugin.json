@@ -1,11 +1,10 @@
 {
   "name": "zango-app-developer",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "Full-stack Zango app development — bootstrap environments, create apps, build modules with CRUD, workflows, and React frontend",
   "author": {
     "name": "Healthlane Technologies"
   },
   "repository": "https://github.com/Healthlane-Technologies/zelthy-claude-skills",
-  "keywords": ["zango", "django", "crud", "workflow", "react"],
-  "skills": "./"
+  "keywords": ["zango", "django", "crud", "workflow", "react"]
 }
