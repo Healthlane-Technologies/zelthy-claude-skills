@@ -19,17 +19,17 @@ Determine what the user wants and read the relevant reference:
 
 | User wants | Reference to read | Section below |
 |------------|-------------------|---------------|
-| Create a new app from scratch | [App Builder Ref](references/APPBUILDER-REFERENCE.md) | Launch App |
-| Create a page (dashboard, CRUD, custom) | [CRUD Ref](references/CRUD-REFERENCE.md) | Scaffold Page |
-| Add a data table | [CRUD Ref](references/CRUD-REFERENCE.md) | Scaffold Table |
-| Add a form | [Form Ref](references/FORM-REFERENCE.md) | Scaffold Form |
-| Add a detail view | [CRUD Ref](references/CRUD-REFERENCE.md) | Scaffold Detail |
-| Add workflow status/tags | [Workflow Ref](references/WORKFLOW-REFERENCE.md) | Scaffold Workflow |
-| Configure routes and menu | [App Builder Ref](references/APPBUILDER-REFERENCE.md) | Setup Routes |
-| Customize sidebar/topbar | [App Builder Ref](references/APPBUILDER-REFERENCE.md) | Setup Navbar |
-| Configure login/auth | [App Builder Ref](references/APPBUILDER-REFERENCE.md) | Setup Auth |
-| Configure theme/colors | [App Builder Ref](references/APPBUILDER-REFERENCE.md) | Setup Theme |
-| General question about Zango | Read the relevant reference based on topic | - |
+| Create a new app from scratch | [App Builder Index](references/appbuilder/index.md) | Launch App |
+| Create a page (dashboard, CRUD, custom) | [CRUD Index](references/crud/index.md) | Scaffold Page |
+| Add a data table | [CRUD Index](references/crud/index.md) | Scaffold Table |
+| Add a form | [Form Index](references/form/index.md) | Scaffold Form |
+| Add a detail view | [CRUD Index](references/crud/index.md) | Scaffold Detail |
+| Add workflow status/tags | [Workflow Index](references/workflow/index.md) | Scaffold Workflow |
+| Configure routes and menu | [App Builder Index](references/appbuilder/index.md) | Setup Routes |
+| Customize sidebar/topbar | [App Builder Index](references/appbuilder/index.md) | Setup Navbar |
+| Configure login/auth | [App Builder Index](references/appbuilder/index.md) | Setup Auth |
+| Configure theme/colors | [App Builder Index](references/appbuilder/index.md) | Setup Theme |
+| General question about Zango | Read the relevant index based on topic | - |
 
 ## Critical Rules (always apply)
 
