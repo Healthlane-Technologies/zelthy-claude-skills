@@ -9,6 +9,7 @@ const DetailViewsDocs = () => {
   return (
     <DocPage
       title="Detail Views"
+      category="crud"
       subtitle="Drawer and route-based detail views with automatic data fetching."
       badge="Views"
     >

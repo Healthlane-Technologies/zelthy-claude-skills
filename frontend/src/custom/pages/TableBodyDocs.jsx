@@ -9,6 +9,7 @@ const TableBodyDocs = () => {
   return (
     <DocPage
       title="TableBody"
+      category="crud"
       subtitle="Main table data display component with virtualization and row interaction support."
       badge="Component"
     >

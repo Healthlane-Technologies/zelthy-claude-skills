@@ -9,6 +9,7 @@ const TableSearchDocs = () => {
   return (
     <DocPage
       title="TableSearch"
+      category="crud"
       subtitle="Standalone search input that syncs with table context, plus the useTableSearch hook for custom search UIs."
       badge="Component + Hook"
     >

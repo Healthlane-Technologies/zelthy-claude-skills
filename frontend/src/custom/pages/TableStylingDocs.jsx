@@ -9,6 +9,7 @@ const TableStylingDocs = () => {
   return (
     <DocPage
       title="Table Styling"
+      category="crud"
       subtitle="Complete visual customization of table components using CSS classes or dynamic style functions. Inspired by React Select's styling approach."
       badge="Styling"
     >

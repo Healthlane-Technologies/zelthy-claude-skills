@@ -9,6 +9,7 @@ const UseTableDocs = () => {
   return (
     <DocPage
       title="useTable()"
+      category="crud"
       subtitle="Access shared table context from any custom component rendered within CrudHandler. Stay in sync with table state and controls."
       badge="Hook"
     >

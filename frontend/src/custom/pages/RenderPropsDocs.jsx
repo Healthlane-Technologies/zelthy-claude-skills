@@ -9,6 +9,7 @@ const RenderPropsDocs = () => {
   return (
     <DocPage
       title="Render Props"
+      category="crud"
       subtitle="Custom rendering for action, status, tag, and workflow-transition columns while maintaining all functionality and state management."
       badge="Advanced"
     >

@@ -9,6 +9,7 @@ const CrudHandlerDocs = () => {
   return (
     <DocPage
       title="CrudHandler"
+      category="crud"
       subtitle="The main orchestrator component. Provides a flexible, customizable table interface with built-in support for headers, utilities, body, pagination, and detail views."
       badge="Core Component"
     >

@@ -9,6 +9,7 @@ const AuthDocs = () => {
   return (
     <DocPage
       title="Authentication"
+      category="appbuilder"
       subtitle="Complete authentication system with password, OTP, OAuth, 2FA, role selection, and full customization."
       badge="App Builder"
     >

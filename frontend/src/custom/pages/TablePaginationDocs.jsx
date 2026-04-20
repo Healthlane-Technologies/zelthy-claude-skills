@@ -9,6 +9,7 @@ const TablePaginationDocs = () => {
   return (
     <DocPage
       title="TablePagination"
+      category="crud"
       subtitle="Pagination controls with page navigation and rows-per-page selection."
       badge="Component"
     >

@@ -9,6 +9,7 @@ const WorkflowTagsDocs = () => {
   return (
     <DocPage
       title="WorkflowTags"
+      category="workflow"
       subtitle="Manages workflow tags with toggle functionality and form-based transitions."
       badge="Workflow"
     >
@@ -207,6 +208,7 @@ function StaticTags({ workflowData }) {
     />
   );
 }`}
+        />
       </Section>
     </DocPage>
   );

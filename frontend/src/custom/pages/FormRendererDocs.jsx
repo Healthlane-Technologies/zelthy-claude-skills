@@ -9,6 +9,7 @@ const FormRendererDocs = () => {
   return (
     <DocPage
       title="FormRenderer"
+      category="form"
       subtitle="Dual-mode form engine with server-driven and local RJSF schema support, multi-step forms, autocomplete, and form sync."
       badge="Forms"
     >

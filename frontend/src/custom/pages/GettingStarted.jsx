@@ -9,6 +9,7 @@ const GettingStarted = () => {
   return (
     <DocPage
       title="Quick Start"
+      category="appbuilder"
       subtitle="Create and launch a new Zango frontend app in minutes."
       badge="Getting Started"
     >

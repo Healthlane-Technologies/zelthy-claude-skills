@@ -9,6 +9,7 @@ const ThemeBuildDocs = () => {
   return (
     <DocPage
       title="Theme & Build"
+      category="appbuilder"
       subtitle="Configure colors, typography, and build your app for development and production deployment."
       badge="App Builder"
     >

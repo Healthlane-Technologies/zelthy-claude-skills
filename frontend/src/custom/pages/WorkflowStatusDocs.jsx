@@ -9,6 +9,7 @@ const WorkflowStatusDocs = () => {
   return (
     <DocPage
       title="WorkflowStatus"
+      category="workflow"
       subtitle="Manages workflow status transitions with full lifecycle control and custom rendering options."
       badge="Workflow"
     >

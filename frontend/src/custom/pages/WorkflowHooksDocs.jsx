@@ -9,6 +9,7 @@ const WorkflowHooksDocs = () => {
   return (
     <DocPage
       title="Hooks Reference"
+      category="crud"
       subtitle="Complete reference for all hooks available in @zango-core/crud/table."
       badge="Hooks"
     >

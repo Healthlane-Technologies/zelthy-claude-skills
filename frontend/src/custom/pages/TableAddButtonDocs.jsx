@@ -9,6 +9,7 @@ const TableAddButtonDocs = () => {
   return (
     <DocPage
       title="TableAddButton"
+      category="crud"
       subtitle="Configurable add button with built-in drawer and form integration."
       badge="Component"
     >

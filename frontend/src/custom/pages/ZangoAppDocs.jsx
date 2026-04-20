@@ -9,6 +9,7 @@ const ZangoAppDocs = () => {
   return (
     <DocPage
       title="ZangoApp"
+      category="appbuilder"
       subtitle="The root component that bootstraps your Zango frontend application."
       badge="App Builder"
     >

@@ -9,6 +9,7 @@ const TableUtilitiesDocs = () => {
   return (
     <DocPage
       title="TableUtilities"
+      category="crud"
       subtitle="Action bar with search, filters, upload/download, and column options."
       badge="Component"
     >

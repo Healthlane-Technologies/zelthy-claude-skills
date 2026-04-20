@@ -9,6 +9,7 @@ const TableHeaderDocs = () => {
   return (
     <DocPage
       title="TableHeader"
+      category="crud"
       subtitle="Page header component with title, count, and action buttons."
       badge="Component"
     >
