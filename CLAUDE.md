@@ -31,22 +31,23 @@ cd frontend && npm run build:zango     # single-file via vite.config.zango.js
 
 ```
 frontend/src/custom/pages/*.jsx     ← human-authored doc pages (source of truth)
+        │                             each has category="crud|workflow|form|appbuilder"
         │
         │  scripts/generate-reference.js
-        │  (parses title=, <Section>, props={[...]}, code={`...`})
+        │  (auto-discovers category=, parses title=, <Section>, props={[...]}, code={`...`})
         ▼
-skills/zango-frontend/references/   ← 4 generated .md files
-  CRUD-REFERENCE.md
-  WORKFLOW-REFERENCE.md
-  FORM-REFERENCE.md
-  APPBUILDER-REFERENCE.md
+skills/zango-frontend/references/   ← per-category directories
+  crud/index.md + CrudHandler.md, TableBody.md, ...
+  workflow/index.md + WorkflowStatus.md, ...
+  form/index.md + FormRenderer.md
+  appbuilder/index.md + ZangoApp.md, ...
         │
         ▼
-skills/zango-frontend/SKILL.md      ← routes task → reference → code template
+skills/zango-frontend/SKILL.md      ← routes task → category index → component file
 skills/app-panel/SKILL.md           ← routes task → agents/*.md → browser actions
 ```
 
-`PAGE_CATEGORIES` in `scripts/generate-reference.js` maps each `.jsx` page to one of the four reference buckets. Adding a new doc page means adding it to that map, otherwise it won't appear in any reference.
+Generator auto-discovers category from `<DocPage category="...">` prop in each `.jsx` page. No manual mapping needed. Adding a new doc page with a `category` prop automatically includes it in the right reference bucket.
 
 ### The two skills have different shapes
 
@@ -60,7 +61,7 @@ skills/app-panel/SKILL.md           ← routes task → agents/*.md → browser 
 ## Editing Rules Specific to This Repo
 
 - **Do not hand-edit files in `skills/zango-frontend/references/`.** They are regenerated from `frontend/src/custom/pages/`. Edit the `.jsx` page, then run `node scripts/generate-reference.js`.
-- **Adding a new doc page** requires three changes: the `.jsx` file, an entry in `frontend/src/custom/pages/index.js`, and an entry in `PAGE_CATEGORIES` in `scripts/generate-reference.js`.
+- **Adding a new doc page** requires two changes: the `.jsx` file (with `category` prop on `<DocPage>`), and an entry in `frontend/src/custom/pages/index.js`.
 - **Frontmatter is load-bearing.** Each `SKILL.md` starts with YAML frontmatter (`name`, `description`, `allowed-tools`). Claude Code uses `description` to decide when to trigger the skill — keep it specific about when to use vs. when not to (see `zango-frontend` vs `app-panel` boundary in their descriptions).
 - **Tailwind v4** in `frontend/` — no `tailwind.config.js`, styles configured via `@theme` in `index.css` and the `@tailwindcss/vite` plugin.
 
