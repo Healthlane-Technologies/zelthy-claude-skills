@@ -1,6 +1,6 @@
 ---
 name: zango-frontend
-description: "Write frontend code for Zango apps - create pages, tables, forms, detail views, workflows, configure routes/menu/auth/theme/navbar in code. Use when writing React components, using CrudHandler, FormRenderer, WorkflowStatus, hooks, or modifying frontend source files. NOT for App Panel browser operations - use app-panel skill for that."
+description: "TRIGGER when: user mentions crud, CRUD, CrudHandler, table, detail view, custom component, form, FormRenderer, workflow, WorkflowStatus, WorkflowTags, useTable, hooks, page, route, navbar, topbar, auth, theme, @zango-core, zango-core/crud, zango-core/form, zango-core/crm-framework, or any Zango frontend task — creating pages, tables, forms, detail views, workflows, configuring routes/menu/auth/theme/navbar. Also trigger when files import from @zango-core/* or package.json contains @zango-core dependencies. NOT for App Panel browser operations — use app-panel skill for that."
 license: MIT
 compatibility: Designed for Claude Code. Requires a Zango frontend project with @zango-core/crud and @zango-core/crm-framework packages.
 metadata:
