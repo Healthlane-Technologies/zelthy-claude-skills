@@ -63,31 +63,17 @@ docker compose version
    - URL: `http://localhost:8000/platform`
    - Credentials from `.env` file
 
----
-
 ### Venv Mode Bootstrap
 
-> In venv mode the Django app runs locally in a Python virtualenv. Postgres and Redis still run in Docker — there is no app container.
-
-#### Prerequisites
-- Python 3.10+ installed locally
-- Docker installed (for postgres and redis only)
+> Django app runs locally in a virtualenv; only Postgres and Redis run in Docker.
 
 #### Steps
 
-1. **Gather configuration** - Same defaults as Docker mode.
+1. **Gather configuration** - Same defaults as Docker mode. *(Requires Python 3.10+ and Docker locally.)*
 
-2. **Venv setup** - Ask the user:
-   - "Do you have an existing virtualenv, or should I create a new one?"
-   - **If new:** ask for the desired path (default: `./venv`)
-     ```bash
-     python3 -m venv <venv_path>
-     <venv_path>/bin/pip install zango
-     ```
-   - **If existing:** verify zango is installed:
-     ```bash
-     <venv_path>/bin/zango --version
-     ```
+2. **Venv setup** - Ask for an existing venv path or a new one (default: `./venv`):
+   - New: `python3 -m venv <venv_path> && <venv_path>/bin/pip install zango`
+   - Existing: verify with `<venv_path>/bin/zango --version`
 
 3. **Save config** - Write `.claude/zango-config.json` (use absolute path for venv):
    ```json
@@ -102,35 +88,15 @@ docker compose version
    ```bash
    docker compose -f deploy/docker_compose_db.yml up -d
    ```
-   Wait until postgres is healthy before continuing.
 
-6. **Bootstrap project** (run from the project root, not inside `deploy/`):
-   ```bash
-   <venv_path>/bin/zango start-project <PROJECT_NAME> \
-     --db_name="<POSTGRES_DB>" \
-     --db_user="<POSTGRES_USER>" \
-     --db_password="<POSTGRES_PASSWORD>" \
-     --db_host="localhost" \
-     --db_port="5432" \
-     --platform_username="<PLATFORM_USERNAME>" \
-     --platform_user_password="<PLATFORM_USER_PASSWORD>" \
-     --redis_host="localhost" \
-     --redis_port="6379" \
-     --platform_domain_url="localhost"
-   ```
+6. **Bootstrap project** — run from project root. See [bootstrap-templates.md](references/bootstrap-templates.md) Venv Mode → Bootstrap Commands for the full `zango start-project` invocation.
 
 7. **Start the development server** (in a separate terminal or background):
    ```bash
    cd <PROJECT_NAME> && <venv_path>/bin/python manage.py runserver 0.0.0.0:8000
    ```
 
-8. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200
-
-9. **Share access info:**
-   - URL: `http://localhost:8000/platform`
-   - Credentials from step 1
-
----
+8. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200, then share credentials.
 
 ### Post-Bootstrap: Create App
 
@@ -167,7 +133,6 @@ Use when user wants to implement features on a Zango project — either **adding
 **C) Determine setup mode (ALWAYS do this before running any commands):**
 - Read `.claude/zango-config.json` to get `setup_mode` (`"docker"` or `"venv"`) and `venv_path` (if venv mode)
 - If the file does not exist, ask the user: "Are you running with Docker or a local virtualenv?"
-- All management commands in STEP 5 depend on this — use the correct variant every time
 
 ### STEP 2: Verify Packages
 
@@ -297,7 +262,6 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
 #### After Backend Changes
 
 1. **Run migrations** (if models changed):
-
    *Docker mode:*
    ```bash
    docker compose -f deploy/docker_compose.yml exec app bash -c \
@@ -310,7 +274,6 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
    ```
 
 2. **Sync policies and tasks** (if policies.json or tasks.py created or modified):
-
    *Docker mode:*
    ```bash
    docker compose -f deploy/docker_compose.yml exec app bash -c \
@@ -322,7 +285,6 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
    ```
 
 3. **Restart Celery** (if tasks.py created or modified):
-
    *Docker mode:*
    ```bash
    docker compose -f deploy/docker_compose.yml restart celery
@@ -350,18 +312,7 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
    - Add menu items for all relevant roles so pages appear in navigation
    - See [packages/appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md)
 
-#### Sync Static Files (if static assets changed)
-
-   *Docker mode:*
-   ```bash
-   docker compose -f deploy/docker_compose.yml exec app bash -c \
-     "cd <PROJECT_NAME> && python manage.py sync_static <app_name> && python manage.py collectstatic --noinput"
-   ```
-   *Venv mode:*
-   ```bash
-   cd <PROJECT_NAME> && <venv_path>/bin/python manage.py sync_static <app_name> && \
-     <venv_path>/bin/python manage.py collectstatic --noinput
-   ```
+   > **Static files:** after copying the build output, run `sync_static` and `collectstatic` — see [bootstrap-templates.md](references/bootstrap-templates.md) Running Management Commands for Docker/venv variants.
 
 #### Deploy to Zango Platform (only when user asks to build/deploy)
 
