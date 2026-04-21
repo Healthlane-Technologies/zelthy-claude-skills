@@ -253,9 +253,42 @@ docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> 
 
 ---
 
-## Venv Mode Files
+## Venv Mode
 
-In venv mode only Postgres and Redis run in Docker. The Django app runs locally in the virtualenv.
+The Django app runs locally in a virtualenv. Only Postgres and Redis run in Docker — there is no app container.
+
+### Step-by-Step
+
+1. **Gather configuration** - Same defaults as Docker mode. *(Requires Python 3.10+ and Docker locally.)*
+
+2. **Venv setup** - Ask for an existing venv path or a new one (default: `./venv`):
+   - New: `python3 -m venv <venv_path> && <venv_path>/bin/pip install zango`
+   - Existing: verify with `<venv_path>/bin/zango --version`
+
+3. **Save config** - Write `.claude/zango-config.json` (use absolute path for venv):
+   ```json
+   { "setup_mode": "venv", "venv_path": "/absolute/path/to/venv" }
+   ```
+
+4. **Create DB-only files** - Use the templates below (`docker_compose_db.yml` and `.env` venv variant).
+
+5. **Start DB services:**
+   ```bash
+   docker compose -f deploy/docker_compose_db.yml up -d
+   ```
+
+6. **Bootstrap project** - Run from project root (see Bootstrap Commands section below for the full `zango start-project` invocation).
+
+7. **Start the development server** (in a separate terminal):
+   ```bash
+   cd <PROJECT_NAME> && <venv_path>/bin/python manage.py runserver 0.0.0.0:8000
+   ```
+
+8. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200, then share credentials.
+
+---
+
+### Venv Mode Files
 
 ### File: `deploy/docker_compose_db.yml` (Venv mode — DB services only)
 

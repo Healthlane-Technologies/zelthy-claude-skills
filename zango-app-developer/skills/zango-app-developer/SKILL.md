@@ -65,38 +65,7 @@ docker compose version
 
 ### Venv Mode Bootstrap
 
-> Django app runs locally in a virtualenv; only Postgres and Redis run in Docker.
-
-#### Steps
-
-1. **Gather configuration** - Same defaults as Docker mode. *(Requires Python 3.10+ and Docker locally.)*
-
-2. **Venv setup** - Ask for an existing venv path or a new one (default: `./venv`):
-   - New: `python3 -m venv <venv_path> && <venv_path>/bin/pip install zango`
-   - Existing: verify with `<venv_path>/bin/zango --version`
-
-3. **Save config** - Write `.claude/zango-config.json` (use absolute path for venv):
-   ```json
-   { "setup_mode": "venv", "venv_path": "/absolute/path/to/venv" }
-   ```
-
-4. **Create DB-only files** - See [bootstrap-templates.md](references/bootstrap-templates.md) for exact content:
-   - `deploy/docker_compose_db.yml` (postgres + redis only, no app container)
-   - `deploy/.env` (venv variant — `db_host=localhost`)
-
-5. **Start DB services:**
-   ```bash
-   docker compose -f deploy/docker_compose_db.yml up -d
-   ```
-
-6. **Bootstrap project** — run from project root. See [bootstrap-templates.md](references/bootstrap-templates.md) Venv Mode → Bootstrap Commands for the full `zango start-project` invocation.
-
-7. **Start the development server** (in a separate terminal or background):
-   ```bash
-   cd <PROJECT_NAME> && <venv_path>/bin/python manage.py runserver 0.0.0.0:8000
-   ```
-
-8. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200, then share credentials.
+See [bootstrap-templates.md](references/bootstrap-templates.md) → Venv Mode for the full step-by-step flow, file templates, and all commands.
 
 ### Post-Bootstrap: Create App
 
