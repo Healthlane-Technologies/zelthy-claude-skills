@@ -7,8 +7,9 @@ const os = require('os');
 const VERSION = require('../package.json').version;
 const PACKAGE_SKILLS = path.join(__dirname, '..', 'skills');
 const GLOBAL_DIR = path.join(os.homedir(), '.claude', 'skill-repos', 'zango-skills');
+const USER_SKILLS_DIR = path.join(os.homedir(), '.claude', 'skills');
 const PROJECT_DIR = process.cwd();
-const SKILLS_DIR = path.join(PROJECT_DIR, '.claude', 'skills');
+const PROJECT_SKILLS_DIR = path.join(PROJECT_DIR, '.claude', 'skills');
 
 const SKILLS = ['zango-frontend', 'app-panel'];
 
@@ -56,61 +57,70 @@ fs.writeFileSync(path.join(GLOBAL_DIR, '.version'), VERSION, 'utf8');
 
 console.log(`  Global: ~/.claude/skill-repos/zango-skills/ (v${VERSION})`);
 
-// ─── Step 2: Symlink into current project ───
+// ─── Step 2: Symlink into ~/.claude/skills/ (global) ───
 
-fs.mkdirSync(SKILLS_DIR, { recursive: true });
+function linkSkills(skillsDir, label) {
+  fs.mkdirSync(skillsDir, { recursive: true });
 
-const linked = [];
-const skipped = [];
+  const linked = [];
+  const skipped = [];
 
-for (const skill of SKILLS) {
-  const target = path.join(SKILLS_DIR, skill);
-  const source = path.join(GLOBAL_DIR, skill);
+  for (const skill of SKILLS) {
+    const target = path.join(skillsDir, skill);
+    const source = path.join(GLOBAL_DIR, skill);
 
-  if (fs.existsSync(target)) {
-    const stat = fs.lstatSync(target);
+    if (fs.existsSync(target)) {
+      const stat = fs.lstatSync(target);
 
-    if (stat.isSymbolicLink()) {
-      const existing = fs.readlinkSync(target);
-      if (existing === source) {
+      if (stat.isSymbolicLink()) {
+        const existing = fs.readlinkSync(target);
+        if (existing === source) {
+          skipped.push(skill);
+          continue;
+        }
+        fs.unlinkSync(target);
+      } else if (stat.isDirectory()) {
+        console.log(`  WARN: ${skill}/ is a regular directory in ${label} — skipping (local override)`);
         skipped.push(skill);
         continue;
       }
-      // Symlink points elsewhere — replace
-      fs.unlinkSync(target);
-    } else if (stat.isDirectory()) {
-      console.log(`  WARN: ${skill}/ is a regular directory — skipping (local override)`);
-      skipped.push(skill);
-      continue;
     }
+
+    fs.symlinkSync(source, target);
+    linked.push(skill);
   }
 
-  fs.symlinkSync(source, target);
-  linked.push(skill);
+  if (linked.length > 0) {
+    console.log(`  ${label}: linked ${linked.join(', ')}`);
+  }
+  if (skipped.length > 0) {
+    console.log(`  ${label}: skipped ${skipped.join(', ')} (already linked)`);
+  }
 }
 
-if (linked.length > 0) {
-  console.log(`  Linked: ${linked.join(', ')}`);
-}
-if (skipped.length > 0) {
-  console.log(`  Skipped: ${skipped.join(', ')} (already linked)`);
-}
+// Always link globally
+linkSkills(USER_SKILLS_DIR, 'Global (~/.claude/skills)');
 
-// ─── Step 3: Update CLAUDE.md ───
+// ─── Step 3: Update CLAUDE.md (only if in a project directory) ───
 
 const claudeMdPath = path.join(PROJECT_DIR, 'CLAUDE.md');
+const isProjectDir = fs.existsSync(path.join(PROJECT_DIR, '.git')) || fs.existsSync(path.join(PROJECT_DIR, 'package.json'));
 
-if (fs.existsSync(claudeMdPath)) {
-  const content = fs.readFileSync(claudeMdPath, 'utf8');
-  if (content.includes('Zango Skills')) {
-    console.log('  CLAUDE.md: already has Zango section');
+if (isProjectDir) {
+  if (fs.existsSync(claudeMdPath)) {
+    const content = fs.readFileSync(claudeMdPath, 'utf8');
+    if (content.includes('Zango Skills')) {
+      console.log('  CLAUDE.md: already has Zango section');
+    } else {
+      fs.appendFileSync(claudeMdPath, '\n' + CLAUDE_MD_BLOCK);
+      console.log('  CLAUDE.md: appended Zango section');
+    }
   } else {
-    fs.appendFileSync(claudeMdPath, '\n' + CLAUDE_MD_BLOCK);
-    console.log('  CLAUDE.md: appended Zango section');
+    fs.writeFileSync(claudeMdPath, '# Project Instructions\n' + CLAUDE_MD_BLOCK, 'utf8');
+    console.log('  CLAUDE.md: created');
   }
 } else {
-  fs.writeFileSync(claudeMdPath, '# Project Instructions\n' + CLAUDE_MD_BLOCK, 'utf8');
-  console.log('  CLAUDE.md: created');
+  console.log('  CLAUDE.md: skipped (not a project directory)');
 }
 
 // ─── Step 4: Summary ───
