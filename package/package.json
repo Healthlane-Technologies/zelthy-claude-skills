@@ -1,0 +1,29 @@
+{
+  "name": "@zango-core/skills",
+  "version": "0.0.1",
+  "description": "Zango skills for Claude Code — tables, forms, workflows, app builder, admin panel automation",
+  "bin": {
+    "zango-skills": "bin/install.js"
+  },
+  "files": [
+    "bin/",
+    "skills/"
+  ],
+  "scripts": {
+    "build": "node ../scripts/sync-package.js",
+    "prepublishOnly": "node ../scripts/sync-package.js"
+  },
+  "keywords": [
+    "zango",
+    "claude-code",
+    "skills",
+    "crud",
+    "workflow",
+    "forms"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Healthlane-Technologies/zelthy-claude-skills.git"
+  }
+}
