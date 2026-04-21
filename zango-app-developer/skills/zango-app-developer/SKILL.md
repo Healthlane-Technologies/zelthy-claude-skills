@@ -1,6 +1,6 @@
 ---
 name: zango-app-developer
-description: Use this skill when the user wants to bootstrap a Zango development environment (Docker-based setup), create a Zango app, add modules to a Zango app, implement backend or frontend features on a Zango project, or work with Zango models, views, forms, tables, workflows, policies, async tasks, React components, CrudHandler, FormRenderer, or ZangoApp. Triggers on mentions of "Zango", "zango app", "zango project", "zango environment", "zango setup", "DynamicModelBase", "BaseCrudView", "CrudHandler", "FormRenderer", "ZangoApp", "React component", "frontend", "zango module", "CRUD view", "create CRUD", "add CRUD", "workflow", "create workflow", "add workflow", "status transitions", "custom page", "routes", "menu", "navbar", "theme" or requests to build business applications using the Zango framework.
+description: Use this skill when the user wants to bootstrap a Zango development environment (Docker-based setup or virtualenv setup), create a Zango app, add modules to a Zango app, implement backend or frontend features on a Zango project, or work with Zango models, views, forms, tables, workflows, policies, async tasks, React components, CrudHandler, FormRenderer, or ZangoApp. Triggers on mentions of "Zango", "zango app", "zango project", "zango environment", "zango setup", "DynamicModelBase", "BaseCrudView", "CrudHandler", "FormRenderer", "ZangoApp", "React component", "frontend", "zango module", "CRUD view", "create CRUD", "add CRUD", "workflow", "create workflow", "add workflow", "status transitions", "custom page", "routes", "menu", "navbar", "theme" or requests to build business applications using the Zango framework.
 ---
 
 # Zango App Developer
@@ -12,14 +12,26 @@ You are skilled in developing apps using Zango framework. Zango is an open-sourc
 
 Use when user wants to set up a new Zango development environment.
 
-### Prerequisites
+### Step 0: Choose Setup Mode
+
+**Ask the user which setup mode they want before doing anything else:**
+- **Docker** — full Docker Compose stack (app, celery, postgres, redis all in containers)
+- **Virtual Environment (venv)** — run the Django app locally in a Python venv; only postgres and redis run in Docker
+
+Save the chosen mode (and venv path if applicable) in `.claude/zango-config.json` inside the project working directory. Keep this file updated throughout the session — it is the source of truth for how to run commands.
+
+---
+
+### Docker Mode Bootstrap
+
+#### Prerequisites
 Verify Docker is installed:
 ```bash
 docker --version
 docker compose version
 ```
 
-### Steps
+#### Steps
 
 1. **Gather configuration** - Ask user to customize defaults or use:
    - Workspace name: `zango-<random-4-chars>` (e.g., `zango-a1b2`)
@@ -33,18 +45,92 @@ docker compose version
    - `deploy/Dockerfile`
    - `deploy/init.sh`
 
-3. **Start services:**
+3. **Save config** - Write `.claude/zango-config.json`:
+   ```json
+   { "setup_mode": "docker" }
+   ```
+
+4. **Start services:**
    ```bash
    chmod +x deploy/init.sh
    export HOST_UID=$(id -u) HOST_GID=$(id -g)
    docker compose -f deploy/docker_compose.yml up -d --build
    ```
 
-4. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200
+5. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200
 
-5. **Share access info:**
+6. **Share access info:**
    - URL: `http://localhost:8000/platform`
    - Credentials from `.env` file
+
+---
+
+### Venv Mode Bootstrap
+
+> In venv mode the Django app runs locally in a Python virtualenv. Postgres and Redis still run in Docker — there is no app container.
+
+#### Prerequisites
+- Python 3.10+ installed locally
+- Docker installed (for postgres and redis only)
+
+#### Steps
+
+1. **Gather configuration** - Same defaults as Docker mode.
+
+2. **Venv setup** - Ask the user:
+   - "Do you have an existing virtualenv, or should I create a new one?"
+   - **If new:** ask for the desired path (default: `./venv`)
+     ```bash
+     python3 -m venv <venv_path>
+     <venv_path>/bin/pip install zango
+     ```
+   - **If existing:** verify zango is installed:
+     ```bash
+     <venv_path>/bin/zango --version
+     ```
+
+3. **Save config** - Write `.claude/zango-config.json` (use absolute path for venv):
+   ```json
+   { "setup_mode": "venv", "venv_path": "/absolute/path/to/venv" }
+   ```
+
+4. **Create DB-only files** - See [bootstrap-templates.md](references/bootstrap-templates.md) for exact content:
+   - `deploy/docker_compose_db.yml` (postgres + redis only, no app container)
+   - `deploy/.env` (venv variant — `db_host=localhost`)
+
+5. **Start DB services:**
+   ```bash
+   docker compose -f deploy/docker_compose_db.yml up -d
+   ```
+   Wait until postgres is healthy before continuing.
+
+6. **Bootstrap project** (run from the project root, not inside `deploy/`):
+   ```bash
+   <venv_path>/bin/zango start-project <PROJECT_NAME> \
+     --db_name="<POSTGRES_DB>" \
+     --db_user="<POSTGRES_USER>" \
+     --db_password="<POSTGRES_PASSWORD>" \
+     --db_host="localhost" \
+     --db_port="5432" \
+     --platform_username="<PLATFORM_USERNAME>" \
+     --platform_user_password="<PLATFORM_USER_PASSWORD>" \
+     --redis_host="localhost" \
+     --redis_port="6379" \
+     --platform_domain_url="localhost"
+   ```
+
+7. **Start the development server** (in a separate terminal or background):
+   ```bash
+   cd <PROJECT_NAME> && <venv_path>/bin/python manage.py runserver 0.0.0.0:8000
+   ```
+
+8. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200
+
+9. **Share access info:**
+   - URL: `http://localhost:8000/platform`
+   - Credentials from step 1
+
+---
 
 ### Post-Bootstrap: Create App
 
@@ -77,6 +163,11 @@ Use when user wants to implement features on a Zango project — either **adding
 **B) New app from scratch** — no existing code to explore; proceed directly to planning:
 - App was just created via Capability 1 (bootstrap) or App Panel API
 - Workspace is empty — skip discovery, go straight to STEP 3
+
+**C) Determine setup mode (ALWAYS do this before running any commands):**
+- Read `.claude/zango-config.json` to get `setup_mode` (`"docker"` or `"venv"`) and `venv_path` (if venv mode)
+- If the file does not exist, ask the user: "Are you running with Docker or a local virtualenv?"
+- All management commands in STEP 5 depend on this — use the correct variant every time
 
 ### STEP 2: Verify Packages
 
@@ -201,23 +292,44 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
 
 ### STEP 5: Post-Implementation
 
+**Before running any command, check `.claude/zango-config.json` to confirm the setup mode and use the correct command variant below.**
+
 #### After Backend Changes
 
 1. **Run migrations** (if models changed):
+
+   *Docker mode:*
    ```bash
    docker compose -f deploy/docker_compose.yml exec app bash -c \
      "cd <PROJECT_NAME> && python manage.py ws_makemigration <app_name> && python manage.py ws_migrate <app_name>"
    ```
+   *Venv mode:*
+   ```bash
+   cd <PROJECT_NAME> && <venv_path>/bin/python manage.py ws_makemigration <app_name> && \
+     <venv_path>/bin/python manage.py ws_migrate <app_name>
+   ```
 
 2. **Sync policies and tasks** (if policies.json or tasks.py created or modified):
+
+   *Docker mode:*
    ```bash
    docker compose -f deploy/docker_compose.yml exec app bash -c \
      "cd <PROJECT_NAME> && zango update-apps --app_name <app_name>"
    ```
+   *Venv mode:*
+   ```bash
+   cd <PROJECT_NAME> && <venv_path>/bin/zango update-apps --app_name <app_name>
+   ```
 
 3. **Restart Celery** (if tasks.py created or modified):
+
+   *Docker mode:*
    ```bash
    docker compose -f deploy/docker_compose.yml restart celery
+   ```
+   *Venv mode:* restart the celery worker process manually (kill and rerun):
+   ```bash
+   cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
    ```
 
 #### Frontend Setup (One-time — do this once after backend, before writing any frontend code)
@@ -238,6 +350,19 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
    - Add menu items for all relevant roles so pages appear in navigation
    - See [packages/appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md)
 
+#### Sync Static Files (if static assets changed)
+
+   *Docker mode:*
+   ```bash
+   docker compose -f deploy/docker_compose.yml exec app bash -c \
+     "cd <PROJECT_NAME> && python manage.py sync_static <app_name> && python manage.py collectstatic --noinput"
+   ```
+   *Venv mode:*
+   ```bash
+   cd <PROJECT_NAME> && <venv_path>/bin/python manage.py sync_static <app_name> && \
+     <venv_path>/bin/python manage.py collectstatic --noinput
+   ```
+
 #### Deploy to Zango Platform (only when user asks to build/deploy)
 
 7. **Build and deploy frontend** (run **once** after all frontend work is complete — do NOT re-run after every frontend change):
@@ -249,7 +374,12 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
 
 ### STEP 6: Verify
 
-- Check logs: `docker compose -f deploy/docker_compose.yml logs app`
+*Docker mode — check logs:*
+```bash
+docker compose -f deploy/docker_compose.yml logs app
+```
+*Venv mode — the Django dev server logs print directly to the terminal where `runserver` is running. Check that terminal for errors.*
+
 - Access configured routes (e.g., `http://yourdomain.com/app/patients`)
 - Verify in App Panel: Code → Policies
 
@@ -403,4 +533,6 @@ import { WorkflowStatus, WorkflowTags } from '@zango-core/crud/table';
 - **Policies**: Always create `policies.json` in each module that has views; always sync after changes
 - **Packages**: Always install in order: appbuilder → crud → workflow
 - **Workflow**: Never create manual status fields on models — use the workflow package
-- **Debugging**: Check logs first: `docker compose -f deploy/docker_compose.yml logs app`
+- **Setup mode**: Always read `.claude/zango-config.json` before running management commands — docker and venv use different command forms
+- **Debugging (Docker)**: Check logs: `docker compose -f deploy/docker_compose.yml logs app`
+- **Debugging (Venv)**: Check the terminal running `manage.py runserver`; DB/Redis issues show in `docker compose -f deploy/docker_compose_db.yml logs`

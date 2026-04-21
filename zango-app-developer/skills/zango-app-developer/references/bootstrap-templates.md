@@ -2,7 +2,13 @@
 
 These are the exact file templates to create when bootstrapping a Zango environment in the developer's current working directory.
 
-## File: `deploy/.env`
+> **Two setup modes are supported.** Docker mode uses the full Docker Compose stack. Venv mode runs Django locally and uses Docker only for Postgres and Redis. Choose the right section below based on the mode selected in Capability 1.
+
+---
+
+## Docker Mode Files
+
+### File: `deploy/.env` (Docker mode)
 
 ```env
 COMPOSE_PROJECT_NAME=zango-a1b2
@@ -29,7 +35,7 @@ Never change this key after creation — existing encrypted secrets will become 
 
 Ask the user if they want to customize any of these values before writing. Use these as sensible defaults. `COMPOSE_PROJECT_NAME` controls the Docker Compose project name (container prefix) — generate a unique default like `zango-<random-4-chars>` so containers aren't always prefixed with "deploy-".
 
-## File: `deploy/Dockerfile`
+### File: `deploy/Dockerfile`
 
 ```dockerfile
 FROM kczelthy/zango:latest
@@ -51,7 +57,7 @@ WORKDIR /zango/
 CMD ["/bin/sh", "init.sh"]
 ```
 
-## File: `deploy/init.sh`
+### File: `deploy/init.sh`
 
 ```bash
 #!/bin/bash
@@ -91,7 +97,7 @@ fi
 python manage.py runserver 0.0.0.0:8000
 ```
 
-## File: `deploy/docker_compose.yml`
+### File: `deploy/docker_compose.yml`
 
 ```yaml
 name: ${COMPOSE_PROJECT_NAME}
@@ -188,7 +194,7 @@ volumes:
   dev_db:
 ```
 
-## Bootstrap Commands
+### Bootstrap Commands (Docker mode)
 
 After creating all files in `deploy/`:
 
@@ -208,14 +214,14 @@ docker compose -f deploy/docker_compose.yml up -d --build
 curl -s -o /dev/null -w "%{http_code}" -L http://localhost:8000/platform
 ```
 
-## Verification
+### Verification (Docker mode)
 
 After startup, the platform should be accessible at:
 - **URL**: `http://localhost:8000/platform`
 - **Username**: Value of PLATFORM_USERNAME from .env
 - **Password**: Value of PLATFORM_USER_PASSWORD from .env
 
-## Stopping and Restarting
+### Stopping and Restarting (Docker mode)
 
 ```bash
 # Stop
@@ -229,7 +235,7 @@ docker compose -f deploy/docker_compose.yml up -d
 docker compose -f deploy/docker_compose.yml down -v
 ```
 
-## Running Management Commands Inside the Container
+### Running Management Commands Inside the Container (Docker mode)
 
 ```bash
 # General pattern
@@ -243,4 +249,153 @@ docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> 
 
 # Update apps (sync policies, tasks, etc.)
 docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> && SINGLE_BEAT_REDIS_SERVER=redis://redis:6379/1 single-beat zango update-apps --app_name <app_name>"
+```
+
+---
+
+## Venv Mode Files
+
+In venv mode only Postgres and Redis run in Docker. The Django app runs locally in the virtualenv.
+
+### File: `deploy/docker_compose_db.yml` (Venv mode — DB services only)
+
+```yaml
+name: ${COMPOSE_PROJECT_NAME}
+
+services:
+  postgres:
+    image: postgres:15
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -p ${POSTGRES_PORT}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - dev_db:/var/lib/postgresql/data
+
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  dev_db:
+```
+
+### File: `deploy/.env` (Venv mode)
+
+The key difference from Docker mode: `POSTGRES_HOST=localhost` and `REDIS_HOST=localhost` because the app runs on the host machine, not inside a container.
+
+```env
+COMPOSE_PROJECT_NAME=zango-a1b2
+PLATFORM_USERNAME=platform_admin@zango.dev
+PLATFORM_USER_PASSWORD=Zango@123
+PROJECT_NAME=zango_project
+POSTGRES_USER=zango_admin
+POSTGRES_PASSWORD=zangopass
+POSTGRES_DB=zango
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+REDIS_HOST=localhost
+REDIS_PORT=6379
+PLATFORM_DOMAIN_URL=localhost
+CSRF_TRUSTED_ORIGINS=http://localhost:3000
+FIELD_ENCRYPTION_KEY=<generate-fernet-key>
+```
+
+Generate `FIELD_ENCRYPTION_KEY`:
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+### File: `.claude/zango-config.json`
+
+Create this file in the project root to persist setup mode and venv path for the current session and future sessions:
+
+```json
+{
+  "setup_mode": "venv",
+  "venv_path": "/absolute/path/to/venv"
+}
+```
+
+Use the absolute path. Expand `~` and relative paths before writing.
+
+### Bootstrap Commands (Venv mode)
+
+```bash
+# 1. Start DB services only
+docker compose -f deploy/docker_compose_db.yml up -d
+
+# 2. Wait for postgres to be healthy
+docker compose -f deploy/docker_compose_db.yml ps
+
+# 3. Bootstrap the Zango project (replace placeholders with values from .env)
+<venv_path>/bin/zango start-project <PROJECT_NAME> \
+  --db_name="<POSTGRES_DB>" \
+  --db_user="<POSTGRES_USER>" \
+  --db_password="<POSTGRES_PASSWORD>" \
+  --db_host="localhost" \
+  --db_port="5432" \
+  --platform_username="<PLATFORM_USERNAME>" \
+  --platform_user_password="<PLATFORM_USER_PASSWORD>" \
+  --redis_host="localhost" \
+  --redis_port="6379" \
+  --platform_domain_url="localhost"
+
+# 4. Start the development server (run in a separate terminal)
+cd <PROJECT_NAME> && <venv_path>/bin/python manage.py runserver 0.0.0.0:8000
+
+# 5. Verify the platform is up
+curl -s -o /dev/null -w "%{http_code}" -L http://localhost:8000/platform
+```
+
+### Running Management Commands (Venv mode)
+
+Run these from the project root (one directory above `<PROJECT_NAME>/`):
+
+```bash
+# Migrations
+cd <PROJECT_NAME> && <venv_path>/bin/python manage.py ws_makemigration <app_name>
+cd <PROJECT_NAME> && <venv_path>/bin/python manage.py ws_migrate <app_name>
+
+# Sync static files
+cd <PROJECT_NAME> && <venv_path>/bin/python manage.py sync_static <app_name>
+cd <PROJECT_NAME> && <venv_path>/bin/python manage.py collectstatic --noinput
+
+# Update apps (sync policies, tasks, etc.)
+cd <PROJECT_NAME> && <venv_path>/bin/zango update-apps --app_name <app_name>
+
+# Start Celery worker (in a separate terminal)
+cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
+
+# Start Celery beat (in a separate terminal)
+cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> beat -l info \
+  --scheduler django_celery_beat.schedulers:DatabaseScheduler
+```
+
+### Stopping and Restarting DB Services (Venv mode)
+
+```bash
+# Stop DB containers
+docker compose -f deploy/docker_compose_db.yml down
+
+# Restart DB containers (data persists in dev_db volume)
+docker compose -f deploy/docker_compose_db.yml up -d
+
+# Full DB reset (destroys all data)
+docker compose -f deploy/docker_compose_db.yml down -v
 ```

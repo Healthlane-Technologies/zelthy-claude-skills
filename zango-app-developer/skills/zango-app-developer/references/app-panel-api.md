@@ -392,7 +392,7 @@ curl -b /tmp/zango_cookies -X POST \
 
 **Note:** Use `-F` flags for proper multipart/form-data encoding. The `-F` flag automatically handles Content-Type and boundaries.
 
-**IMPORTANT:** After updating task configuration, restart Celery service:
+**IMPORTANT:** After updating task configuration, restart Celery service (Docker syntax; see SKILL.md STEP 5 for venv variant):
 ```bash
 docker compose -f deploy/docker_compose.yml restart celery
 ```

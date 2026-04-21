@@ -62,7 +62,7 @@ This creates `frontend/zango-build/zango-app.<timestamp>.min.js`
 cp -r frontend/zango-build/* static/js/
 ```
 
-#### Sync static files:
+#### Sync static files (Docker syntax; see SKILL.md STEP 5 for venv variant):
 ```bash
 docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> && python manage.py sync_static <app_name> && python manage.py collectstatic --noinput"
 ```

@@ -779,7 +779,7 @@ Zango uses PostgreSQL with a multi-tenant setup:
 
 After creating or modifying models, you MUST create and apply migrations.
 
-**IMPORTANT:** Migrations are Django management commands that must be run from the `zango_project` directory inside the Docker container:
+> **Setup mode:** The commands below show Docker syntax. If using venv mode, use the venv variant from SKILL.md STEP 5 instead.
 
 ```bash
 docker compose -f deploy/docker_compose.yml exec app bash -c \
@@ -853,7 +853,7 @@ workspace/
 4. **Apply Migration**: `python manage.py ws_migrate myapp` (inside Docker container, from zango_project directory)
 5. **Verify** model is working
 
-**Quick Command** (run both steps together):
+**Quick Command** (run both steps together — Docker syntax; see SKILL.md STEP 5 for venv variant):
 ```bash
 docker compose -f deploy/docker_compose.yml exec app bash -c \
   "cd <PROJECT_NAME> && python manage.py ws_makemigration myapp && python manage.py ws_migrate myapp"
