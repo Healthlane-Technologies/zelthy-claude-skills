@@ -1,6 +1,6 @@
 {
   "name": "@zango-core/skills",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Zango skills for Claude Code — tables, forms, workflows, app builder, admin panel automation",
   "bin": {
     "zango-skills": "bin/install.js"
