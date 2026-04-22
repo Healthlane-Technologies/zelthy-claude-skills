@@ -9,6 +9,7 @@ const ProjectStructure = () => {
   return (
     <DocPage
       title="Project Structure"
+      category="appbuilder"
       subtitle="Understanding the file structure of a Zango frontend app."
       badge="Getting Started"
     >

@@ -9,6 +9,7 @@ const WorkflowHooksDocs = () => {
   return (
     <DocPage
       title="Hooks Reference"
+      category="crud"
       subtitle="Complete reference for all hooks available in @zango-core/crud/table."
       badge="Hooks"
     >
@@ -43,7 +44,7 @@ const WorkflowHooksDocs = () => {
             { name: 'hasNextPage', type: 'boolean', description: 'Whether a next page exists.' },
             { name: 'setCurrentPage', type: '(page: number) => void', description: 'Navigate to a specific page.' },
             { name: 'setRowsPerPage', type: '(size: number) => void', description: 'Change the page size.' },
-            { name: 'selectedDetailRow', type: 'object | null', description: 'The row currently open in the detail drawer.' },
+            { name: 'selectedDetailRow', type: 'object \| null', description: 'The row currently open in the detail drawer.' },
             { name: 'openDetailDrawer', type: '(row) => void', description: 'Open the detail drawer for a row.' },
             { name: 'closeDetailDrawer', type: '() => void', description: 'Close the detail drawer.' },
             { name: 'navigateToNextEntry', type: '() => void', description: 'Move the detail drawer to the next row.' },
@@ -96,7 +97,7 @@ function OrdersPage() {
             { name: 'totalPages', type: 'number', description: 'Computed total pages based on row count and page size.' },
             { name: 'isLoading', type: 'boolean', description: 'True during the initial data load.' },
             { name: 'isFetching', type: 'boolean', description: 'True during any fetch, including background refetches.' },
-            { name: 'error', type: 'Error | null', description: 'Error object if the fetch failed.' },
+            { name: 'error', type: 'Error \| null', description: 'Error object if the fetch failed.' },
             { name: 'searchTerm', type: 'string', description: 'Current search term sent to the server.' },
             { name: 'setSearchTerm', type: '(term: string) => void', description: 'Update the search term.' },
             { name: 'filterObj', type: 'object', description: 'Current filter state sent to the server.' },
@@ -381,7 +382,7 @@ function Toolbar() {
         <PropsTable
           props={[
             { name: 'handleRowClick', type: '(row) => void', description: 'Default handler that opens the detail drawer for the clicked row.' },
-            { name: 'selectedDetailRow', type: 'object | null', description: 'The row currently displayed in the detail drawer.' },
+            { name: 'selectedDetailRow', type: 'object \| null', description: 'The row currently displayed in the detail drawer.' },
             { name: 'openDetailDrawer', type: '(row) => void', description: 'Programmatically open the detail drawer for a row.' },
             { name: 'closeDetailDrawer', type: '() => void', description: 'Close the detail drawer.' },
             { name: 'navigateToNextEntry', type: '() => void', description: 'Move the detail drawer to the next row in the list.' },
@@ -430,7 +431,7 @@ function DetailDrawerNav() {
           props={[
             { name: 'data', type: 'object', description: 'The fetched detail data for the current object.' },
             { name: 'loading', type: 'boolean', description: 'True while detail data is being fetched.' },
-            { name: 'error', type: 'string | null', description: 'Error message if the detail fetch failed.' },
+            { name: 'error', type: 'string \| null', description: 'Error message if the detail fetch failed.' },
             { name: 'refresh', type: '() => Promise<void>', description: 'Re-fetch the detail data from the API.' },
             { name: 'objectUuid', type: 'string', description: 'UUID of the current detail object.' },
             { name: 'workflowDetails', type: 'object', description: 'Workflow data for the object (current_status, current_status_meta, next_transitions, tag_details).' },
@@ -471,7 +472,7 @@ function UserProfile() {
           props={[
             { name: 'data', type: 'object', description: 'Detail data from the shared context.' },
             { name: 'loading', type: 'boolean', description: 'True while the shared detail fetch is in progress.' },
-            { name: 'error', type: 'string | null', description: 'Error from the shared detail fetch.' },
+            { name: 'error', type: 'string \| null', description: 'Error from the shared detail fetch.' },
             { name: 'refresh', type: '() => Promise<void>', description: 'Re-fetch detail data for the entire context.' },
             { name: 'objectUuid', type: 'string', description: 'UUID of the current detail object.' },
             { name: 'workflowDetails', type: 'object', description: 'Workflow data from the shared context.' },
@@ -500,34 +501,44 @@ function StatusBadge() {
         <p className="mb-4">
           Provides full programmatic access to workflow state and operations. Use it when
           you need direct control over transitions, tags, or workflow data outside of the
-          built-in workflow components.
+          built-in workflow components. Automatically reads from{' '}
+          <InlineCode>DetailViewContext</InlineCode> when no <InlineCode>apiUrl</InlineCode> is
+          provided.
         </p>
 
         <h3 className="text-base font-semibold text-gray-800 mb-3">Configuration</h3>
         <PropsTable
           props={[
-            { name: 'apiUrl', type: 'string', required: true, description: 'API endpoint for fetching workflow data.' },
-            { name: 'beforeTransition', type: '(transition) => Promise<void>', description: 'Async callback invoked before executing a transition.' },
-            { name: 'afterTransition', type: '(transition, success) => Promise<void>', description: 'Async callback invoked after a transition completes.' },
+            { name: 'apiUrl', type: 'string', description: 'API endpoint for fetching and mutating workflow data. Optional — resolved from context when omitted. Required for executeTransition / toggleTag in static data mode.' },
+            { name: 'initialWorkflowDetails', type: 'WorkflowDetails', description: 'Seed the hook with known workflow data. Overridden by staticData when both are supplied.' },
+            { name: 'staticData', type: 'any', description: 'Pre-fetched payload that already contains workflow details. Accepts { workflow_details }, { response: { workflow_details } }, or a bare WorkflowDetails object. Bypasses the initial API fetch; apiUrl is still needed for mutations.' },
+            { name: 'objectUuid', type: 'string', description: 'Explicit object UUID used in API calls. Extracted from apiUrl automatically when omitted.' },
+            { name: 'beforeTransition', type: '(transition: Transition) => Promise<void> \| void', description: 'Async callback invoked before executing a status transition. Throw to abort.' },
+            { name: 'afterTransition', type: '(transition: Transition, success: boolean) => Promise<void> \| void', description: 'Async callback invoked after a transition completes.' },
+            { name: 'beforeTagChange', type: '(tag: TagDetail, newState: string) => Promise<void> \| void', description: 'Async callback invoked before toggling a tag.' },
+            { name: 'afterTagChange', type: '(tag: TagDetail, success: boolean) => Promise<void> \| void', description: 'Async callback invoked after a tag toggle completes.' },
           ]}
         />
 
         <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">Return Values</h3>
         <PropsTable
           props={[
-            { name: 'workflowDetails', type: 'object', description: 'Full workflow data: current_status, current_status_meta, next_transitions, and tag_details.' },
-            { name: 'loading', type: 'boolean', description: 'True while workflow data is being fetched.' },
-            { name: 'error', type: 'string | null', description: 'Error message if the workflow fetch or operation failed.' },
-            { name: 'refreshWorkflow', type: '() => Promise<void>', description: 'Re-fetch workflow data from the API.' },
-            { name: 'executeTransition', type: '(transition, formData?) => Promise<boolean>', description: 'Execute a status transition. Optionally pass form data. Returns success boolean.' },
-            { name: 'toggleTag', type: '(tag) => Promise<boolean>', description: 'Toggle a tag on or off. Returns success boolean.' },
+            { name: 'workflowDetails', type: 'WorkflowDetails \| undefined', description: 'Full workflow data: current_status, current_status_meta, next_transitions, and tag_details.' },
+            { name: 'loading', type: 'boolean', description: 'True while workflow data is being fetched or a mutation is in-flight.' },
+            { name: 'error', type: 'Error \| null', description: 'Error object if the workflow fetch or operation failed.' },
+            { name: 'executeTransition', type: '(transition: Transition) => Promise<boolean>', description: 'Execute a status transition. Refreshes workflow data on success. Returns success boolean.' },
+            { name: 'toggleTag', type: '(tag: TagDetail) => Promise<boolean>', description: 'Toggle a tag between enabled and disabled. Returns success boolean.' },
+            { name: 'refreshWorkflow', type: '() => Promise<void>', description: 'Re-fetch workflow data from the API. No-op in static data mode without apiUrl.' },
+            { name: 'handleFormSubmit', type: '() => Promise<void>', description: 'Call after a form-based transition submits; triggers refreshWorkflow internally.' },
+            { name: 'setWorkflowDetails', type: '(details: WorkflowDetails) => void', description: 'Directly overwrite local workflow state — useful for optimistic updates.' },
+            { name: 'onCancel', type: '() => void', description: 'Reset workflow to initialWorkflowDetails and re-fetch from API.' },
           ]}
         />
 
-        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">Example</h3>
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">Example — API mode</h3>
         <CodeBlock
           language="jsx"
-          title="use-workflow.jsx"
+          title="use-workflow-api.jsx"
           code={`import { useWorkflow } from "@zango-core/crud/table";
 
 function ApproveButton({ objectUuid }) {
@@ -538,6 +549,42 @@ function ApproveButton({ objectUuid }) {
   const approveTransition = workflowDetails.next_transitions.find((t) => t.name === "approve");
   if (!approveTransition) return null;
   return <button onClick={() => executeTransition(approveTransition)}>Approve</button>;
+}`}
+        />
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-6">Example — static data mode</h3>
+        <CodeBlock
+          language="jsx"
+          title="use-workflow-static.jsx"
+          code={`import { useDetailView, useWorkflow } from "@zango-core/crud/table";
+
+// Use when workflow data is already fetched as part of a detail view.
+// Pass staticData to skip the extra API call; supply apiUrl for mutations.
+function WorkflowPanel({ apiUrl }) {
+  const { data, loading: detailLoading } = useDetailView({ apiUrl });
+
+  const {
+    workflowDetails,
+    executeTransition,
+    toggleTag,
+    loading,
+  } = useWorkflow({
+    staticData: data,          // extracts data.workflow_details automatically
+    apiUrl,                    // still required for executeTransition / toggleTag
+  });
+
+  if (detailLoading || !workflowDetails) return <p>Loading…</p>;
+
+  return (
+    <div>
+      <p>Status: {workflowDetails.current_status_meta?.status_label}</p>
+      {workflowDetails.next_transitions.map((t) => (
+        <button key={t.name} disabled={loading} onClick={() => executeTransition(t)}>
+          {t.display_name}
+        </button>
+      ))}
+    </div>
+  );
 }`}
         />
       </Section>

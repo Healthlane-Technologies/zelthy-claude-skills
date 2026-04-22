@@ -9,6 +9,7 @@ const NavbarTopbarDocs = () => {
   return (
     <DocPage
       title="Navbar & Topbar"
+      category="appbuilder"
       subtitle="Customize the sidebar navigation and top bar with custom components, logos, and menus."
       badge="App Builder"
     >

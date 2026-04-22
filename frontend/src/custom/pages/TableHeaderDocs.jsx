@@ -9,6 +9,7 @@ const TableHeaderDocs = () => {
   return (
     <DocPage
       title="TableHeader"
+      category="crud"
       subtitle="Page header component with title, count, and action buttons."
       badge="Component"
     >
@@ -17,7 +18,7 @@ const TableHeaderDocs = () => {
           props={[
             {
               name: 'title',
-              type: 'string | ReactNode',
+              type: 'string \| ReactNode',
               description: 'Header title text or custom React element. Supports plain strings or JSX for rich formatting.',
             },
             {
@@ -38,7 +39,7 @@ const TableHeaderDocs = () => {
             },
             {
               name: 'addButtonTitle',
-              type: 'string | ReactNode',
+              type: 'string \| ReactNode',
               description: 'Custom text or element for the add button. Defaults to a standard "Add" label.',
             },
             {
@@ -57,15 +58,35 @@ const TableHeaderDocs = () => {
               description: 'Content rendered between the title area and the action buttons. Commonly used for filters, status tabs, or date range selectors.',
             },
             {
-              name: 'api_endpoint',
+              name: 'apiUrl',
               type: 'string',
-              description: 'API endpoint for the default add form. Used by the built-in form drawer to submit new records.',
+              description: 'API URL for the default add form drawer. When omitted, falls back to the URL from TableProvider context.',
             },
             {
               name: 'enableDefaultAddForm',
               type: 'boolean',
               default: true,
               description: 'Enable or disable the built-in form drawer that opens when the add button is clicked. Set to false when using a custom add flow.',
+            },
+            {
+              name: 'className',
+              type: 'string',
+              description: 'Extra CSS classes applied to the inner flex row (title + actions). Default empty string.',
+            },
+            {
+              name: 'containerClassName',
+              type: 'string',
+              description: 'Extra CSS classes applied to the outermost container div. Default empty string.',
+            },
+            {
+              name: 'titleClassName',
+              type: 'string',
+              description: 'Extra CSS classes applied to the h1 title element. Default empty string.',
+            },
+            {
+              name: 'buttonClassName',
+              type: 'string',
+              description: 'Extra CSS classes applied to the add button element. Default empty string.',
             },
           ]}
         />

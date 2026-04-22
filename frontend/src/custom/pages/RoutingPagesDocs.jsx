@@ -9,6 +9,7 @@ const RoutingPagesDocs = () => {
   return (
     <DocPage
       title="Routing & Pages"
+      category="appbuilder"
       subtitle="How routes, page types, and custom pages work together in Zango."
       badge="App Builder"
     >

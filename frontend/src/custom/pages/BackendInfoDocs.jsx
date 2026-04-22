@@ -8,6 +8,7 @@ const BackendInfoDocs = () => {
   return (
     <DocPage
       title="Additional Information"
+      category="appbuilder"
       subtitle="Backend app views, URL routing, redirects, and deployment patterns."
       badge="App Builder"
     >

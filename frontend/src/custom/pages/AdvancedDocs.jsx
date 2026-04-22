@@ -9,6 +9,7 @@ const AdvancedDocs = () => {
   return (
     <DocPage
       title="Advanced Features"
+      category="workflow"
       subtitle="Programmatic form control, portal rendering, error handling, and migration guides."
       badge="Advanced"
     >

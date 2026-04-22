@@ -9,6 +9,7 @@ const AppInitializerDocs = () => {
   return (
     <DocPage
       title="App Initializer"
+      category="appbuilder"
       subtitle="The backend API that configures your entire frontend - routes, menu, theme, and user profile."
       badge="App Builder"
     >

@@ -9,6 +9,7 @@ const FormRendererDocs = () => {
   return (
     <DocPage
       title="FormRenderer"
+      category="form"
       subtitle="Dual-mode form engine with server-driven and local RJSF schema support, multi-step forms, autocomplete, and form sync."
       badge="Forms"
     >
@@ -39,17 +40,17 @@ const FormRendererDocs = () => {
             },
             {
               name: 'getParams',
-              type: 'object',
+              type: 'Record<string, any>',
               default: "{ action: 'initialize_form' }",
               description:
                 'Query parameters appended to the GET request when fetching the form schema in server-driven mode. Override to load edit forms or pass context.',
             },
             {
               name: 'postParams',
-              type: 'object',
+              type: 'Record<string, any>',
               default: "{ form_type: 'create_form' }",
               description:
-                'Query parameters appended to the POST request when submitting the form in server-driven mode. Typically set to { form_type: "edit_form", object_uuid: "..." } for updates.',
+                'Query parameters appended to the POST request when submitting the form in server-driven mode. Override with form_type and object_uuid for edit flows.',
             },
             {
               name: 'showConfirmAlert',
@@ -68,7 +69,7 @@ const FormRendererDocs = () => {
               name: 'rjsf_schema',
               type: 'object',
               description:
-                'Local RJSF schema object with shape { schema, uiSchema, formData }. Enables local mode for client-side form rendering without any server calls. Ignored if api_endpoint is provided.',
+                'Local RJSF schema object with shape { schema, uiSchema, formData, submit_endpoint }. Enables local mode. When submit_endpoint is provided, form submission is POSTed to that URL instead of calling onSubmit. Ignored if api_endpoint is provided.',
             },
             {
               name: 'onSubmit',
@@ -89,10 +90,16 @@ const FormRendererDocs = () => {
                 'Callback invoked when form submission fails. Receives the error object. Use this for toast notifications or error logging.',
             },
             {
-              name: 'customWidgets',
-              type: 'object',
+              name: 'autocompleteParams',
+              type: 'Record<string, any>',
               description:
-                'Map of custom RJSF widget names to React components. Merged with the default widget set. Reference a custom widget in ui_schema via "ui:widget": "yourWidgetName".',
+                'Query parameters appended to autocomplete API requests in AsyncSelectFieldWidget. Only applies when using api_endpoint or rjsf_schema with submit_endpoint.',
+            },
+            {
+              name: 'customWidgets',
+              type: 'Record<string, React.ComponentType<any>>',
+              description:
+                'Map of widget names to React components that override default RJSF widgets. Reference in ui_schema via ui:widget. Widgets receive all standard RJSF widget props.',
             },
             {
               name: 'submitButtonContainerId',
@@ -350,7 +357,7 @@ function CreateUserForm() {
           prototyping.
         </p>
         <p className="mb-4">
-          The <InlineCode>rjsf_schema</InlineCode> object accepts three keys:
+          The <InlineCode>rjsf_schema</InlineCode> object accepts these keys:
         </p>
         <ul style={{ paddingLeft: '20px', listStyleType: 'disc', marginBottom: '16px' }}>
           <li style={{ marginBottom: '6px' }}>
@@ -364,6 +371,12 @@ function CreateUserForm() {
           <li style={{ marginBottom: '6px' }}>
             <InlineCode>formData</InlineCode> -- Initial/default values for the form
             fields.
+          </li>
+          <li style={{ marginBottom: '6px' }}>
+            <InlineCode>submit_endpoint</InlineCode> -- API URL for server-side
+            submission. When provided, the form POSTs to this URL with{' '}
+            <InlineCode>postParams</InlineCode> as query parameters instead of calling
+            onSubmit. Also enables form sync and autocomplete against this endpoint.
           </li>
         </ul>
         <CodeBlock
@@ -458,6 +471,49 @@ function CreateUserForm() {
           returns a promise, FormRenderer awaits it and passes the resolved value.
           If the promise rejects, <InlineCode>onError</InlineCode> is called instead.
         </Callout>
+
+        <h3 className="text-base font-semibold text-gray-800 mb-3 mt-8">
+          Local RJSF Mode with submit_endpoint
+        </h3>
+        <p className="mb-3">
+          Provide <InlineCode>submit_endpoint</InlineCode> inside{' '}
+          <InlineCode>rjsf_schema</InlineCode> to POST form data to a server URL
+          instead of using a client-side <InlineCode>onSubmit</InlineCode> handler.
+          This also enables form sync and autocomplete against that endpoint.
+        </p>
+        <CodeBlock
+          language="jsx"
+          title="local-rjsf-submit-endpoint.jsx"
+          code={`<FormRenderer
+  rjsf_schema={{
+    schema: {
+      type: "object",
+      required: ["name", "email"],
+      properties: {
+        name: { type: "string", title: "Full Name" },
+        email: { type: "string", title: "Email", format: "email" },
+      },
+    },
+    uiSchema: {
+      name: { "ui:placeholder": "Enter name" },
+      email: { "ui:placeholder": "user@company.com" },
+      "ui:order": ["name", "email"],
+    },
+    formData: {},
+    submit_endpoint: "/api/users/",
+  }}
+  postParams={{ form_type: "create_form" }}
+  autocompleteParams={{ limit: 20 }}
+  onResponse={(response) => {
+    console.log("User created:", response);
+  }}
+  onError={(error) => {
+    console.error("Failed:", error);
+  }}
+/>
+
+// POST /api/users/?form_type=create_form  --> submits form data`}
+        />
       </Section>
 
       {/* ── 6. Multi-Step Forms ── */}
@@ -1027,7 +1083,71 @@ function UserFormDialog({ open, onClose }) {
         </Callout>
       </Section>
 
-      {/* ── 11. Choosing Between Modes ── */}
+      {/* ── 11. Custom Widgets ── */}
+      <Section title="Custom Widgets">
+        <p className="mb-4">
+          Override default RJSF widgets by passing a <InlineCode>customWidgets</InlineCode>{' '}
+          map. Each key is the widget name you reference in{' '}
+          <InlineCode>uiSchema</InlineCode> via <InlineCode>"ui:widget"</InlineCode>, and
+          each value is a React component receiving standard RJSF widget props (
+          <InlineCode>value</InlineCode>, <InlineCode>onChange</InlineCode>,{' '}
+          <InlineCode>schema</InlineCode>, <InlineCode>options</InlineCode>, etc.).
+        </p>
+        <CodeBlock
+          language="jsx"
+          title="custom-widgets.jsx"
+          code={`import { FormRenderer } from "@zango-core/crud/form";
+
+function PhoneNumberWidget({ value, onChange, schema, options }) {
+  return (
+    <div>
+      <input
+        type="tel"
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={options?.placeholder || schema?.placeholder || ""}
+        className="w-full px-3 py-2 border rounded-lg"
+      />
+      <p className="text-xs text-gray-400 mt-1">Enter with country code</p>
+    </div>
+  );
+}
+
+const myWidgets = {
+  PhoneNumberWidget,
+};
+
+const formSchema = {
+  schema: {
+    type: "object",
+    properties: {
+      phone: { type: "string", title: "Phone Number" },
+      name: { type: "string", title: "Name" },
+    },
+  },
+  uiSchema: {
+    phone: { "ui:widget": "PhoneNumberWidget" },
+    name: { "ui:placeholder": "Full name" },
+    "ui:order": ["name", "phone"],
+  },
+  formData: {},
+  submit_endpoint: "/api/contacts/",
+};
+
+function ContactForm() {
+  return (
+    <FormRenderer
+      rjsf_schema={formSchema}
+      customWidgets={myWidgets}
+      postParams={{ form_type: "create_form" }}
+      onResponse={(res) => console.log("Saved:", res)}
+    />
+  );
+}`}
+        />
+      </Section>
+
+      {/* ── 12. Choosing Between Modes ── */}
       <Section title="Choosing Between Modes">
         <p className="mb-4">
           <InlineCode>FormRenderer</InlineCode> supports two distinct operational modes.

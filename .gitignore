@@ -8,3 +8,5 @@ frontend/node_modules/
 frontend/dist/
 frontend/zango-build/
 frontend/.env
+docs/superpowers/
+package/skills/

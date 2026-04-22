@@ -111,7 +111,7 @@ const DocsNavbar = () => {
               <Link
                 key={item.uri}
                 to={item.uri}
-                onClick={() => setSearch('')}
+                onClick={() => {}}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
