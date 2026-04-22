@@ -145,6 +145,254 @@ Backend response format: `{ response: { form: { json_schema, ui_schema, form_dat
 
 ---
 
+## Common Flows
+
+Copy-paste recipes for common implementation patterns. Check here before scaffolding.
+
+---
+
+### Flow 1: Route-Based Detail View
+
+**When:** User wants detail view as a separate page/route, not a drawer.
+
+**Required:**
+```jsx
+import { CrudHandler } from '@zango-core/crud/table';
+import { TableBody } from '@zango-core/crud/table';
+
+const EntityDetail = ({ data, general_details, workflow_details, onRefresh }) => {
+  return (
+    <div>
+      <h2>{data?.title}</h2>
+      {Object.entries(general_details?.fields || {}).map(([k, f]) => (
+        <div key={k}>{f.display_name}: {f.value}</div>
+      ))}
+    </div>
+  );
+};
+
+<CrudHandler
+  api_endpoint="/api/entity/"
+  customMainDetail={EntityDetail}
+  enableDetailViewRoute={true}
+  customTableBody={() => <TableBody defaultDetailView="navigate" />}
+/>
+```
+
+**Gotcha:** All three props required together. Miss any one = detail view won't work. `customMainDetail` (not `customDrawerDetail`) for route-based.
+
+---
+
+### Flow 2: Drawer-Based Detail View
+
+**When:** User wants detail view as a side drawer overlay.
+
+**Required:**
+```jsx
+import { CrudHandler } from '@zango-core/crud/table';
+
+const EntityDrawer = ({ selectedRow, open, onClose }) => {
+  if (!open) return null;
+  return (
+    <div>
+      <h2>{selectedRow?.name}</h2>
+      <button onClick={onClose}>Close</button>
+    </div>
+  );
+};
+
+<CrudHandler
+  api_endpoint="/api/entity/"
+  customDrawerDetail={({ selectedRow, open, onClose }) => (
+    <EntityDrawer selectedRow={selectedRow} open={open} onClose={onClose} />
+  )}
+  detailDrawerSize="full"
+/>
+```
+
+**Gotcha:** Props are `selectedRow`, `open`, `onClose` — not `data`/`general_details`. Different from route-based detail.
+
+---
+
+### Flow 3: Custom Table Body
+
+**When:** User wants cards, kanban, or custom row click behavior instead of default table.
+
+**Required:**
+```jsx
+// Variant A: Custom row click handler (open modal, navigate, etc.)
+import { CrudHandler } from '@zango-core/crud/table';
+import { TableBody } from '@zango-core/crud/table';
+import { useNavigate } from 'react-router-dom';
+
+const Page = () => {
+  const navigate = useNavigate();
+  return (
+    <CrudHandler
+      api_endpoint="/api/entity/"
+      customTableBody={() => (
+        <TableBody
+          defaultDetailView={{
+            action: 'custom',
+            customHandler: (row) => navigate(`/app/entity/${row.original.object_uuid}`)
+          }}
+        />
+      )}
+    />
+  );
+};
+```
+
+```jsx
+// Variant B: Fully custom body using useTable hook
+import { CrudHandler, useTable } from '@zango-core/crud/table';
+
+const CardGrid = () => {
+  const { data, isLoading, handleRowClick } = useTable();
+  if (isLoading) return <div>Loading...</div>;
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      {data?.map((row) => (
+        <div key={row.object_uuid} onClick={() => handleRowClick(row)}>
+          {row.name}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+<CrudHandler api_endpoint="/api/entity/" customTableBody={CardGrid} />
+```
+
+**Gotcha:** `row.original.object_uuid` in Variant A (row is wrapped). Direct `row.object_uuid` in Variant B (useTable gives raw data).
+
+---
+
+### Flow 4: Custom Stats Header
+
+**When:** User wants stats cards or summary above the table.
+
+**Required:**
+```jsx
+import { CrudHandler, useTable } from '@zango-core/crud/table';
+
+const StatsHeader = () => {
+  const tableContext = useTable();
+  const stats = tableContext?.rawResponse?.stats || {};
+
+  if (tableContext?.isLoading) return null;
+  return (
+    <div style={{ display: 'flex', gap: 16, padding: 16 }}>
+      <div>Total: {stats.total || 0}</div>
+      <div>Active: {stats.active || 0}</div>
+      <div>Pending: {stats.pending || 0}</div>
+    </div>
+  );
+};
+
+<CrudHandler
+  api_endpoint="/api/entity/"
+  customHeader={StatsHeader}
+/>
+```
+
+**Gotcha:** Stats come from `tableContext.rawResponse.stats` — backend must include `stats` key in response. `useTable()` only works inside CrudHandler's render tree.
+
+---
+
+### Flow 5: Server-Driven Form in Drawer
+
+**When:** User wants a form that opens in a drawer/dialog, schema loaded from backend.
+
+**Required:**
+```jsx
+import { FormRenderer } from '@zango-core/crud/form';
+
+const EditDialog = ({ objectUuid, open, onClose, onSuccess }) => {
+  if (!open) return null;
+  return (
+    <Drawer open={open} onClose={onClose}>
+      <FormRenderer
+        api_endpoint="/api/entity/"
+        getParams={{
+          action: 'initialize_form',
+          action_type: 'row',
+          action_key: 'edit',
+          object_uuid: objectUuid,
+        }}
+        postParams={{
+          form_type: 'row_action_form',
+          action_type: 'row',
+          action_key: 'edit',
+          object_uuid: objectUuid,
+        }}
+        onResponse={(r) => { onSuccess(); onClose(); }}
+        onError={(e) => console.error(e)}
+      />
+    </Drawer>
+  );
+};
+```
+
+**Gotcha:** Both `getParams` and `postParams` needed — get loads schema, post submits. Backend returns `{ response: { form: { json_schema, ui_schema, form_data } } }`.
+
+---
+
+### Flow 6: Custom Page with CrudHandler
+
+**When:** User wants a custom page that includes a CRUD table alongside other UI.
+
+**Required:**
+```jsx
+// src/custom/pages/DashboardPage.jsx
+import { CrudHandler } from '@zango-core/crud/table';
+
+const DashboardPage = () => (
+  <div style={{ padding: 32 }}>
+    <h1>Dashboard</h1>
+    <div>Custom stats or UI here</div>
+    <CrudHandler
+      api_endpoint="/api/entity/"
+      headerProps={{ title: "Recent Items" }}
+    />
+  </div>
+);
+export default DashboardPage;
+
+// src/custom/pages/index.js — MUST add export
+export { default as DashboardPage } from './DashboardPage';
+```
+
+**Gotcha:** Export name in `pages/index.js` MUST match backend route's `component` field exactly. Mismatch = blank page.
+
+---
+
+### Flow 7: Standalone Workflow
+
+**When:** User wants workflow status/tags outside of CrudHandler (custom page, standalone detail).
+
+**Required:**
+```jsx
+import { WorkflowStatus, WorkflowTags } from '@zango-core/crud/table';
+
+const EntityDetail = ({ objectUuid }) => (
+  <div>
+    <WorkflowStatus
+      apiUrl={`/api/entity/?object_uuid=${objectUuid}`}
+      onStatusChange={() => window.location.reload()}
+    />
+    <WorkflowTags
+      apiUrl={`/api/entity/?object_uuid=${objectUuid}`}
+      onTagChange={() => window.location.reload()}
+    />
+  </div>
+);
+```
+
+**Gotcha:** `apiUrl` must include `object_uuid` param. For shared fetch, wrap both in `<DetailViewProvider apiUrl="...">` and omit individual `apiUrl` props.
+
+---
+
 ## Scaffold Detail
 
 Ask: Drawer or route-based? What to display?
