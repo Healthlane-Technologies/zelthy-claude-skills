@@ -393,6 +393,225 @@ const EntityDetail = ({ objectUuid }) => (
 
 ---
 
+### Flow 8: Nested CRUD in Tabs
+
+**When:** Detail view has tabs, each tab shows a different CRUD table (e.g., Program → Teams tab, Vendors tab).
+
+**Required:**
+```jsx
+import { CrudHandler, useTable } from '@zango-core/crud/table';
+import { TableHeader } from '@zango-core/crud/table';
+
+const MinimalHeader = () => {
+  const tableContext = useTable();
+  if (tableContext?.isLoading) return null;
+  return <TableHeader showAddButton={true} />;
+};
+
+const TabCrud = ({ endpoint, DetailComponent }) => (
+  <CrudHandler
+    api_endpoint={endpoint}
+    customHeader={MinimalHeader}
+    showUtilities={true}
+    enableDetailViewRoute={false}
+    customDrawerDetail={DetailComponent ? ({ selectedRow, open, onClose }) => (
+      <DetailComponent selectedRow={selectedRow} open={open} onClose={onClose} />
+    ) : undefined}
+    detailDrawerSize="full"
+  />
+);
+
+// Usage in parent detail view:
+const ProgramDetail = ({ programUUID }) => {
+  const [activeTab, setActiveTab] = useState(0);
+  return (
+    <div>
+      <Tabs value={activeTab} onChange={setActiveTab}>
+        <Tab label="Teams" />
+        <Tab label="Vendors" />
+      </Tabs>
+      {activeTab === 0 && <TabCrud endpoint={`/api/team/?program_uuid=${programUUID}`} />}
+      {activeTab === 1 && <TabCrud endpoint={`/api/vendor/?program_uuid=${programUUID}`} />}
+    </div>
+  );
+};
+```
+
+**Gotcha:** Each tab's CrudHandler needs its own `api_endpoint` with parent UUID as query param. Set `enableDetailViewRoute={false}` — nested route-based details conflict with parent route.
+
+---
+
+### Flow 9: Dynamic API Endpoints
+
+**When:** API endpoint depends on a runtime value (parent UUID, filter, user selection).
+
+**Required:**
+```jsx
+import { CrudHandler } from '@zango-core/crud/table';
+
+const FilteredTable = ({ parentUuid, status }) => (
+  <CrudHandler
+    api_endpoint={`/api/entity/?parent_uuid=${parentUuid}&status=${status}`}
+  />
+);
+```
+
+**Gotcha:** CrudHandler re-fetches when `api_endpoint` string changes. Use stable references — avoid building the string inline in render if parent re-renders frequently.
+
+---
+
+### Flow 10: Multi-Tab Detail View
+
+**When:** User wants a full detail page with multiple tabs, each showing different content (overview, timeline, nested CRUD, documents).
+
+**Required:**
+```jsx
+import { useDetailView } from '@zango-core/crud/table';
+import { WorkflowStatus } from '@zango-core/crud/table';
+
+const EntityDetail = () => {
+  const uuid = window.location.pathname.split('/').pop();
+  const { data, refresh, loading } = useDetailView({
+    apiUrl: `/api/entity/?object_uuid=${uuid}`,
+  });
+  const [activeTab, setActiveTab] = useState(0);
+
+  if (loading) return <div>Loading...</div>;
+  return (
+    <div>
+      <h1>{data?.name}</h1>
+      <WorkflowStatus
+        apiUrl={`/api/entity/?object_uuid=${uuid}`}
+        onStatusChange={refresh}
+      />
+      <Tabs value={activeTab} onChange={setActiveTab}>
+        <Tab label="Overview" />
+        <Tab label="Items" />
+      </Tabs>
+      {activeTab === 0 && <Overview data={data} />}
+      {activeTab === 1 && (
+        <CrudHandler
+          api_endpoint={`/api/items/?entity_uuid=${uuid}`}
+          enableDetailViewRoute={false}
+        />
+      )}
+    </div>
+  );
+};
+```
+
+**Gotcha:** `useDetailView` is for the parent entity data. Nested CrudHandlers in tabs use their own `api_endpoint`. Extract UUID from URL pathname — not passed as prop in route-based views.
+
+---
+
+### Flow 11: Status-Dependent Form Action
+
+**When:** Form schema changes based on workflow status (e.g., draft shows "edit_basic", active shows "edit").
+
+**Required:**
+```jsx
+import { FormRenderer } from '@zango-core/crud/form';
+
+const EditForm = ({ objectUuid, currentStatus, onSuccess }) => {
+  const actionKey = currentStatus === 'draft' ? 'edit_basic' : 'edit';
+  return (
+    <FormRenderer
+      api_endpoint="/api/entity/"
+      getParams={{
+        action: 'initialize_form',
+        action_type: 'row',
+        action_key: actionKey,
+        object_uuid: objectUuid,
+      }}
+      postParams={{
+        form_type: 'row_action_form',
+        action_type: 'row',
+        action_key: actionKey,
+        object_uuid: objectUuid,
+      }}
+      onResponse={onSuccess}
+    />
+  );
+};
+```
+
+**Gotcha:** `action_key` must match backend's registered form actions. Different `action_key` = different form schema from backend.
+
+---
+
+### Flow 12: PDF Export with Filters
+
+**When:** User wants an export button that respects current table filters and search.
+
+**Required:**
+```jsx
+import { useTable, useTableFilters } from '@zango-core/crud/table';
+
+const ExportButton = ({ exportEndpoint }) => {
+  const tableData = useTable();
+  const filterData = useTableFilters();
+
+  const handleExport = async () => {
+    const params = new URLSearchParams({
+      search: filterData?.debouncedSearchTerm || '',
+      ...filterData?.debouncedFilterObj,
+      sorting: JSON.stringify(tableData?.sorting || []),
+    });
+    window.open(`${exportEndpoint}?${params.toString()}`);
+  };
+
+  return <button onClick={handleExport}>Export PDF</button>;
+};
+
+// Place inside CrudHandler's customHeader or any component within CrudHandler tree
+```
+
+**Gotcha:** `useTableFilters()` only works inside CrudHandler's render tree. `debouncedSearchTerm` and `debouncedFilterObj` are debounced — they reflect what the user last committed, not in-progress typing.
+
+---
+
+### Flow 13: Modal-Within-CRUD
+
+**When:** Row click opens a modal/dialog instead of a drawer or route.
+
+**Required:**
+```jsx
+import { CrudHandler } from '@zango-core/crud/table';
+import { TableBody } from '@zango-core/crud/table';
+import { useState } from 'react';
+
+const Page = () => {
+  const [selectedUuid, setSelectedUuid] = useState(null);
+
+  return (
+    <>
+      <CrudHandler
+        api_endpoint="/api/entity/"
+        customTableBody={() => (
+          <TableBody
+            defaultDetailView={{
+              action: 'custom',
+              customHandler: (row) => setSelectedUuid(row.original.object_uuid),
+            }}
+          />
+        )}
+      />
+      {selectedUuid && (
+        <div className="modal-overlay" onClick={() => setSelectedUuid(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <EntityModal uuid={selectedUuid} onClose={() => setSelectedUuid(null)} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+```
+
+**Gotcha:** Modal state lives OUTSIDE CrudHandler. `customHandler` sets state, modal renders as sibling. Don't put modal inside CrudHandler tree — it unmounts on re-render.
+
+---
+
 ## Scaffold Detail
 
 Ask: Drawer or route-based? What to display?
