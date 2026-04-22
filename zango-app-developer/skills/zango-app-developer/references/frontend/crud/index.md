@@ -1,6 +1,5 @@
 # Zango CRUD Reference
 
-> Auto-generated from documentation pages. Regenerate with: `node scripts/generate-reference.js`
 
 ## Quick Import Reference
 ```js

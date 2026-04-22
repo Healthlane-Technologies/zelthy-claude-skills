@@ -1,6 +1,5 @@
 # Zango App Builder Reference
 
-> Auto-generated from documentation pages. Regenerate with: `node scripts/generate-reference.js`
 
 ## Quick Start
 ```bash
