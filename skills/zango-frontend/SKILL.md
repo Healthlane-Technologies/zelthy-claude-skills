@@ -634,7 +634,7 @@ const Detail = ({ data, general_details, workflow_details, onClose, open }) => {
 <CrudHandler api_endpoint="..." customDrawerDetail={Detail} />
 ```
 
-**Route-based**: `customMainDetail` instead of `customDrawerDetail` receives `onRefresh` instead of `onClose`. Add `enableDetailViewRoute={true}` and `customTableBody={() => <TableBody defaultDetailView="navigate" />}` props.
+**Route-based**: See **Flow 1** above for the full required combo (`customMainDetail` + `enableDetailViewRoute` + `customTableBody` with `defaultDetailView="navigate"`). All three props required together.
 
 ---
 
