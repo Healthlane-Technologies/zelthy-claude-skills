@@ -29,6 +29,7 @@ Determine what the user wants and read the relevant reference:
 | Customize sidebar/topbar | [App Builder Index](references/appbuilder/index.md) | Setup Navbar |
 | Configure login/auth | [App Builder Index](references/appbuilder/index.md) | Setup Auth |
 | Configure theme/colors | [App Builder Index](references/appbuilder/index.md) | Setup Theme |
+| Implement a common pattern | — | Common Flows |
 | General question about Zango | Read the relevant index based on topic | - |
 
 ## Critical Rules (always apply)
@@ -39,6 +40,7 @@ Determine what the user wants and read the relevant reference:
 4. **StatusCol data**: `{ status_label: "Active", status_color: "#12B76A" }`
 5. **Row actions**: `type: "form"` opens drawer, `type: "simple"` shows confirmation
 6. **Custom page exports**: Name in `pages/index.js` MUST match route's `component` field exactly
+7. **Flows first**: Before scaffolding, check Common Flows for a matching recipe. Use the exact combo shown.
 
 ---
 
@@ -165,7 +167,7 @@ const Detail = ({ data, general_details, workflow_details, onClose, open }) => {
 <CrudHandler api_endpoint="..." customDrawerDetail={Detail} />
 ```
 
-**Route-based**: Same but receives `onRefresh` instead of `onClose`. Add `enableDetailViewRoute={true}`.
+**Route-based**: `customMainDetail` instead of `customDrawerDetail` receives `onRefresh` instead of `onClose`. Add `enableDetailViewRoute={true}` and `customTableBody={() => <TableBody defaultDetailView="navigate" />}` props.
 
 ---
 
