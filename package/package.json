@@ -5,6 +5,10 @@
   "bin": {
     "zango-skills": "bin/install.js"
   },
+  "scripts": {
+    "build": "node ../scripts/sync-package.js",
+    "prepublishOnly": "node ../scripts/sync-package.js"
+  },
   "files": [
     "bin/",
     "skills/"
