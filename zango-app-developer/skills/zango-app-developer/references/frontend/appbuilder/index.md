@@ -31,7 +31,6 @@ from zango.apps.appauth.models import UserRoleModel
 |------|------|-------------|----------|
 | App Initializer | App Builder | The backend API that configures your entire frontend - routes, menu, theme, and user profile. | [App-Initializer.md](App-Initializer.md) |
 | Authentication | App Builder | Complete authentication system with password, OTP, OAuth, 2FA, role selection, and full customization. | [Authentication.md](Authentication.md) |
-| Additional Information | App Builder | Backend app views, URL routing, redirects, and deployment patterns. | [Additional-Information.md](Additional-Information.md) |
 | Quick Start | Getting Started | Create and launch a new Zango frontend app in minutes. | [Quick-Start.md](Quick-Start.md) |
 | Navbar & Topbar | App Builder | Customize the sidebar navigation and top bar with custom components, logos, and menus. | [Navbar-&-Topbar.md](Navbar-&-Topbar.md) |
 | Project Structure | Getting Started | Understanding the file structure of a Zango frontend app. | [Project-Structure.md](Project-Structure.md) |

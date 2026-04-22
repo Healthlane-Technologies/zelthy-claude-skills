@@ -1,0 +1,39 @@
+name: Publish @zango-core/skills
+
+on:
+  push:
+    branches:
+      - development
+      - plugin_creation
+    paths:
+      - 'zango-app-developer/**'
+      - 'package/**'
+      - '.github/workflows/publish-npm-package.yml'
+
+jobs:
+  validate-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.check.outputs.should_publish }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate version
+        id: check
+        run: |
+          VERSION=$(node -p "require('./package/package.json').version")
+          echo "Version: $VERSION"
+          echo "should_publish=true" >> $GITHUB_OUTPUT
+
+  publish:
+    needs: validate-version
+    if: needs.validate-version.outputs.should_publish == 'true'
+    uses: Healthlane-Technologies/zelthy-ci-cd-workflows/.github/workflows/publish-npm-package.yml@main
+    with:
+      working_directory: 'package'
+      package_name: '@zango-core/skills'
+      node_version: '20'
+      build_command: 'build'
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

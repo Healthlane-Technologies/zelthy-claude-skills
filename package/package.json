@@ -1,0 +1,26 @@
+{
+  "name": "@zango-core/skills",
+  "version": "0.0.4",
+  "description": "Zango skills for Claude Code — full-stack app development with CRUD, forms, workflows, and app builder",
+  "bin": {
+    "zango-skills": "bin/install.js"
+  },
+  "files": [
+    "bin/",
+    "skills/"
+  ],
+  "keywords": [
+    "zango",
+    "claude-code",
+    "skills",
+    "crud",
+    "workflow",
+    "forms",
+    "django"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Healthlane-Technologies/zelthy-claude-skills.git"
+  }
+}
