@@ -123,6 +123,8 @@ After creating or modifying tasks in your codebase, you must sync them to make t
 
 ### Method 1: Via Command Line
 
+> **Setup mode:** Docker syntax shown. For venv mode, use the venv variant from SKILL.md STEP 5.
+
 ```bash
 docker compose -f deploy/docker_compose.yml exec app bash -c \
   "cd <PROJECT_NAME> && zango update-apps --app_name <app_name>"
@@ -152,6 +154,8 @@ See [app-panel-api.md](../app-panel-api.md) → Tasks → Sync Tasks for full de
 ## Restarting Celery Service
 
 **CRITICAL:** After creating or modifying async tasks, you must restart the Celery service for changes to take effect.
+
+> **Setup mode:** Docker syntax shown. For venv mode, use the venv variant from SKILL.md STEP 5.
 
 ```bash
 docker compose -f deploy/docker_compose.yml restart celery
