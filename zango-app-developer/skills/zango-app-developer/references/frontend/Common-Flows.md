@@ -462,3 +462,117 @@ const Page = () => {
 ```
 
 **Gotcha:** Modal state lives OUTSIDE CrudHandler. `customHandler` sets state, modal renders as sibling. Don't put modal inside CrudHandler tree — it unmounts on re-render.
+
+---
+
+#### Flow 14: App Branding & Theming
+
+**When:** User wants to customize the app's look — login page, navbar, topbar, colors, typography.
+
+**Required:**
+```jsx
+import { ZangoApp } from '@zango-core/crm-framework';
+import * as customPages from './custom/pages';
+
+const App = () => (
+  <ZangoApp
+    appInitializerEndpoint="/appbuilder/initializer/"
+    customPages={customPages}
+
+    {/* 1. Theme — colors & typography */}
+    {/* Colors are set via backend AppBuilder config (initializer API response).
+        They generate CSS variables: --color-brand-500, --color-gray-500, etc.
+        Use them in custom components: */}
+
+    {/* 2. Layout */}
+    layoutConfig={{
+      showTopbar: true,
+      showNavbar: true,
+      layoutType: 'wide',  // 'wide' | 'compact'
+    }}
+
+    {/* 3. Navbar — logo, menu, bottom content */}
+    navbarConfig={{
+      collapsible: true,
+      customLogo: (
+        <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src="/logo.svg" width={28} height={28} alt="Logo" />
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-brand-700)' }}>
+            My App
+          </span>
+        </div>
+      ),
+      customBottomContent: (
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--color-gray-200)', fontSize: 12, color: 'var(--color-gray-500)' }}>
+          v1.0.0
+        </div>
+      ),
+    }}
+
+    {/* 4. Topbar — custom left/right content */}
+    topbarConfig={{
+      customLeftContent: (
+        <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-gray-900)' }}>
+          Dashboard
+        </h2>
+      ),
+      customRightContent: (
+        <button style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid var(--color-gray-300)', fontSize: 13 }}>
+          Help
+        </button>
+      ),
+    }}
+
+    {/* 5. Auth — login page branding */}
+    authConfig={{
+      theme: {
+        background: { gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+        primaryColor: '#5048ED',
+        fontFamily: 'Inter, sans-serif',
+        borderRadius: '8px',
+      },
+      logo: { url: '/logo.svg', width: '120px' },
+      card: {
+        borderRadius: '16px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+        maxWidth: '420px',
+      },
+      login: {
+        title: 'Welcome Back',
+        subtitle: 'Sign in to your account',
+        submitButtonText: 'Sign In',
+        showRememberMe: true,
+      },
+      roleSelection: {
+        title: 'Select Your Role',
+        gridColumns: 2,
+      },
+    }}
+  />
+);
+```
+
+**Using theme in custom components:**
+```jsx
+// CSS variables are auto-generated from backend theme config
+const Card = ({ children }) => (
+  <div style={{
+    backgroundColor: 'var(--color-brand-50)',
+    border: '1px solid var(--color-brand-200)',
+    borderRadius: 8,
+    padding: 16,
+    color: 'var(--color-gray-900)',
+  }}>
+    {children}
+  </div>
+);
+
+// Or with Tailwind (if @theme configured in index.css)
+const Card = ({ children }) => (
+  <div className="bg-brand-50 border border-brand-200 rounded-lg p-4 text-gray-900">
+    {children}
+  </div>
+);
+```
+
+**Gotcha:** Theme colors (primary, gray, success, etc.) come from the backend AppBuilder initializer API — configure them via App Panel or API, not in React code. The frontend auto-generates CSS variables from the response. Use `var(--color-brand-500)` or Tailwind classes like `text-brand-500` in custom components.

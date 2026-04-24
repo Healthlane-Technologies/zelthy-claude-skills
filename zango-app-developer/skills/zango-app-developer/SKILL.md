@@ -397,7 +397,7 @@ import { WorkflowStatus, WorkflowTags } from '@zango-core/crud/table';
 
 Copy-paste recipes for common implementation patterns. Check [Common-Flows.md](references/frontend/Common-Flows.md) before scaffolding.
 
-13 flows: Route-Based Detail, Drawer Detail, Custom Table Body, Custom Stats Header, Server-Driven Form, Custom Page with CrudHandler, Standalone Workflow, Nested CRUD in Tabs, Dynamic API Endpoints, Multi-Tab Detail, Status-Dependent Form, PDF Export with Filters, Modal-Within-CRUD.
+14 flows: Route-Based Detail, Drawer Detail, Custom Table Body, Custom Stats Header, Server-Driven Form, Custom Page with CrudHandler, Standalone Workflow, Nested CRUD in Tabs, Dynamic API Endpoints, Multi-Tab Detail, Status-Dependent Form, PDF Export with Filters, Modal-Within-CRUD, App Branding & Theming.
 
 ---
 
