@@ -107,8 +107,10 @@ services:
     image: postgres:15
     env_file:
       - .env
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: md5  # ensures pg_hba.conf allows host connections from containers and local tools
     ports:
-      - "5432:5432"  # host port — connect via TablePlus/psql at localhost:5432
+      - "127.0.0.1:5432:5432"  # host port — connect via TablePlus/psql at localhost:5432
     healthcheck:
       test:
         [
