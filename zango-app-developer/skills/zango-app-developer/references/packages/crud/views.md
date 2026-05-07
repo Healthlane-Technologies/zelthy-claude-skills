@@ -51,6 +51,12 @@ class MyModelCrudView(BaseCrudView):
     detail_template = "crud/detail.html"  # Optional - override template
 ```
 
+Consistency rule:
+- If table shows computed or derived values, ensure create/edit flow also handles them correctly:
+  - Either include required inputs in form, or
+  - Compute on backend deterministically before save.
+- Avoid table-only derived fields with no matching create/update logic.
+
 ---
 
 ## View Attributes

@@ -122,7 +122,7 @@ Access shared table context from any custom component rendered within CrudHandle
 ```tsx
 const { data, isLoading, isFetching, error, totalCount } = useTable();
 
-if (isLoading) return <Spinner
+if (isLoading) return <Spinner />;
 ```
 
 ### search.tsx
@@ -310,4 +310,3 @@ const {
   apiUrl, tableId,
 } = useTable();
 ```
-

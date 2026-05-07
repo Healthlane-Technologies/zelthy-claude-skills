@@ -31,13 +31,21 @@ Customize the sidebar navigation and top bar with custom components, logos, and 
 | `className` | string | - | Additional CSS class for the topbar container. |
 | `style` | CSSProperties | - | Custom inline styles for the topbar container. |
 
+## Code-Backed Notes
+
+- Default sidebar CSS currently sets a white background in AppBuilder layout styles; avoid custom text/icon colors that assume dark backgrounds.
+- Keep menu text/icon colors aligned to theme variables (`--color-gray-*`, `--color-brand-*`) so active/hover states remain visible.
+- Before finalizing style overrides, verify contrast for normal, hover, active, and collapsed-sidebar states.
+
 ## Code Examples
 
 ### custom-logo.jsx
 ```jsx
 const MyLogo = () => (
   <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-    <img src="/logo.svg" width={28} height={28}
+    <img src="/logo.svg" width={28} height={28} alt="Logo" />
+  </div>
+);
 ```
 
 ### custom-menu.jsx
@@ -63,28 +71,29 @@ const CustomMenu = () => {
   );
 };
 
-<ZangoApp navbarConfig={{ customMenu: <CustomMenu
+<ZangoApp navbarConfig={{ customMenu: <CustomMenu /> }} />
 ```
 
 ### custom-bottom-content.jsx
 ```jsx
 <ZangoApp navbarConfig={{
-  customBottomContent: <ProfileCard
+  customBottomContent: <ProfileCard />
+}} />
 ```
 
 ### collapsible-sidebar.jsx
 ```jsx
-<ZangoApp navbarConfig={{ collapsible: true }}
+<ZangoApp navbarConfig={{ collapsible: true }} />
 ```
 
 ### hide-topbar.jsx
 ```jsx
-<ZangoApp layoutConfig={{ showTopbar: false }}
+<ZangoApp layoutConfig={{ showTopbar: false }} />
 ```
 
 ### custom-topbar-content.jsx
 ```jsx
 <ZangoApp topbarConfig={{
-  customLeftContent: <Breadcrumbs
+  customLeftContent: <Breadcrumbs />
+}} />
 ```
-

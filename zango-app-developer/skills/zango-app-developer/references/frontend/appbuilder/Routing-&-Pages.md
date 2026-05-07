@@ -70,6 +70,10 @@ export default Analytics;
 export { default as Analytics } from './Analytics';
 ```
 
+Critical:
+- Register custom pages in `src/custom/pages/index.js` and reference that exact export in route `component`.
+- Do not wire custom pages directly in `App.tsx` for AppBuilder-managed routing.
+
 ### route-config.json
 ```json
 {
@@ -106,6 +110,8 @@ const CustomPatientPage = () => (
     api_endpoint="/api/patients/"
     headerProps={{ title: "Patient Management" }}
     customDrawerDetail={MyCustomDetail}
+  />
+);
 ```
 
 ### Import
@@ -176,4 +182,3 @@ AppMenuModel.objects.create(
   ]
 }
 ```
-

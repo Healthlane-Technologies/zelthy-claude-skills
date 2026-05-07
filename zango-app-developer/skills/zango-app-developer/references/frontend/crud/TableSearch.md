@@ -26,7 +26,7 @@ Standalone search input that syncs with table context, plus the useTableSearch h
 ### basic.jsx
 ```jsx
 // Default search — placeholder and handler come from context
-<TableSearchField
+<TableSearchField />
 ```
 
 ### standalone.jsx
@@ -36,6 +36,7 @@ Standalone search input that syncs with table context, plus the useTableSearch h
   onSearchChange={(e) => setSearchTerm(e.target.value)}
   placeholder="Search products..."
   inputSize="md"
+/>
 ```
 
 ### custom-search.jsx
@@ -51,10 +52,14 @@ function CommandBarSearch() {
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         placeholder="Type to search..."
+      />
+      <span className="text-xs text-gray-500">Debounced: {debouncedSearchTerm}</span>
+    </div>
+  );
+}
 ```
 
 ### hide.jsx
 ```jsx
-<TableSearchField showSearch={userRole === 'admin'}
+<TableSearchField showSearch={userRole === 'admin'} />
 ```
-

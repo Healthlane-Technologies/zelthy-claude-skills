@@ -134,7 +134,29 @@ import { MoreHorizontal } from "lucide-react";
                 size="sm"
                 onClick={(e) => e.stopPropagation()}
               >
-                <MoreHorizontal className="h-4 w-4"
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {overflowActions.map((action) => (
+                <DropdownMenuItem
+                  key={action.key}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onActionClick(action);
+                    setMenuOpen(false);
+                  }}
+                >
+                  {action.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    );
+  }}
+/>
 ```
 
 ### custom-status.jsx
@@ -157,7 +179,10 @@ import { MoreHorizontal } from "lucide-react";
         <span
           className="text-sm"
           dangerouslySetInnerHTML={{ __html: value }}
-```
+        />
+      );
+    }
+  ```
 
 ### custom-tags.jsx
 ```jsx
@@ -348,4 +373,3 @@ function CaseDetail({ caseData }) {
           apiUrl={`/api/cases/${caseData.object_uuid}/`}
           onToggle={(enabled) => console.log(tag.name, enabled)}
 ```
-

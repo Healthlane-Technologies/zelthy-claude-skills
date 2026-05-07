@@ -22,6 +22,10 @@ Workflows in Zango enable status-based lifecycle management for records with con
 - Business logic needs to execute on status changes
 - Additional information is needed during transitions
 
+**Critical Modeling Rule**:
+- Do not add manual status fields to your model metadata for entities managed by workflow.
+- Attach workflow via CRUD view (`workflow = YourWorkflowClass`) and render status from workflow metadata/components.
+
 ---
 
 ## Workflow Architecture
@@ -59,3 +63,8 @@ For detailed documentation on each component, see:
 - [Tags Reference](tags.md) - Tag definitions, tag transitions, and tag management
 - [Utils Reference](utils.md) - Utility functions for filtering by status and tags
 - [Advanced Reference](advanced.md) - Conditions, done methods, system transitions, and complete examples
+
+Integration checklist:
+- Workflow class is attached in the corresponding CRUD view.
+- Transition permissions are defined in relevant module `policies.json`.
+- Table/status UI consumes the workflow metadata shape returned by the API.

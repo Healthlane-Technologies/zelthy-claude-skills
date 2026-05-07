@@ -12,7 +12,8 @@ Create and launch a new Zango frontend app in minutes.
 | `--verbose` | boolean | - | Print additional logs during scaffolding. |
 | `--use-pnpm` | boolean | - | Use pnpm as the package manager. |
 | `--skip-install` | boolean | - | Skip installing dependencies after project creation. |
-| `VITE_API_BASE_URL` | string | http://localhost:8000 | Backend API URL. In dev, the Vite dev server proxies requests here. |
+| `VITE_API_BASE_URL` | string | http://<app-domain>:8000 | Backend API URL. Use the app platform domain (not localhost) so frontend and backend match deployed app routing. |
+| `VITE_USE_PROXY` | string | true | Enables relative API calls through Vite proxy in development. |
 | `VITE_PROXY_ROUTES` | string | /api | Comma-separated routes to proxy to backend. MUST include ALL backend routes your app uses (app initializer, CRUD endpoints, workflow, etc.). |
 | `VITE_APP_ENV` | string | development | Environment flag (development / staging / production). |
 | `npm run dev` | string | - | Start development server on port 3000 with hot reload and backend proxying. |
@@ -44,8 +45,23 @@ pnpm create @zango-core/zango-app my-app
 
 ### terminal
 ```bash
-cd my-appncp .env.example .env
+cd my-app
+cp .env.example .env
 ```
+
+### .env
+```env
+VITE_API_BASE_URL=http://pharmaapp.zango.com:8000
+VITE_USE_PROXY=true
+VITE_PROXY_ROUTES=/api,/zango,/frame,/appbuilder/initializer,/patients,/doctors
+VITE_APP_ENV=development
+```
+
+Notes:
+- Never add `/app` to `VITE_PROXY_ROUTES` (it is a frontend route, not backend API).
+- Do not keep `VITE_API_BASE_URL` as `http://localhost:8000` for platform apps; use the app domain configured in App Panel.
+- If backend domain/port changes, update `VITE_API_BASE_URL` before running `npm run dev` again.
+- Ensure proxy entries include core platform routes plus every module route used by frontend pages (for example `/patients`, `/doctors`).
 
 ### terminal
 ```bash
@@ -85,4 +101,3 @@ export { default as Dashboard } from './Dashboard';
 npm run build          # Standard build to dist/
 npm run build:zango    # Single-file build for Zango platform
 ```
-

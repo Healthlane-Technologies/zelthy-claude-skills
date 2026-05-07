@@ -26,7 +26,7 @@ Manages workflow tags with toggle functionality and form-based transitions.
 
 ### basic.jsx
 ```jsx
-<WorkflowTags apiUrl="/api/users/?object_uuid=123"
+<WorkflowTags apiUrl="/api/users/?object_uuid=123" />
 ```
 
 ### custom-container.jsx
@@ -55,6 +55,10 @@ function UserTags({ objectUuid }) {
         onTagChange={() => {
           setShowModal(false);
         }}
+      />
+    </div>
+  );
+}
 ```
 
 ### custom-rendering.jsx
@@ -89,6 +93,13 @@ function UserTags({ objectUuid }) {
               className={`inline-block h-5 w-5 rounded-full bg-white shadow transform
                 transition-transform mt-0.5
                 ${tag.state === "enabled" ? "translate-x-5 ml-0.5" : "translate-x-0.5"}`}
+            />
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+/>
 ```
 
 ### static-data.jsx
@@ -102,5 +113,5 @@ function StaticTags({ workflowData }) {
     <WorkflowTags
       staticData={workflowData}
       onTagChange={() => console.log("Tag changed")}
-```
-
+    />
+  ```

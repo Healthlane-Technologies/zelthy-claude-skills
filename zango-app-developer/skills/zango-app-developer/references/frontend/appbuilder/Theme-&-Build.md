@@ -21,6 +21,12 @@ Configure colors, typography, and build your app for development and production 
 | `font_size_base` | string | - | Base font size. |
 | `line_height` | number | - | Base line height. |
 
+## Code-Backed Notes
+
+- Initializer theme is sourced from active backend theme config (`color.primary` and `typography`) and merged with backend defaults for gray/success/warning/error/info colors.
+- Theme API update payload should send `config` with `color`, `button`, and `typography` objects (see app panel theme API reference).
+- Build deployment is not complete after `npm run build:zango`; you must copy artifacts into `static/js/`, run `sync_static`, and run `collectstatic`.
+
 ## Code Examples
 
 ### generated-css-variables.css
@@ -125,7 +131,8 @@ function initializeApp() {
   }
 
   const root = ReactDOM.createRoot(rootElement);
-  root.render(<App
+  root.render(<App />);
+}
 ```
 
 ### django-template.html
@@ -136,4 +143,3 @@ function initializeApp() {
 </script>
 <script type="module" src="{% zstatic 'packages/appbuilder/js/build.min.js' %}"></script>
 ```
-
