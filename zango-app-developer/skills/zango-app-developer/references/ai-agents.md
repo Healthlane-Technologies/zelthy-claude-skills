@@ -4,6 +4,57 @@ Everything the LLM needs to write tools and run agents in Zango app code. Source
 
 ---
 
+## Setting Up an AI Provider (ALWAYS do this first)
+
+Every agent needs a provider. Before creating prompts or agents via the API, a provider must exist in the App Panel.
+
+### Step 1 — Check existing providers
+
+Always check first — a compatible provider may already be configured:
+
+```bash
+curl -s -b /tmp/zango_cookies \
+  "http://localhost:8000/api/v1/apps/$APP_UUID/ai/providers/" \
+  | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+providers = data['response']['providers']['records']
+if providers:
+    for p in providers:
+        print(f\"id={p['id']}  name={p['name']}  type={p.get('provider_slug','')}  model={p.get('default_model','')}  enabled={p.get('is_enabled','')}\")
+else:
+    print('No providers configured.')
+"
+```
+
+### Step 2 — Decide: reuse or create
+
+- **If a provider of the required type already exists and is enabled** → tell the user which one you'll use (name + id) and proceed directly to creating prompts/agents.
+- **If no suitable provider exists** → announce the name you'll create (e.g. `doc-ai-openai`) and follow the manual setup steps below.
+
+### Step 3 — Creating a new provider (only if needed)
+
+**Do not ask for or collect API keys.** Instead, give the user these exact steps:
+
+> **Please create the AI provider in the App Panel before I continue:**
+>
+> 1. Go to `http://localhost:8000/platform` → select your app → **AI → Providers**
+> 2. Click **Add Provider**
+> 3. Provider type: **`<ProviderType>`** (e.g. `OpenAI`)
+> 4. Paste your API key
+> 5. Default model: **`<model>`** (e.g. `gpt-4o-mini`)
+> 6. Name: **`<provider-name>`** — use this exact name, it is referenced in code
+> 7. **Save**
+> 8. Reply here once saved and I'll continue.
+
+Wait for the user to confirm, then re-run the list command above to get the new provider's integer `id`.
+
+### Step 4 — Use the provider ID
+
+Use the integer `id` returned from the list as `provider_id` in all agent creation calls.
+
+---
+
 ## Defining Tools
 
 ### File location

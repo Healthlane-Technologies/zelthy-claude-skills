@@ -518,6 +518,64 @@ Body (JSON):
 - `provider_id`: integer ID of an enabled provider
 - `system_prompt_name` / `user_prompt_name`: prompt `name` string (not ID) — prompt must be active; omit or pass `""` to leave unset
 - `output_schema`: `"Text"` | `"JSON"` | `"Markdown"`
+- **`output_json_schema` is REQUIRED when `output_schema` is `"JSON"`** — omitting it will cause agent creation to fail.
+
+  **Schema rules differ by provider:**
+
+  **OpenAI** enforces strict structured outputs — three rules apply:
+  1. Every `object` must have `"additionalProperties": false`
+  2. Every key listed in `properties` must also appear in `required`
+  3. Nullable fields must use `anyOf` syntax — `{"type": ["string", "null"]}` shorthand is **not** accepted
+
+  ```json
+  "output_json_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["summary", "is_urgent", "priority", "tags", "assigned_to"],
+    "properties": {
+      "summary":     {"type": "string"},
+      "is_urgent":   {"type": "boolean"},
+      "priority":    {"type": "integer"},
+      "tags":        {"type": "array", "items": {"type": "string"}},
+      "assigned_to": {"anyOf": [{"type": "string"}, {"type": "null"}]}
+    }
+  }
+  ```
+
+  For nested objects under OpenAI, apply the same rules recursively:
+  ```json
+  "address": {
+    "anyOf": [
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["street", "city", "pincode"],
+        "properties": {
+          "street":  {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "city":    {"type": "string"},
+          "pincode": {"type": "string"}
+        }
+      },
+      {"type": "null"}
+    ]
+  }
+  ```
+
+  **Anthropic** is lenient — standard JSON Schema works without the strict rules:
+  ```json
+  "output_json_schema": {
+    "type": "object",
+    "properties": {
+      "summary":     {"type": "string"},
+      "is_urgent":   {"type": "boolean"},
+      "priority":    {"type": "integer"},
+      "tags":        {"type": "array"},
+      "assigned_to": {"type": ["string", "null"]}
+    }
+  }
+  ```
+
+  If you don't need schema enforcement, use `"output_schema": "Text"` and parse JSON in code.
 - `tools`: list of tool `name` strings (as registered after sync)
 - `memory_enabled`: set to `true` to retain conversation history across `agent.run()` calls with the same `session_id`
 
