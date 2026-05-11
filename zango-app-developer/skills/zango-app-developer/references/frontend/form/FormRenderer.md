@@ -102,6 +102,9 @@ function CreateUserForm() {
       onError={(error) => {
         console.error("Form submission failed:", error);
       }}
+    />
+  );
+}
 ```
 
 ### server-edit-form.jsx
@@ -123,6 +126,7 @@ function CreateUserForm() {
   onError={(error) => {
     console.error("Update failed:", error);
   }}
+/>
 ```
 
 ### server-confirm.jsx
@@ -159,6 +163,7 @@ function CreateUserForm() {
   onResponse={(response) => {
     console.log("Submitted with confirmation:", response);
   }}
+/>
 ```
 
 ### local-rjsf.jsx
@@ -242,6 +247,9 @@ function CreateUserForm() {
       onError={(error) => {
         console.error("Failed to create user:", error);
       }}
+    />
+  );
+}
 ```
 
 ### local-rjsf-submit-endpoint.jsx
@@ -272,6 +280,7 @@ function CreateUserForm() {
   onError={(error) => {
     console.error("Failed:", error);
   }}
+/>
 ```
 
 ### multistep-response.json
@@ -357,6 +366,7 @@ function CreateUserForm() {
   onError={(error) => {
     console.error("Onboarding failed:", error);
   }}
+/>
 ```
 
 ### sync-ui-schema.json
@@ -555,6 +565,10 @@ function UserManagement() {
             </tbody>
           </table>
         )}
+      />
+    </div>
+  );
+}
 ```
 
 ### submit-portal.jsx
@@ -581,6 +595,12 @@ function UserFormDialog({ open, onClose }) {
           api_endpoint="/api/users/"
           submitButtonContainerId="user-form-footer"
           onResponse={() => onClose()}
+        />
+        <DialogFooter id="user-form-footer" />
+      </DialogContent>
+    </Dialog>
+  );
+}
 ```
 
 ### custom-widgets.jsx
@@ -596,5 +616,24 @@ function PhoneNumberWidget({ value, onChange, schema, options }) {
         onChange={(e) => onChange(e.target.value)}
         placeholder={options?.placeholder || schema?.placeholder || ""}
         className="w-full px-3 py-2 border rounded-lg"
-```
+      />
+    </div>
+  );
+}
 
+<FormRenderer
+  rjsf_schema={{
+    schema: {
+      type: "object",
+      properties: {
+        phone: { type: "string", title: "Phone Number" }
+      }
+    },
+    uiSchema: {
+      phone: { "ui:widget": "PhoneNumberWidget" }
+    },
+    formData: {}
+  }}
+  customWidgets={{ PhoneNumberWidget }}
+/>
+```

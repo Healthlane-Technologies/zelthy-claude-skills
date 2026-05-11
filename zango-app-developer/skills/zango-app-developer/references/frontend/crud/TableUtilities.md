@@ -99,7 +99,7 @@ Action bar with search, filters, upload/download, and column options.
 ### basic.jsx
 ```jsx
 // All default controls visible
-<TableUtilities
+<TableUtilities />
 ```
 
 ### hide-features.jsx
@@ -108,6 +108,7 @@ Action bar with search, filters, upload/download, and column options.
 <TableUtilities
   showUpload={false}
   showFiltersButton={false}
+/>
 ```
 
 ### custom-handlers.jsx
@@ -121,6 +122,7 @@ Action bar with search, filters, upload/download, and column options.
     // Trigger a custom export
     exportToExcel(currentFilters);
   }}
+/>
 ```
 
 ### with-children.jsx
@@ -130,5 +132,6 @@ Action bar with search, filters, upload/download, and column options.
     options={statusOptions}
     placeholder="Filter by status"
     onChange={handleStatusFilter}
+  />
+</TableUtilities>
 ```
-

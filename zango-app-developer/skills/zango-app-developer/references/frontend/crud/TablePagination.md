@@ -38,7 +38,7 @@ Pagination controls with page navigation and rows-per-page selection.
 ### basic.jsx
 ```jsx
 // Default pagination with all controls
-<TablePagination
+<TablePagination />
 ```
 
 ### custom-sizes.jsx
@@ -46,16 +46,17 @@ Pagination controls with page navigation and rows-per-page selection.
 <TablePagination
   rowsPerPageOptions={[5, 10, 25, 50]}
   showPageInfo={false}
+/>
 ```
 
 ### hide-rows-per-page.jsx
 ```jsx
-<TablePagination showRowsPerPage={false}
+<TablePagination showRowsPerPage={false} />
 ```
 
 ### compact.jsx
 ```jsx
-<TablePagination compact showPageInfo={false}
+<TablePagination compact showPageInfo={false} />
 ```
 
 ### custom-pagination.tsx
@@ -81,4 +82,3 @@ function CustomPagination() {
   );
 }
 ```
-

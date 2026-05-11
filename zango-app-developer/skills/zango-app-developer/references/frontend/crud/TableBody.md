@@ -25,13 +25,13 @@ Main table data display component with virtualization and row interaction suppor
 ### drawer-default.jsx
 ```jsx
 // Default behavior - opens a detail drawer on row click
-<TableBody
+<TableBody />
 ```
 
 ### navigate-mode.jsx
 ```jsx
 // Navigate to detail page on row click
-<TableBody defaultDetailView="navigate"
+<TableBody defaultDetailView="navigate" />
 ```
 
 ### navigate-custom-url.jsx
@@ -42,6 +42,7 @@ Main table data display component with virtualization and row interaction suppor
     action: "navigate",
     navigateUrlTemplate: "/users/{object_uuid}/profile"
   }}
+/>
 ```
 
 ### custom-handler.jsx
@@ -52,6 +53,7 @@ Main table data display component with virtualization and row interaction suppor
     action: "custom",
     customHandler: (row) => console.log(row.original)
   }}
+/>
 ```
 
 ### infinite-scroll.jsx
@@ -69,5 +71,5 @@ const handleScroll = (e) => {
   isInfiniteScroll={true}
   onScroll={handleScroll}
   isFetching={isFetchingNextPage}
+/>
 ```
-

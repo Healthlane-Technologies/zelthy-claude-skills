@@ -211,6 +211,7 @@ import CustomDrawerDetail from './CustomDrawerDetail';
 <CrudHandler
   api_endpoint="/api/users"
   customDrawerDetail={CustomDrawerDetail}
+/>
 ```
 
 ### CustomMainDetail.jsx
@@ -274,7 +275,15 @@ const CustomMainDetail = ({
             </div>
           )}
           {section.extra_html && (
-            <div dangerouslySetInnerHTML={{ __html: section.extra_html }}
+            <div dangerouslySetInnerHTML={{ __html: section.extra_html }} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default CustomMainDetail;
 ```
 
 ### usage-main-detail.jsx
@@ -285,7 +294,9 @@ import CustomMainDetail from './CustomMainDetail';
   api_endpoint="/api/users"
   customMainDetail={CustomMainDetail}
   customTableBody={
-    <TableBody defaultDetailView="navigate"
+    <TableBody defaultDetailView="navigate" />
+  }
+/>
 ```
 
 ### standalone-detail.jsx
@@ -295,6 +306,7 @@ import { StandaloneDetailView } from "@zango-core/crud/table";
 // Option 1: full URL
 <StandaloneDetailView
   apiUrl="/api/users/?object_uuid=uuid-001&action=fetch_item_details&view=detail"
+/>
 ```
 
 ### detail-view-provider.jsx
@@ -306,7 +318,9 @@ import { DetailViewProvider, WorkflowStatus, WorkflowTags } from "@zango-core/cr
   objectUuid="uuid-001"
   baseApiUrl="/api/users/"
 >
-  <WorkflowStatus
+  <WorkflowStatus />
+  <WorkflowTags />
+</DetailViewProvider>
 ```
 
 ### detail-wrapper-usage.jsx
@@ -317,6 +331,7 @@ import { DetailWrapper } from "@zango-core/crud/table";
 <DetailWrapper
   apiUrl="/api/users/"
   customComponent={MyDetailPage}
+/>
 ```
 
 ### drawer-detail-wrapper-usage.jsx
@@ -331,6 +346,7 @@ import { DrawerDetailWrapper } from "@zango-core/crud/table";
   apiUrl="/api/users/"
   selectedRow={selectedRow}
   customComponent={MyDrawerDetail}
+/>
 ```
 
 ### table-drawer-usage.jsx
@@ -351,7 +367,11 @@ const MyTable = () => {
         onClose={closeDrawer}
         selectedRow={selectedRow}
       >
-        <MyDetailPanel row={selectedRow?.original}
+        <MyDetailPanel row={selectedRow?.original} />
+      </TableDrawer>
+    </>
+  );
+};
 ```
 
 ### detail-hooks.jsx
@@ -366,4 +386,3 @@ const { data, loading, workflowDetails } = useDetailView({
 // Context-based - reads from DetailViewProvider
 const { data, refreshDetail } = useDetailViewContext();
 ```
-

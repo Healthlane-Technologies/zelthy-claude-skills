@@ -90,6 +90,7 @@ Complete visual customization of table components using CSS classes or dynamic s
     bodyRow: "hover:bg-gray-50",
     filterButton: "border-blue-300 text-blue-600"
   }}
+/>
 ```
 
 ### forced-classes.jsx
@@ -101,6 +102,7 @@ Complete visual customization of table components using CSS classes or dynamic s
     bodyRow: "!bg-gray-900 hover:!bg-gray-800",
     filterButton: "!bg-gray-700 !text-gray-200"
   }}
+/>
 ```
 
 ### dynamic-styles.jsx
@@ -119,6 +121,7 @@ Complete visual customization of table components using CSS classes or dynamic s
       fontWeight: state.isPinned ? 'bold' : 'normal'
     })
   }}
+/>
 ```
 
 ### row-state.tsx
@@ -363,7 +366,7 @@ const professionalTheme = {
   }
 };
 
-<CrudHandler api_endpoint="/api/users" {...professionalTheme}
+<CrudHandler api_endpoint="/api/users" {...professionalTheme} />
 ```
 
 ### dark-theme.jsx
@@ -398,7 +401,7 @@ const darkTheme = {
   }
 };
 
-<CrudHandler api_endpoint="/api/users" {...darkTheme}
+<CrudHandler api_endpoint="/api/users" {...darkTheme} />
 ```
 
 ### data-driven.jsx
@@ -421,7 +424,7 @@ const dataStyles = {
   }
 };
 
-<CrudHandler api_endpoint="/api/tasks" {...dataStyles}
+<CrudHandler api_endpoint="/api/tasks" {...dataStyles} />
 ```
 
 ### gradients.jsx
@@ -501,7 +504,8 @@ function ThemedTable() {
     }
   };
 
-  return <CrudHandler api_endpoint="/api/users" {...themedStyles}
+  return <CrudHandler api_endpoint="/api/users" {...themedStyles} />;
+}
 ```
 
 ### performance.jsx
@@ -538,4 +542,3 @@ const customStyle: TableCustomStyles = {
   customClass={customClass}
   customStyle={customStyle}
 ```
-

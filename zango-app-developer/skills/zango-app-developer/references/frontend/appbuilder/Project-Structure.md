@@ -52,5 +52,7 @@ const App = () => {
     <ZangoApp
       appInitializerEndpoint="/appbuilder/initializer/"
       customPages={customPages}
+    />
+  );
+};
 ```
-

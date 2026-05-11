@@ -32,7 +32,7 @@ React-based single-page application framework with dynamic routing, themes, and 
 - Theme system via CSS variables
 - Smart navigation (SPA + server routes)
 
-See **[Frontend AppBuilder Reference](../../frontend/appbuilder.md)** for complete frontend architecture, framework details, and development guide.
+See **[Frontend AppBuilder Reference](../../frontend/appbuilder/index.md)** for complete frontend architecture, framework details, and development guide.
 
 ### Backend (Django)
 
@@ -67,7 +67,7 @@ Auto-generated tables with full CRUD operations.
   "page_type": "crud",
   "entity": "doctors",
   "extra_params": {
-    "api_endpoint": "/api/doctors/"
+    "api_endpoint": "/doctors/doctors/"
   }
 }
 ```
@@ -110,7 +110,7 @@ User-defined React components for specialized functionality.
 - Create React component
 - Export in custom pages index
 
-See **[Frontend AppBuilder Reference](../../frontend/appbuilder.md)** for complete guide on creating custom pages.
+See **[Frontend AppBuilder Reference](../../frontend/appbuilder/index.md)** for complete guide on creating custom pages.
 
 ## Configuration
 
@@ -126,7 +126,7 @@ Routes are stored in `AppRoutesModel` and define all available paths in the appl
     "page_type": "crud",
     "entity": "doctors",
     "extra_params": {
-      "api_endpoint": "/api/doctors/"
+      "api_endpoint": "/doctors/doctors/"
     }
   },
   {
@@ -203,7 +203,7 @@ Menu configurations are role-based - each role can have different menu items.
 
 ### 4. Build Custom Pages (Optional)
 
-For custom React pages, see the **[Frontend AppBuilder Reference](../../frontend/appbuilder.md)** for complete setup, build commands, and development workflow.
+For custom React pages, see the **[Frontend AppBuilder Reference](../../frontend/appbuilder/index.md)** for complete setup, build commands, and development workflow.
 
 ### 5. Access the Application
 
@@ -231,7 +231,7 @@ See **[API Configuration Guide](api-configuration.md)** for complete details on:
 
 ### Adding a Custom Page
 
-1. Create React component - see **[Frontend AppBuilder Reference](../../frontend/appbuilder.md)**
+1. Create React component - see **[Frontend AppBuilder Reference](../../frontend/appbuilder/index.md)**
 2. Configure route and menu via **[API Configuration Guide](api-configuration.md)**
 3. Access at your configured path
 
@@ -274,4 +274,4 @@ AppBuilder typically works with:
 ## Related Documentation
 
 - **[API Configuration Guide](api-configuration.md)** - Complete guide for configuring routes and menus via API
-- **[Frontend AppBuilder Reference](../../frontend/appbuilder.md)** - Complete guide for React frontend development, custom pages, themes, and build workflow
+- **[Frontend AppBuilder Reference](../../frontend/appbuilder/index.md)** - Complete guide for React frontend development, custom pages, themes, and build workflow

@@ -224,7 +224,11 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
 
 4. **Set up frontend app** (skip if `<workspace>/frontend/` already exists):
    - Create React app: `npx @zango-core/create-zango-app frontend` inside the workspace directory
-   - Configure `.env` with `VITE_PROXY_ROUTES` for all backend routes — **never add `/app`** (that's a frontend route, not a backend proxy)
+   - Configure `.env` with:
+     - `VITE_API_BASE_URL=http://<app-domain>:<backend-port>` using the app domain configured in platform (do not keep localhost for platform apps)
+     - `VITE_USE_PROXY=true`
+     - `VITE_PROXY_ROUTES` for all backend routes (core + module routes such as `/patients`, `/doctors`) — **never add `/app`** (that's a frontend route, not a backend proxy)
+   - Verify the configured API base URL resolves to the same backend where your module routes are mounted before writing frontend code
    - See [frontend/appbuilder/index.md](references/frontend/appbuilder/index.md)
 
 5. **Create app module** (skip if `backend/app/` already exists):
@@ -244,7 +248,12 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
    ```bash
    cd <workspace>/frontend && npm run build:zango
    ```
-   Then copy output to `static/js/` and sync static files (see app module README).
+   Then complete all of the following from the workspace root:
+   ```bash
+   cp -r frontend/zango-build/* static/js/
+   docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> && python manage.py sync_static <app_name> && python manage.py collectstatic --noinput"
+   ```
+   Finally update `backend/app/templates/app.html` with the generated build filename (see app module README).
    > During development, the frontend runs on the dev server (`npm run dev`) — no build needed.
 
 ### STEP 6: Verify
@@ -303,6 +312,10 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 7. **Proxy routes**: include ALL backend routes in `VITE_PROXY_ROUTES` in `.env` — never add `/app` (that's a frontend route)
 8. **Backend form response format**: `{ response: { form: { json_schema, ui_schema, form_data } } }`
 9. **Flows first**: Before scaffolding, check Common Flows for a matching recipe. Use the exact combo shown.
+10. **Theme and layout safety checks (AppBuilder)**:
+    - Theme from initializer is derived from active `ThemesModel` config (`color.primary` and `typography`) with backend defaults for other colors; align custom UI with this shape
+    - Validate sidebar/topbar contrast against resolved CSS variables before finalizing style overrides (avoid white-on-white and low-contrast combinations)
+    - Keep sidebar visibility logic compatible with `theme.menu_config.display_sidebar` and layout config
 
 ### Scaffolding Patterns
 

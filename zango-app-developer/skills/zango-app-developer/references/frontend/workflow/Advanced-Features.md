@@ -37,6 +37,14 @@ function OrderDetail({ objectUuid }) {
       <WorkflowStatus
         apiUrl={`/api/orders/?object_uuid=${objectUuid}`}
         onFormCancel={statusFormRef}
+      />
+      <WorkflowTags
+        apiUrl={`/api/orders/?object_uuid=${objectUuid}`}
+        onFormCancel={tagFormRef}
+      />
+    </div>
+  );
+}
 ```
 
 ### glitch-free-portal.jsx
@@ -78,6 +86,10 @@ function OrderWorkflow({ objectUuid }) {
             setShowDialog(false);
           }
         }}
+      />
+    </div>
+  );
+}
 ```
 
 ### error-handling.jsx
@@ -102,6 +114,9 @@ function OrderWorkflow({ objectUuid }) {
         // Only called on success — safe to refresh data here
         window.location.reload();
       }}
+    />
+  );
+}
 ```
 
 ### before-migration.jsx
@@ -124,6 +139,10 @@ function OrderDetail({ objectUuid }) {
         afterTransition={async (transition, success) => {
           if (success) setShowDialog(false);
         }}
+      />
+    </div>
+  );
+}
 ```
 
 ### after-migration.jsx
@@ -159,5 +178,8 @@ function OrderDetail({ objectUuid }) {
         afterTransition={async (transition, success) => {
           if (success) setShowDialog(false);
         }}
+      />
+    </div>
+  );
+}
 ```
-

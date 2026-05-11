@@ -39,7 +39,7 @@ Manages workflow status transitions with full lifecycle control and custom rende
 ### auto-context.jsx
 ```jsx
 // Inside a DetailView — no props needed
-<WorkflowStatus
+<WorkflowStatus />
 ```
 
 ### standalone.jsx
@@ -47,6 +47,7 @@ Manages workflow status transitions with full lifecycle control and custom rende
 <WorkflowStatus
   apiUrl="/api/users/?object_uuid=123"
   onStatusChange={() => console.log("Changed!")}
+/>
 ```
 
 ### custom-form-container.jsx
@@ -76,6 +77,10 @@ function OrderDetail({ objectUuid }) {
         onStatusChange={() => {
           console.log("Status updated, refreshing...");
         }}
+      />
+    </div>
+  );
+}
 ```
 
 ### custom-rendering.jsx
@@ -99,6 +104,7 @@ function OrderDetail({ objectUuid }) {
       ))}
     </div>
   )}
+/>
 ```
 
 ### programmatic-cancel.jsx
@@ -114,6 +120,10 @@ function OrderWorkflow() {
       <WorkflowStatus
         apiUrl="/api/orders/?object_uuid=123"
         onFormCancel={cancelRef}
+      />
+    </div>
+  );
+}
 ```
 
 ### cancel-transition.jsx
@@ -126,5 +136,5 @@ function OrderWorkflow() {
     }
     // Throwing an error prevents the transition
   }}
+/>
 ```
-

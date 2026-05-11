@@ -36,6 +36,8 @@ const App = () => (
   <ZangoApp
     appInitializerEndpoint="/appbuilder/initializer/"
     customPages={customPages}
+  />
+);
 ```
 
 ### full-config.jsx
@@ -56,7 +58,13 @@ const App = () => (
     }}
     navbarConfig={{
       collapsible: true,
-      customLogo: <MyLogo
+      customLogo: <MyLogo />,
+    }}
+    authConfig={{
+      customComponents: { LoginPage: CustomLogin },
+    }}
+  />
+);
 ```
 
 ### use-app-context.jsx
@@ -77,4 +85,3 @@ const MyComponent = () => {
   return <div>Hello {profileInfo?.name}</div>;
 };
 ```
-

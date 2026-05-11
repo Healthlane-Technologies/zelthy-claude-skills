@@ -75,6 +75,7 @@ Complete authentication system with password, OTP, OAuth, 2FA, role selection, a
   authConfig={{
     // Theme, custom components, login config, etc.
   }}
+/>
 ```
 
 ### custom-login.jsx
@@ -87,6 +88,7 @@ import CustomLogin from './custom/pages/CustomLogin';
       LoginPage: CustomLogin,
     },
   }}
+/>
 ```
 
 ### password-reset-config.jsx
@@ -107,6 +109,7 @@ import CustomLogin from './custom/pages/CustomLogin';
       },
     },
   }}
+/>
 ```
 
 ### complete-auth-config.jsx
@@ -130,5 +133,5 @@ import CustomLogin from './custom/pages/CustomLogin';
       separatorText: 'or continue with',
     },
   }}
+/>
 ```
-

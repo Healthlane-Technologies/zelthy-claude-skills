@@ -29,7 +29,7 @@ Page header component with title, count, and action buttons.
 ### basic.jsx
 ```jsx
 // Uses defaults from table context
-<TableHeader
+<TableHeader />
 ```
 
 ### custom-actions.jsx
@@ -43,7 +43,9 @@ Page header component with title, count, and action buttons.
     <>
       <button className="btn-secondary">Export CSV</button>
       <button className="btn-secondary">Import</button>
-    <
+    </>
+  }
+/>
 ```
 
 ### html-title.jsx
@@ -59,6 +61,7 @@ Page header component with title, count, and action buttons.
     // Custom logic instead of default form
     openCustomOrderModal();
   }}
+/>
 ```
 
 ### with-children.jsx
@@ -67,6 +70,8 @@ Page header component with title, count, and action buttons.
   <StatusFilter
     options={['All', 'In Stock', 'Low Stock', 'Out of Stock']}
     onChange={handleStatusChange}
+  />
+</TableHeader>
 ```
 
 ### disable-default-form.jsx
@@ -74,5 +79,5 @@ Page header component with title, count, and action buttons.
 <TableHeader
   enableDefaultAddForm={false}
   onAddClick={() => router.push('/products/new')}
+/>
 ```
-

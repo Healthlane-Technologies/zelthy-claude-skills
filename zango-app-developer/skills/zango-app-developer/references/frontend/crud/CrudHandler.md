@@ -115,7 +115,7 @@ import { CrudHandler } from "@zango-core/crud/table";
 
 ### minimal.jsx
 ```jsx
-<CrudHandler api_endpoint="/api/users"
+<CrudHandler api_endpoint="/api/users" />
 ```
 
 ### hide-sections.jsx
@@ -126,6 +126,7 @@ import { CrudHandler } from "@zango-core/crud/table";
   showHeader={false}
   showUtilities={false}
   showPagination={false}
+/>
 ```
 
 ### custom-overrides.jsx
@@ -133,7 +134,8 @@ import { CrudHandler } from "@zango-core/crud/table";
 // Replace entire sections with custom components
 <CrudHandler
   api_endpoint="/api/products"
-  customHeader={<MyCustomHeader
+  customHeader={<MyCustomHeader />}
+/>
 ```
 
 ### render-props.jsx
@@ -156,6 +158,7 @@ import { CrudHandler } from "@zango-core/crud/table";
       ))}
     </Menu>
   )}
+/>
 ```
 
 ### metadata-response.json
@@ -187,6 +190,7 @@ import { CrudHandler } from "@zango-core/crud/table";
   utilityProps={{
     showUpload: true
   }}
+/>
 ```
 
 ### configured-defaults.jsx
@@ -214,6 +218,7 @@ import { CrudHandler } from "@zango-core/crud/table";
   }}
   className="custom-table-wrapper"
   style={{ height: '600px' }}
+/>
 ```
 
 ### mix-and-match.jsx
@@ -221,7 +226,8 @@ import { CrudHandler } from "@zango-core/crud/table";
 <CrudHandler
   api_endpoint="/api/orders"
   customHeader="Order Management"
-  customUtilities={<MyAdvancedFilters
+  customUtilities={<MyAdvancedFilters />}
+/>
 ```
 
 ### custom-detail-views.jsx
@@ -234,6 +240,9 @@ import { CrudHandler } from "@zango-core/crud/table";
       workflowDetails={workflowDetails}
       isOpen={open}
       onClose={onClose}
+    />
+  )}
+/>
 ```
 
 ### table.jsx
@@ -244,6 +253,7 @@ import { Table } from "@zango-core/crud/table";
   apiUrl="/api/users"
   tableMetadataObj={metadata}
   onRowClick={(row, e) => openMyDetail(row.original)}
+/>
 ```
 
 ### table-provider.jsx
@@ -256,7 +266,8 @@ const TableTitle = () => {
 };
 
 <TableProvider apiUrl="/api/users">
-  <TableTitle
+  <TableTitle />
+</TableProvider>
 ```
 
 ### table-layout.jsx
@@ -266,13 +277,20 @@ import { TableProvider, TableLayout, TableToolbar, TableContainer } from "@zango
 <TableProvider apiUrl="/api/orders">
   <TableLayout variant="card">
     <TableToolbar>
-      <TableSearch
+      <TableSearch />
+    </TableToolbar>
+    <TableContainer>
+      <Table />
+    </TableContainer>
+  </TableLayout>
+</TableProvider>
 ```
 
 ### table-toolbar.jsx
 ```jsx
 <TableToolbar variant="sticky" align="between">
-  <TableSearch
+  <TableSearch />
+</TableToolbar>
 ```
 
 ### table-container.jsx
@@ -286,6 +304,7 @@ import { TableProvider, TableLayout, TableToolbar, TableContainer } from "@zango
       </div>
     }
   >
-    <FavoritesGrid
+    <FavoritesGrid />
+  </TableContainer>
+</TableProvider>
 ```
-

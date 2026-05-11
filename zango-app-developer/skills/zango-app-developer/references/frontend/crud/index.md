@@ -68,12 +68,22 @@ import type {
 { "success": true, "response": { "table_data": [{ "id": 1, "object_uuid": "uuid", "workflow_status": { "status_label": "Active", "status_color": "#12B76A" }, "row_actions": [{ "name": "Edit", "key": "edit", "type": "form" }] }], "recordsTotal": 25 } }
 ```
 
+### Pagination Query Params (Critical)
+- Pagination params are package-version dependent. Verify from installed CRUD backend code before wiring frontend requests.
+- Legacy/current package implementations may use DataTables-style `start` and `length`.
+- Some newer wrappers or custom APIs may expose `page` and `page_size`.
+- Do not assume one contract globally across all workspaces.
+
 ### Detail View (GET ?action=fetch_item_details&object_uuid=UUID)
 ```json
 { "success": true, "response": { "pk": 1, "object_uuid": "uuid", "title": "Title", "general_details": { "fields": { "name": { "display_name": "Name", "value": "val" } } }, "workflow_details": { "current_status": "active", "current_status_meta": { "status_label": "Active", "status_color": "#12B76A" }, "next_transitions": [{ "name": "approve", "display_name": "Approve", "is_form_based": false, "confirmation_message": "Approve this record?", "description": "Moves record to approved state", "from": "pending", "to": "approved" }], "tag_details": [{ "name": "urgent", "state": "enabled", "enable": { "is_form_based": false, "confirmation_message": "Enable urgent tag?" }, "disable": { "is_form_based": false, "confirmation_message": "Disable urgent tag?" }, "is_enable_allowed": true, "is_disable_allowed": true }] }, "sections": [{ "key": "overview", "title": "Overview", "data": {} }] } }
 ```
 
 Note: `to_state_meta` only appears on audit-log / workflow-transaction entries, NOT on `next_transitions[]`.
+
+### Detail Mapping Rule
+- When building custom drawer/detail components, map fields from actual API keys (`general_details`, `workflow_details`, etc.) and verify payload first.
+- Do not assume renamed variables without checking response shape.
 
 ## Column Types
 - `string`, `number`, `date` - primitive column types
@@ -101,4 +111,3 @@ Note: `to_state_meta` only appears on audit-log / workflow-transaction entries, 
 | TableUtilities | Component | Action bar with search, filters, upload/download, and column options. | [TableUtilities.md](TableUtilities.md) |
 | useTable() | Hook | Access shared table context from any custom component rendered within CrudHandler. Stay in sync with table state and controls. | [useTable.md](useTable.md) |
 | Hooks Reference | Hooks | Complete reference for all hooks available in @zango-core/crud/table. | [Hooks-Reference.md](Hooks-Reference.md) |
-
