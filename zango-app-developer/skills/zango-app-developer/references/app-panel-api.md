@@ -8,6 +8,14 @@ All endpoints are under `http://localhost:8000/api/v1/` unless otherwise noted. 
 
 Zango uses Django session auth with CSRF protection. All API calls require authentication.
 
+### Before running the login curl — confirm credentials
+
+**Never hardcode or assume platform credentials.** Before executing the login:
+
+1. Check `deploy/.env` for `PLATFORM_USERNAME` / `PLATFORM_USER_PASSWORD`, or check if credentials are already present in the current conversation context.
+2. Present what you found to the user: *"I'll use `<email>` — is that correct, or should I use different credentials?"*
+3. Wait for confirmation, then URL-encode the values (`@` → `%40`, `#` → `%23`, `!` → `%21`) before substituting.
+
 ### Login Flow
 
 ```bash
@@ -15,13 +23,13 @@ Zango uses Django session auth with CSRF protection. All API calls require authe
 curl -s -c /tmp/zango_cookies http://localhost:8000/auth/login/ -o /dev/null
 CSRF=$(grep csrftoken /tmp/zango_cookies | awk '{print $NF}')
 
-# Step 2: Login (returns 302 on success, sets sessionid cookie)
+# Step 2: Login — substitute confirmed, URL-encoded credentials
 # Do NOT use -L (follow redirects) — the redirect destination may throw a 500
 curl -s -c /tmp/zango_cookies -b /tmp/zango_cookies -X POST http://localhost:8000/auth/login/ \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -H "Origin: http://localhost:8000" \
   -H "Referer: http://localhost:8000/auth/login/" \
-  -d "csrfmiddlewaretoken=$CSRF&username=platform_admin%40zango.dev&password=Zango%40123" \
+  -d "csrfmiddlewaretoken=$CSRF&username=<EMAIL_ENCODED>&password=<PASSWORD_ENCODED>" \
   -o /dev/null -w "%{http_code}"
 # Expect: 302 — session cookie is now set
 
@@ -29,8 +37,6 @@ curl -s -c /tmp/zango_cookies -b /tmp/zango_cookies -X POST http://localhost:800
 CSRF=$(grep csrftoken /tmp/zango_cookies | awk '{print $NF}')
 # All POST/PUT/DELETE must include: -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/"
 ```
-
-**Important:** Replace username/password with values from `deploy/.env` (`PLATFORM_USERNAME` / `PLATFORM_USER_PASSWORD`). URL-encode special characters (`@` → `%40`, `#` → `%23`).
 
 Both `SessionAuthentication` and Knox `TokenAuthentication` are accepted.
 
