@@ -199,10 +199,28 @@ response = agent.run(
 
 **Input priority** (first non-None wins):
 1. `messages` — caller provides full `LLMMessage` list
-2. `input` — plain string
-3. `variables` — rendered into the agent's configured `user_prompt` template
+2. `input` — plain string; use when the agent has a system prompt but no user prompt template configured
+3. `variables` — rendered into the agent's configured `user_prompt` template; standard when the agent's prompt is managed in the App Panel
 
 If all three are `None` and the agent has no user prompt, raises `ValueError`.
+
+**`messages=` — multi-turn / manual history:**
+
+```python
+from zango.ai import get_agent, LLMMessage
+
+agent = get_agent("chat-agent")
+response = agent.run(
+    messages=[
+        LLMMessage(role="user", content="What's the capital of France?"),
+        LLMMessage(role="assistant", content="Paris."),
+        LLMMessage(role="user", content="And what's its population?"),
+    ],
+    triggered_by="user",
+)
+```
+
+This bypasses the agent's prompt template entirely. Used for injecting explicit conversation history.
 
 ### The response object
 
@@ -333,6 +351,12 @@ response = agent.run(
     files=[LLMFile.from_url("https://example.com/scan.jpg")],
     triggered_by="user",
 )
+
+# From a local file path
+response = agent.run(
+    files=[LLMFile.from_path("/tmp/report.pdf")],
+    triggered_by="system",
+)
 ```
 
 ---
@@ -372,18 +396,32 @@ rendered = prompt_version.render(
 
 ## Error Handling
 
+All exceptions inherit from `ZangoAIError` (`zango.ai.exceptions`).
+
+| Exception | Raised by | When | Useful attributes |
+|-----------|-----------|------|-------------------|
+| `AgentNotFound` | `get_agent()` | No agent with that name, or it is inactive | `e.name` |
+| `AgentDisabled` | `agent.run()` | Agent exists but is toggled off in the App Panel | `e.name` |
+| `PromptRenderError` | `agent.run()` | A `{{variable}}` placeholder was not supplied in `variables=` | `e.missing_vars` (list) |
+| `BudgetExceeded` | `agent.run()` | Provider's monthly spend limit reached | `e.provider_name`, `e.budget_limit` |
+| `RateLimitExceeded` | `agent.run()` | Provider rate limit hit | `e.retry_after_seconds` |
+| `LLMTimeoutError` | `agent.run()` | LLM request timed out | — |
+| `LLMAPIError` | `agent.run()` | Provider returned an API-level error | `e.status_code`, `e.original_error` |
+| `OutputParseError` | `agent.run()` | Output Schema is JSON but response couldn't be parsed | — |
+| `OutputValidationError` | `agent.run()` | Parsed JSON doesn't match the configured JSON Schema | `e.field`, `e.errors` |
+
 ```python
 from zango.ai import get_agent
 from zango.ai.exceptions import (
     AgentNotFound,      # name not found or agent is disabled
     AgentDisabled,      # agent exists but is_enabled=False
-    PromptNotFound,     # prompt name not found or inactive
+    PromptRenderError,  # missing {{variable}} in prompt; .missing_vars
     BudgetExceeded,     # monthly budget for the provider hit
-    RateLimitExceeded,  # provider or tool rate limit hit; .retry_after_seconds
+    RateLimitExceeded,  # provider rate limit hit; .retry_after_seconds
     LLMAPIError,        # provider API error; .status_code, .original_error
     LLMTimeoutError,    # LLM request timed out
     OutputParseError,   # output_schema=JSON but LLM returned invalid JSON
-    OutputValidationError,  # JSON valid but doesn't match output_json_schema
+    OutputValidationError,  # JSON valid but doesn't match output_json_schema; .field, .errors
 )
 
 try:
