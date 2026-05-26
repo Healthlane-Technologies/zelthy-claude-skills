@@ -107,8 +107,10 @@ services:
     image: postgres:15
     env_file:
       - .env
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: md5  # ensures pg_hba.conf allows host connections from containers and local tools
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # host port — connect via TablePlus/psql at localhost:5432
     healthcheck:
       test:
         [
@@ -220,6 +222,20 @@ After startup, the platform should be accessible at:
 - **URL**: `http://localhost:8000/platform`
 - **Username**: Value of PLATFORM_USERNAME from .env
 - **Password**: Value of PLATFORM_USER_PASSWORD from .env
+
+### Local DB Access — TablePlus / psql (Docker mode)
+
+The postgres container already binds port `5432` to the host. Connect from TablePlus or any local client using:
+
+| Field    | Value |
+|----------|-------|
+| Host     | `localhost` (NOT `postgres` — that name is only valid inside Docker) |
+| Port     | `5432` |
+| User     | Value of `POSTGRES_USER` from `.env` (default: `zango_admin`) |
+| Password | Value of `POSTGRES_PASSWORD` from `.env` (default: `zangopass`) |
+| Database | Value of `POSTGRES_DB` from `.env` (default: `zango`) |
+
+> If port 5432 is already occupied on your machine, change the host-side mapping in `docker_compose.yml` (e.g. `"5433:5432"`) and connect TablePlus on port `5433`.
 
 ### Stopping and Restarting (Docker mode)
 

@@ -456,3 +456,4 @@ import { WorkflowStatus, WorkflowTags } from '@zango-core/crud/table';
 - **Setup mode**: Always read `.claude/zango-config.json` before running management commands — docker and venv use different command forms
 - **Debugging (Docker)**: Check logs: `docker compose -f deploy/docker_compose.yml logs app`
 - **Debugging (Venv)**: Check the terminal running `manage.py runserver`; DB/Redis issues show in `docker compose -f deploy/docker_compose_db.yml logs`
+- **Package source**: Read the relevant package under `packages/` directly (e.g. `crud/`, `appbuilder/`, `workflow/`, `communication/`) when: a method/attribute isn't documented, you need to customise framework behaviour, or debugging unexpected behaviour — always prefer a real override point over guessing
