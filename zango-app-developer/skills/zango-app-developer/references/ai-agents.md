@@ -441,6 +441,17 @@ response = agent.run(
 )
 ```
 
+### File Audit Storage
+
+Every file passed to `agent.run()` is automatically mirrored to the tenant's file storage before being sent to the LLM provider:
+
+- Files sourced from Django file fields, raw bytes, or local paths have their bytes saved (via `ZFileField`) and are available for download from the Invocation Logs in the App Panel.
+- Files sourced from `LLMFile.from_url()` are recorded as identity rows only — the URL and metadata (SHA-256, size, media type) are stored, but the bytes are **not** fetched or mirrored.
+- Identity fields (`sha256`, `size_bytes`, `media_type`, `filename`) are preserved even if the blob is later removed by a retention policy.
+- Audit persistence is **fail-open**: storage errors are logged but never raised, so a failed audit write cannot break the agent run.
+
+The `files` field on the invocation detail API response (`GET /api/v1/apps/<uuid>/ai/invocations/<invocation_id>/`) returns each file with a presigned download URL when a blob is present. See `app-panel-api.md` → Invocations → Get invocation detail.
+
 ---
 
 ## Direct Provider Access (without an agent)

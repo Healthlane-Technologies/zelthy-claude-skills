@@ -797,6 +797,10 @@ GET /api/v1/apps/<uuid>/ai/invocations/<invocation_id>/
      provider, provider_name, provider_slug,
      agent, agent_name,
      request_messages, request_system, request_tools, request_params, request_files,
+     files: [{id, filename, media_type, size_bytes, sha256,
+              source_kind,   # "upload" | "url"
+              source_url,    # original URL when source_kind="url", else null
+              url}],         # presigned download URL when blob mirrored, else null
      response_content, response_tool_calls, stop_reason,
      input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens,
      cost_usd, latency_ms, time_to_first_token_ms,
