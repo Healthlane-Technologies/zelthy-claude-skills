@@ -267,6 +267,7 @@ agent = get_agent("agent-name")   # raises AgentNotFound if not found or disable
 response = agent.run(
     input=None,               # Plain string message — simplest way to call the agent
     variables=None,           # Dict rendered into the agent's user_prompt template
+    system_variables=None,    # Dict rendered into the agent's system_prompt template (separate from variables)
     messages=None,            # Full LLMMessage list — low-level escape hatch
     files=None,               # List of LLMFile for image/document attachments
     triggered_by="user",      # "user" | "celery" | "cron" | "system"
@@ -280,6 +281,17 @@ response = agent.run(
 1. `messages` — caller provides full `LLMMessage` list
 2. `input` — plain string; use when the agent has a system prompt but no user prompt template configured
 3. `variables` — rendered into the agent's configured `user_prompt` template; standard when the agent's prompt is managed in the App Panel
+
+**`variables` vs `system_variables`:** These are independent. `variables` renders the **user prompt** template; `system_variables` renders the **system prompt** template. If `system_variables` is omitted, the system prompt is used as-is (no substitution).
+
+```python
+# Both prompts have {{placeholders}} — pass variables separately
+response = agent.run(
+    variables={"patient_id": 42, "question": "What medications is this patient on?"},
+    system_variables={"department": "cardiology", "protocol_version": "2026-Q1"},
+    triggered_by="user",
+)
+```
 
 If all three are `None` and the agent has no user prompt, raises `ValueError`.
 
@@ -449,18 +461,96 @@ print(response.cost_usd)
 
 ---
 
-## Prompt Access (without an agent)
+## Prompts
+
+### Overview
+
+A **Prompt** is a named, versioned template managed in the App Panel. It is separate from the agent so the same prompt can be reused across multiple agents, and prompt content can be updated without touching agent configuration or code.
+
+- `"system"` type — injected as the system message before the conversation (sets the LLM's role/persona)
+- `"user"` type — rendered as the user turn message (the task/question template)
+
+An agent can have one system prompt and one user prompt attached. Only the **active version** of a prompt is used at runtime.
+
+### Prompt Variables
+
+Both system and user prompts support `{{variable_name}}` placeholders. Variables are extracted automatically when a prompt version is saved.
+
+```
+You are a clinical assistant working in the {{department}} department.
+Protocol version: {{protocol_version}}
+```
+
+Variables are passed at runtime via `agent.run()`:
+- `system_variables=` → substituted into the system prompt
+- `variables=` → substituted into the user prompt
+
+**Rule:** `system_variables` and `variables` are independent dicts. Don't mix them — system prompt `{{placeholders}}` must be in `system_variables`, user prompt `{{placeholders}}` in `variables`.
+
+```python
+agent = get_agent("triage-agent")
+response = agent.run(
+    # user prompt has {{patient_id}} and {{question}}
+    variables={"patient_id": 42, "question": "What medications is this patient on?"},
+    # system prompt has {{department}} and {{protocol_version}}
+    system_variables={"department": "cardiology", "protocol_version": "2026-Q1"},
+    triggered_by="user",
+)
+```
+
+If a required variable is missing, `PromptRenderError` is raised with `.missing_vars` listing the unresolved placeholder names.
+
+### Prompt Versioning
+
+Every save creates a new **version**. Versions have three states:
+
+| Status | Meaning |
+|--------|---------|
+| `"draft"` | Just created; not used by any agent |
+| `"active"` | The live version — this is what `get_agent()` and `get_prompt()` resolve |
+| `"inactive"` | Previously active; superseded by a newer version |
+
+Exactly one version is active at a time. Promoting a version atomically sets it to `"active"` and demotes the previous one to `"inactive"`.
+
+**To update a prompt without affecting live agents:** create a new version (it starts as draft), test it, then promote it. The change takes effect immediately for all agents using that prompt.
+
+For creating and managing prompts via curl (create, add version, promote, list), see **`app-panel-api.md → AI Agents → Prompts`**.
+
+### `get_prompt()` — Accessing Prompts from Code
 
 ```python
 from zango.ai import get_prompt
+from zango.ai.exceptions import PromptNotFound, PromptRenderError
 
-prompt_version = get_prompt("patient-summary-system")  # raises PromptNotFound if inactive
-rendered = prompt_version.render(
-    patient_name="Jane Doe",
-    screening_date="2024-03-15",
-)
-# rendered is a str — the prompt with variables substituted
+# Returns the active AppLLMPromptVersion
+prompt_version = get_prompt("patient-triage-system")  # raises PromptNotFound if not found or inactive
+
+# Render with variables
+try:
+    rendered = prompt_version.render(
+        department="cardiology",
+        protocol_version="2026-Q1",
+    )
+except PromptRenderError as e:
+    print(e.missing_vars)  # list of unresolved {{variable}} names
 ```
+
+`get_prompt()` raises `PromptNotFound` if:
+- No prompt with that name exists
+- The prompt exists but `is_active=False`
+- The prompt has no active version
+
+`render()` raises `PromptRenderError` if any `{{variable}}` placeholder remains after substitution — i.e., a required variable was not provided.
+
+The returned `AppLLMPromptVersion` object has:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `.content` | `str` | Raw template with `{{placeholders}}` |
+| `.variables` | `list[str]` | Auto-extracted variable names |
+| `.version_number` | `int` | Version number (1-based) |
+| `.status` | `str` | `"active"` when returned by `get_prompt()` |
+| `.render(**kwargs)` | `str` | Rendered content; raises `PromptRenderError` on missing vars |
 
 ---
 

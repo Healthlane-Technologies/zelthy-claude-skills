@@ -409,7 +409,11 @@ GET  /api/v1/apps/<uuid>/ai/providers/<provider_id>/dependencies/
 ```
 GET /api/v1/apps/<uuid>/ai/prompts/
 Optional: ?search=<term>&type=system|user&include_inactive=true&page=1&page_size=10
-→ {success, response: {prompts: {total_records, records: [...]}, stats: {total_prompts, active_versions, total_versions}}}
+→ {success, response: {prompts: {total_records, records: [
+     {id, name, description, type, is_active,
+      active_version_number, active_version_id,
+      total_versions, created_at}
+   ]}, stats: {total_prompts, active_versions, total_versions}}}
 ```
 
 #### Create prompt
@@ -430,7 +434,7 @@ Body (JSON):
 **Notes:**
 - `type`: `"system"` (injected before conversation) or `"user"` (sent as a user turn)
 - `name` must be unique — used to reference the prompt from agents and code
-- `content`: for user-type prompts, declare variables with `{{variable_name}}` — they are extracted automatically
+- `content`: both `system` and `user` type prompts support `{{variable_name}}` syntax — variables are extracted automatically. Pass them at runtime via `system_variables=` (system prompt) or `variables=` (user prompt) in `agent.run()`.
 - First version is created and set active automatically
 
 #### Get / Update / Delete prompt
@@ -447,17 +451,20 @@ Delete: soft-deletes (sets `is_active=False`) if versions exist. Blocked (409) i
 #### Prompt versions
 ```
 GET  /api/v1/apps/<uuid>/ai/prompts/<prompt_id>/versions/
-→ {success, response: {versions: [...]}}
+→ {success, response: {versions: [
+     {id, version_number, content, status, variables: ["var1", "var2"], change_description, created_at}
+   ]}}
 
 POST /api/v1/apps/<uuid>/ai/prompts/<prompt_id>/versions/
 Body (JSON): {"content": "Updated instruction...", "change_description": "Refined tone"}
-→ {success, response: {message: "Version v2 created", version: {...}}}
+→ {success, response: {message: "Version v2 created", version: {id, version_number, status: "draft", variables: [...]}}}
 ```
 New versions start as `"draft"` — they are not used by agents until promoted.
+`variables` is the auto-extracted list of `{{placeholder}}` names from the content.
 
 ```
 GET  /api/v1/apps/<uuid>/ai/prompts/<prompt_id>/versions/<version_id>/
-→ {success, response: {version: {id, version_number, content, status, variables, ...}}}
+→ {success, response: {version: {id, version_number, content, status, variables: [...], change_description, created_at}}}
 ```
 
 #### Promote a version to active
@@ -483,6 +490,59 @@ POST-only — GET returns 405.
 ```
 GET /api/v1/apps/<uuid>/ai/prompts/<prompt_id>/dependencies/
 → {success, response: {is_mapped: bool, agent_count, agents: [{id, name}], suggested_action}}
+```
+
+#### Typical prompt workflow (curl)
+
+```bash
+# Step 1 — Create prompt (first version auto-created and set active)
+curl -s -b /tmp/zango_cookies -X POST \
+  "http://localhost:8000/api/v1/apps/$APP_UUID/ai/prompts/" \
+  -H "Content-Type: application/json" -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/" \
+  -d '{
+    "name": "patient-triage-system",
+    "type": "system",
+    "content": "You are a clinical assistant in {{department}}. Protocol: {{protocol_version}}",
+    "change_description": "Initial version"
+  }'
+# → {success, response: {prompt_id: 3}}
+PROMPT_ID=3
+
+# Step 2 — Add a new version (starts as draft)
+curl -s -b /tmp/zango_cookies -X POST \
+  "http://localhost:8000/api/v1/apps/$APP_UUID/ai/prompts/$PROMPT_ID/versions/" \
+  -H "Content-Type: application/json" -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/" \
+  -d '{"content": "You are a senior clinical assistant in {{department}}. Always follow {{protocol_version}}.", "change_description": "Refined tone"}'
+# → {success, response: {message: "Version v2 created", version: {id: 8, version_number: 2, status: "draft", variables: ["department", "protocol_version"]}}}
+VERSION_ID=8
+
+# Step 3 — Promote draft to active (takes effect immediately for all agents using this prompt)
+curl -s -b /tmp/zango_cookies -X POST \
+  "http://localhost:8000/api/v1/apps/$APP_UUID/ai/prompts/$PROMPT_ID/versions/$VERSION_ID/promote/" \
+  -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/" -H "Content-Length: 0"
+# → {success, response: {message: "Version v2 promoted to active"}}
+```
+
+**Helper — list prompts and versions to find IDs:**
+
+```bash
+# List prompts
+curl -s -b /tmp/zango_cookies \
+  "http://localhost:8000/api/v1/apps/$APP_UUID/ai/prompts/" \
+  | python3 -c "
+import json, sys
+for p in json.load(sys.stdin)['response']['prompts']['records']:
+    print(f\"id={p['id']}  name={p['name']}  type={p['type']}  active_v={p.get('active_version_number','—')}\")
+"
+
+# List versions for a specific prompt
+curl -s -b /tmp/zango_cookies \
+  "http://localhost:8000/api/v1/apps/$APP_UUID/ai/prompts/$PROMPT_ID/versions/" \
+  | python3 -c "
+import json, sys
+for v in json.load(sys.stdin)['response']['versions']:
+    print(f\"id={v['id']}  v{v['version_number']}  status={v['status']}  vars={v.get('variables','[]')}\")
+"
 ```
 
 ---
@@ -607,20 +667,36 @@ POST /api/v1/apps/<uuid>/ai/agents/<agent_id>/duplicate/
   {success, response: {message, agent: {...}}}
 
 POST /api/v1/apps/<uuid>/ai/agents/<agent_id>/test/
-Body (JSON):
-  {"variables": {"key": "value"}}           # agent has a user prompt → pass template variables
-  {"user_message": "Hello, what can you do?"}  # agent has NO user prompt → required
+Content-Type: application/json  OR  multipart/form-data (when sending files)
 Body fields:
-  variables    dict    Optional. Rendered into the agent's user prompt template.
-  user_message str     Required when the agent has no user prompt configured.
+  user_message      str           Required when agent has NO user prompt AND no files attached.
+  variables         dict|str      Optional. Rendered into the agent's user_prompt template.
+  system_variables  dict|str      Optional. Rendered into the agent's system_prompt template (separate from variables).
+  files             file upload   Optional. One or more file attachments (multipart only).
+Note: when sending files use multipart/form-data; variables/system_variables must be JSON strings in that case.
+      When no files, plain JSON body works; variables/system_variables are plain dicts.
 → Runs a live test invocation (triggered_by="system"). Real invocation — logged + costs accrue.
   Returns up to 2000 chars of response content.
   {success, response: {message: "Test successful", result: {content, model, latency_ms, input_tokens, output_tokens, cost_usd}}}
 Errors:
   400 — no provider configured
-  400 — no user prompt + user_message missing: "This agent has no user prompt configured. Provide a 'user_message' to run a test."
+  400 — no user prompt + no user_message + no files: "This agent has no user prompt configured. Provide a 'user_message' or attach files to run a test."
   404 — agent not found
   500 — LLM/runtime error (message contains exception text)
+
+# JSON body example (no files)
+curl -s -b /tmp/zango_cookies -X POST \
+  "http://localhost:8000/api/v1/apps/$APP_UUID/ai/agents/$AGENT_ID/test/" \
+  -H "Content-Type: application/json" -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/" \
+  -d '{"variables": {"patient_id": 1}, "system_variables": {"department": "cardiology"}}'
+
+# Multipart example (with file)
+curl -s -b /tmp/zango_cookies -X POST \
+  "http://localhost:8000/api/v1/apps/$APP_UUID/ai/agents/$AGENT_ID/test/" \
+  -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/" \
+  -F "user_message=Summarise this document" \
+  -F "system_variables={\"department\": \"cardiology\"}" \
+  -F "files=@/path/to/report.pdf"
 ```
 
 #### Agent memory sessions
