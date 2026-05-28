@@ -568,13 +568,13 @@ Body (JSON):
   "model": "gpt-4o-mini",
   "system_prompt_name": "patient-summary-system",
   "user_prompt_name": "patient-summary-user",
-  "temperature": 0.2,
+  "temperature": 0.7,
   "max_tokens": 2000,
   "timeout_seconds": 30,
   "output_schema": "Text",
   "tools": ["get_patient_lead_details"],
-  "memory_enabled": false,
-  "memory_max_messages": 20
+  "short_term_memory": false,
+  "short_term_memory_max_messages": 20
 }
 → {success, response: {message: "Agent created successfully", agent_id: <int>}}
 ```
@@ -643,7 +643,7 @@ Body (JSON):
 
   If you don't need schema enforcement, use `"output_schema": "Text"` and parse JSON in code.
 - `tools`: list of tool `name` strings (as registered after sync)
-- `memory_enabled`: set to `true` to retain conversation history across `agent.run()` calls with the same `session_id`
+- `short_term_memory`: set to `true` to retain conversation history across `agent.run()` calls with the same `session_id`; `short_term_memory_max_messages` (default 20) controls the sliding window of message pairs loaded per call
 
 #### Get / Update / Delete agent
 ```
@@ -737,7 +737,7 @@ curl -s -b /tmp/zango_cookies -X POST \
 #### List tools
 ```
 GET /api/v1/apps/<uuid>/ai/tools/
-Optional: ?search=<term>&section=<section>&safety=read_only|read_write&is_active=true|false
+Optional: ?search=<term>&section=<section>&safety=read_only|write|external&is_active=true|false
 → {success, response: {tools: {total_records, records: [...]}, stats: {active_tools, sections}}}
 ```
 
@@ -750,7 +750,7 @@ GET /api/v1/apps/<uuid>/ai/tools/<tool_id>/
      last_called_at, created_at, modified_at}}}
 ```
 
-Note: `safety` values are lowercase strings: `"read_only"` or `"read_write"`.
+Note: `safety` values are lowercase strings: `"read_only"`, `"write"`, or `"external"`.
 
 #### List tool sections
 ```
