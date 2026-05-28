@@ -607,9 +607,20 @@ POST /api/v1/apps/<uuid>/ai/agents/<agent_id>/duplicate/
   {success, response: {message, agent: {...}}}
 
 POST /api/v1/apps/<uuid>/ai/agents/<agent_id>/test/
-Body (JSON): {"variables": {"item_id": 1, "question": "Summarise this."}}
-→ Runs a live test invocation. Returns first 500 chars of response.
-  {success, response: {result: {content, model, latency_ms, input_tokens, output_tokens, cost_usd}}}
+Body (JSON):
+  {"variables": {"key": "value"}}           # agent has a user prompt → pass template variables
+  {"user_message": "Hello, what can you do?"}  # agent has NO user prompt → required
+Body fields:
+  variables    dict    Optional. Rendered into the agent's user prompt template.
+  user_message str     Required when the agent has no user prompt configured.
+→ Runs a live test invocation (triggered_by="system"). Real invocation — logged + costs accrue.
+  Returns up to 2000 chars of response content.
+  {success, response: {message: "Test successful", result: {content, model, latency_ms, input_tokens, output_tokens, cost_usd}}}
+Errors:
+  400 — no provider configured
+  400 — no user prompt + user_message missing: "This agent has no user prompt configured. Provide a 'user_message' to run a test."
+  404 — agent not found
+  500 — LLM/runtime error (message contains exception text)
 ```
 
 #### Agent memory sessions

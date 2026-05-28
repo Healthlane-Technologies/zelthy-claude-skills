@@ -103,14 +103,15 @@ def get_patient_lead_details(
 
 ### Decorator parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `name` | `str` | Yes | Unique tool name. Snake_case. This is what the LLM calls and what you reference in agent config. |
-| `description` | `str` | Yes | Sent to the LLM to describe what the tool does. Write from the LLM's perspective — be explicit about when to use it. |
-| `section` | `str` | No | Groups tools in the App Panel. Defaults to `"general"`. |
-| `safety` | `ToolSafety` | No | `READ_ONLY` (default) or `WRITE` or `EXTERNAL`. |
-| `timeout_seconds` | `int` | No | Max execution time before the call is killed. Default `30`. |
-| `rate_limit` | `int \| None` | No | Max calls per minute. `None` = unlimited. |
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `name` | `str` | Yes | — | Unique tool name. Snake_case. This is what the LLM calls and what you reference in agent config. |
+| `description` | `str` | Yes | — | Sent to the LLM to describe what the tool does. Write from the LLM's perspective — be explicit about when to use it. |
+| `section` | `str` | No | `"general"` | Groups tools in the App Panel. |
+| `safety` | `ToolSafety` | No | `READ_ONLY` | `READ_ONLY`, `WRITE`, or `EXTERNAL`. |
+| `timeout_seconds` | `int` | No | `30` | Max execution time before the call is killed. |
+| `rate_limit` | `int \| None` | No | `None` | Max calls per minute. `None` = unlimited. |
+| `memory_policy` | `str` | No | `"include"` | `"include"` or `"exclude"`. Controls whether this tool's call/result is stored in and replayed from session memory. See [Memory Policy](#memory-policy-on-tools). |
 
 ### ToolSafety values
 
@@ -192,6 +193,33 @@ Tools run in the correct tenant schema automatically — no manual schema switch
 items = Item.objects.filter(is_active=True)
 ```
 
+### Memory Policy on Tools
+
+When an agent has `short_term_memory` enabled, every tool call and its result are saved to session history and replayed on the next `agent.run()`. `memory_policy` controls whether a specific tool participates in that replay.
+
+| Value | Behaviour |
+|-------|-----------|
+| `"include"` (default) | Tool call + result stored in session history; sent to LLM on subsequent turns. |
+| `"exclude"` | Tool call + result **dropped** from loaded history. Use for irreversible side-effect tools. |
+
+```python
+# Side-effect tool — don't replay this in the next turn (notification already sent)
+@tool(
+    name="send_notification",
+    description="Sends a push notification to the user. Call once the response is ready.",
+    safety=ToolSafety.EXTERNAL,
+    memory_policy="exclude",
+)
+def send_notification(
+    user_id: int = ToolParam(description="The user to notify"),
+    message: str = ToolParam(description="Notification body"),
+) -> dict:
+    ...
+    return {"sent": True}
+```
+
+**Rule:** use `memory_policy="exclude"` for any tool that triggers an action outside the DB — sending email, SMS, calling a payment API. Replaying those in the next session turn would cause double-sends.
+
 ### After defining tools: sync
 
 After writing or modifying any `@tool` function, sync via App Panel → AI → Tools → **Sync Tools**, or via API:
@@ -243,7 +271,7 @@ response = agent.run(
     files=None,               # List of LLMFile for image/document attachments
     triggered_by="user",      # "user" | "celery" | "cron" | "system"
     max_tool_rounds=10,       # Safety limit on tool-call rounds
-    session_id=None,          # Memory session key; auto-generated if memory_enabled
+    session_id=None,          # Memory session key; auto-generated if short_term_memory=True
     user_ref="",              # Opaque string stored on session for audit (e.g. user PK)
 )
 ```
@@ -285,7 +313,7 @@ response.usage.cache_read_tokens      # int (Anthropic only)
 response.latency_ms           # int — total wall time
 response.stop_reason          # "end_turn" | "tool_use" | "max_tokens" | "refusal"
 response.model                # str — actual model used
-response.session_id           # str | None — set when memory_enabled
+response.session_id           # str | None — set when short_term_memory is enabled
 response.parsed_content       # dict | None — set when output_schema=JSON and valid
 response.invocation_id        # int | None — DB PK of last invocation record
 ```
@@ -336,37 +364,28 @@ class DailySummaryTask(BaseTask):
 
 ### Memory sessions
 
-```python
-agent = get_agent("chat-agent")  # must have memory_enabled=True in App Panel
+Enable `short_term_memory` on the agent in the App Panel. Optionally set `short_term_memory_max_messages` (default 20) to control the sliding window of message pairs loaded per call.
 
-# First turn — session_id auto-generated
-response = agent.run(variables={"question": "Who is PN-0001?"}, triggered_by="user")
+```python
+agent = get_agent("chat-agent")  # must have short_term_memory=True in App Panel
+
+# First turn — session_id auto-generated as UUID
+response = agent.run(input="Who is PN-0001?", triggered_by="user")
 sid = response.session_id   # store this; pass it back on subsequent turns
 
 # Subsequent turns — continue the same conversation
 response2 = agent.run(
-    variables={"question": "What was their last screening date?"},
+    input="What was their last screening date?",
     triggered_by="user",
     session_id=sid,
+    user_ref=str(request.user.pk),  # optional: stored on session for audit
 )
 
-# Clear a session
+# Clear a session when conversation is complete
 agent.clear_session(sid)   # returns True if found, False otherwise
 ```
 
-### Streaming
-
-```python
-agent = get_agent("my-agent")
-for chunk in agent.stream(variables={"question": "..."}, triggered_by="user"):
-    if chunk.delta_text:
-        print(chunk.delta_text, end="", flush=True)
-    if chunk.is_final:
-        print()
-        # chunk.usage, chunk.stop_reason available on final chunk
-```
-
-**Note:** `stream()` does not execute the agentic tool loop — tools are not called in streaming mode.
+Tool call/result rounds from agentic loops are also persisted in session memory and replayed on the next turn — unless the tool has `memory_policy="exclude"` (see above).
 
 ---
 
@@ -491,6 +510,19 @@ except OutputValidationError as e:
 except Exception:
     ...    # LLM API errors, timeouts, etc.
 ```
+
+---
+
+## Testing an Agent from the App Panel
+
+Every agent has a **Test** button in App Panel → AI → Agents. Use it to run a live invocation without writing code.
+
+- **Agent with a user prompt configured** — test fires immediately using the prompt template. A result modal shows the response, latency (ms), and token counts.
+- **Agent with no user prompt** — a modal opens. Type a `user_message` and submit; that string is sent as the user input for the test run.
+
+When telling a user to verify an agent works, direct them to this button first before writing shell/curl test code.
+
+For the full API spec to test via curl, see the `POST …/agents/<agent_id>/test/` entry in **app-panel-api.md → AI Agents**.
 
 ---
 
