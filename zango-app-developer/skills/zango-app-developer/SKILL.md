@@ -184,6 +184,9 @@ Based on what you need to build, identify the relevant references to read before
 | Custom frontend page / table / form | [frontend/crud.md](references/frontend/crud.md), [frontend/form.md](references/frontend/form.md) |
 | Routes and menus | [packages/appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md) |
 | Secrets / encrypted fields | [core/secrets.md](references/core/secrets.md) |
+| AI tools (define, ToolParam, ToolSafety) | [ai-agents.md](references/ai-agents.md) |
+| AI agents (run, stream, memory, files, errors) | [ai-agents.md](references/ai-agents.md) |
+| App Panel API (create apps, roles, AI via curl) | [app-panel-api.md](references/app-panel-api.md) |
 
 ### STEP 4: Implement
 
