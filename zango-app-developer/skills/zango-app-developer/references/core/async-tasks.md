@@ -122,6 +122,8 @@ cd <PROJECT_NAME> && PATH="<venv_path>/bin:$PATH" python manage.py shell -c \
 
 Tasks can be configured to run automatically at specified intervals or times.
 
+> **Scheduled tasks require a running Celery *beat* process** (separate from the worker). Beat is what enqueues scheduled tasks at their due time; the worker then executes them. Without beat, a scheduled task is configured but **never fires**. In **Docker** mode the `celery_beat` service runs it automatically. In **venv** mode you must start beat yourself — see bootstrap-templates.md → Venv Mode Bootstrap **Step 8a** (`celery -A <PROJECT_NAME> beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler`). This is the scheduling analogue of the "missing worker" trap.
+
 ### Configuration via App Panel UI
 
 1. Navigate to **Tasks** menu in the App Panel

@@ -324,6 +324,12 @@ The Django app runs locally in a virtualenv. Only Postgres and Redis run in Dock
 
    **macOS fork() crash (apply on darwin):** Celery's default `prefork` pool calls `fork()`, which the macOS Objective-C runtime forbids — the worker crashes (often while processing the first task) with `objc[...]: +[... initialize] may have been in progress in another thread when fork() was called. ... crashing instead`. The `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` prefix above prevents this while keeping the prefork pool. If it still crashes, fall back to a non-forking pool: append `--pool=threads` (or `--pool=solo`). On Linux/Docker the env var is harmless, so it is safe to always include it.
 
+8a. **Start Celery beat** (in ANOTHER separate terminal — required if the app uses scheduled/periodic tasks):
+   ```bash
+   cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+   ```
+   The Docker stack always runs a dedicated `celery_beat` service; **Without beat, scheduled tasks never fire** (the worker only consumes tasks that something enqueues; beat is what enqueues them on schedule) Skip this only if the app has no periodic/scheduled tasks.
+
 9. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200, then share credentials.
 
 ---
@@ -439,6 +445,10 @@ cd <PROJECT_NAME> && <venv_path>/bin/python manage.py runserver 0.0.0.0:8000
 #    macOS: keep the OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES prefix to avoid the fork() crash
 #    (see Step 8 in Venv Mode Bootstrap above; add --pool=threads if it still crashes).
 cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
+
+# 5b. Start Celery beat (ANOTHER terminal) — REQUIRED if the app has scheduled/periodic tasks.
+#     Docker runs a dedicated celery_beat service; venv does not. Without beat, scheduled tasks never fire.
+cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
 
 # 6. Verify the platform is up
 curl -s -o /dev/null -w "%{http_code}" -L http://localhost:8000/platform
