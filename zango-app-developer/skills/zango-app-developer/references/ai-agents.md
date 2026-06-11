@@ -338,6 +338,10 @@ response.parsed_content       # dict | None — set when output_schema=JSON and 
 response.invocation_id        # int | None — DB PK of last invocation record
 ```
 
+> **Inspecting a run:** every `agent.run()` (including runs triggered from async tasks) is recorded as an **invocation log** in the **App Panel UI → AI → (agent) → Invocations/Logs** — prompt, response, token usage, latency, tool calls, and any error. When an agent flow misbehaves, check there first; it's usually faster than reading Celery/worker output. `response.invocation_id` is that record's PK.
+
+> **Using `output_schema="JSON"`?** The agent's `output_json_schema` must follow strict structured-output rules for **both** providers — every `object` needs `"additionalProperties": false` (recursively), every property must be in `required`, and nullables must use `anyOf`. Anthropic is **not** lenient here (it enforces via native json_schema), and omitting `additionalProperties` fails with `Anthropic - For 'object' type, 'additionalProperties' must be explicitly set to false`. See [app-panel-api.md](app-panel-api.md) → AI Agents → agent creation (`output_json_schema`) for the full rules and examples.
+
 ### Calling from a view
 
 ```python
@@ -655,6 +659,8 @@ print(f"Cost: ${response.cost_usd}")
 ```
 
 `connection.set_tenant()` is only needed in the Django shell. Views and tasks set the tenant automatically.
+
+To import the app's own models in the shell (e.g. to seed or inspect data), use the full workspace-rooted path — `from workspaces.<app_name>.backend.<module>.models import MyModel`. A bare `from backend.<module>.models import ...` raises `ModuleNotFoundError: No module named 'backend'`. See core/modules.md → "Seeding / querying app models from the Django shell".
 
 ---
 

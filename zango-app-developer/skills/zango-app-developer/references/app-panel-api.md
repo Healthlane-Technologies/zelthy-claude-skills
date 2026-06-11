@@ -292,7 +292,7 @@ Default theme config:
 
 ## Secrets
 
-Secrets store credentials encrypted. Requires `FIELD_ENCRYPTION_KEY` in `deploy/.env`.
+Secrets store credentials encrypted. Requires a valid `FIELD_ENCRYPTION_KEY` in the `.env` the server reads — `deploy/.env` in Docker mode, but the auto-generated project-root `.env` (parent of `<PROJECT_NAME>/`) in venv mode. See core/secrets.md and bootstrap-templates.md → Venv Mode Bootstrap Step 6a.
 
 Key naming: `^[A-Z][a-z0-9_]*$` (e.g. `Stripe_secret`, `Sendgrid_api_key`).
 
@@ -644,12 +644,12 @@ Body (JSON):
 - `output_schema`: `"Text"` | `"JSON"` | `"Markdown"`
 - **`output_json_schema` is REQUIRED when `output_schema` is `"JSON"`** — omitting it will cause agent creation to fail.
 
-  **Schema rules differ by provider:**
+  **Both OpenAI and Anthropic enforce strict structured outputs** — write the schema to satisfy the strict rules and it works on either provider. (Zango passes `output_json_schema` to Anthropic via the *native* json_schema structured-output path — `output_config.format = {"type": "json_schema", "schema": ...}` — which is just as strict as OpenAI, **not** lenient.)
 
-  **OpenAI** enforces strict structured outputs — three rules apply:
-  1. Every `object` must have `"additionalProperties": false`
-  2. Every key listed in `properties` must also appear in `required`
-  3. Nullable fields must use `anyOf` syntax — `{"type": ["string", "null"]}` shorthand is **not** accepted
+  **Required for both providers:**
+  1. Every `object` (top-level and every nested one) must have `"additionalProperties": false`. Omitting it on Anthropic fails with: `Anthropic - For 'object' type, 'additionalProperties' must be explicitly set to false`.
+  2. Every key listed in `properties` must also appear in `required`.
+  3. Nullable fields must use `anyOf` syntax — `{"type": ["string", "null"]}` shorthand is **not** accepted.
 
   ```json
   "output_json_schema": {
@@ -666,7 +666,7 @@ Body (JSON):
   }
   ```
 
-  For nested objects under OpenAI, apply the same rules recursively:
+  Apply the same rules recursively to nested objects:
   ```json
   "address": {
     "anyOf": [
@@ -682,20 +682,6 @@ Body (JSON):
       },
       {"type": "null"}
     ]
-  }
-  ```
-
-  **Anthropic** is lenient — standard JSON Schema works without the strict rules:
-  ```json
-  "output_json_schema": {
-    "type": "object",
-    "properties": {
-      "summary":     {"type": "string"},
-      "is_urgent":   {"type": "boolean"},
-      "priority":    {"type": "integer"},
-      "tags":        {"type": "array"},
-      "assigned_to": {"type": ["string", "null"]}
-    }
   }
   ```
 
