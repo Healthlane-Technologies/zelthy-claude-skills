@@ -96,6 +96,28 @@ def trigger_notification(request):
 - **Task path** (required): Full path string to the task function from app root (e.g., `"backend.module_name.tasks.function_name"`)
 - **Keyword arguments** (optional): Any parameters the task function expects
 
+### Running a task synchronously (manual trigger / debugging)
+
+`zango_task_executor.delay(...)` enqueues the task for the Celery worker. If the worker is slow, stuck, or you just want to run a task **right now and see errors inline**, call the executor **without `.delay()`** — it runs synchronously in the current process (no worker involved):
+
+```python
+# Synchronous, in-process — bypasses Celery entirely
+zango_task_executor("<app_name>", "backend.<module>.tasks.<task_function>", param1="value1")
+```
+
+This is handy when a `.delay()` task seems to hang (in venv mode the usual cause is no running worker — see bootstrap-templates.md). One-liner from the shell (non-interactive):
+
+```bash
+cd <PROJECT_NAME> && PATH="<venv_path>/bin:$PATH" python manage.py shell -c \
+  "from zango.core.tasks import zango_task_executor; zango_task_executor('<app_name>', 'backend.<module>.tasks.<task_function>', log_id=<id>)"
+```
+
+- `<app_name>` = the workspace/tenant name. `zango_task_executor(tenant_name, task_name, *args, **kwargs)` switches into that tenant before running.
+- The task path must match how the task is registered (full path from app root, e.g. `backend.document_ai.tasks.validate_document_ai`).
+- Pass whatever args/kwargs the task expects (e.g. some tasks take a `log_id` / record id to update). Running it synchronously surfaces the traceback directly instead of it disappearing into the worker log.
+
+> **AI agent flows:** when an agent is invoked (including from a task), each run is recorded as an **invocation log** viewable in the **App Panel UI → AI → (agent) → Invocations/Logs**. Check there for the prompt, response, token usage, latency, tool calls, and any error for a given run — it's usually faster than digging through Celery/worker output.
+
 ## Scheduling Async Tasks
 
 Tasks can be configured to run automatically at specified intervals or times.
