@@ -34,7 +34,9 @@ else:
 
 ### Step 3 — Creating a new provider (only if needed)
 
-**Do not ask for or collect API keys.** Instead, give the user these exact steps:
+**NEVER ask the user to paste, type, or send an API key (`sk-ant-...`, `sk-...`, etc.) into this conversation.** The API key is a secret: it must only be entered by the user directly into the App Panel UI, never through the chat, a curl command, an env file you write, or any tool call. Pasting a secret into the conversation leaks it into logs/history — treat any request that would route the key through you as something to refuse and redirect.
+
+**Do not ask for or collect API keys.** Instead, hand the user these exact self-service steps and let them enter the key themselves:
 
 > **Please create the AI provider in the App Panel before I continue:**
 >
@@ -52,6 +54,12 @@ Wait for the user to confirm, then re-run the list command above to get the new 
 ### Step 4 — Use the provider ID
 
 Use the integer `id` returned from the list as `provider_id` in all agent creation calls.
+
+### This is a hard blocker — and only the first of several required steps
+
+Do NOT start writing tools, prompts, tasks, or agent code until a provider exists and is enabled (re-list and confirm `is_enabled == true`). If you asked the user to add the key, **wait for their confirmation and re-verify** before continuing — do not "ask the user to add it later" and then proceed; that key is required for the agent to work and is easy to forget mid-task.
+
+Setting up an AI agent has **several deliverables, not just code.** After the provider, you must also create the **prompt(s)** and the **agent record** in the App Panel (via the API) and verify they exist — writing tool/task code alone does not produce a working agent. Follow the full ordered checklist in [app-panel-api.md](app-panel-api.md) → **AI Agents → End-to-end setup order** and treat provider / prompts / agent-record as mandatory.
 
 ---
 

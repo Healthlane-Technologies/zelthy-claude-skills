@@ -263,8 +263,8 @@ docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> 
 # Sync static files
 docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> && python manage.py sync_static <app_name> && python manage.py collectstatic --noinput"
 
-# Update apps (sync policies, tasks, etc.)
-docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> && SINGLE_BEAT_REDIS_SERVER=redis://redis:6379/1 single-beat zango update-apps --app_name <app_name>"
+# Sync policies / tasks after code changes: use the App Panel APIs (HTTP, mode-independent),
+# NOT `zango update-apps`. See SKILL.md STEP 5 and app-panel-api.md (Policies / Tasks sync).
 ```
 
 ---
@@ -279,7 +279,7 @@ The Django app runs locally in a virtualenv. Only Postgres and Redis run in Dock
 
 2. **Venv setup** - Ask for an existing venv path or a new one (default: `./venv`):
    - New: `python3 -m venv <venv_path> && <venv_path>/bin/pip install zango`
-   - Existing: verify with `<venv_path>/bin/zango --version`
+   - Existing: verify with `<venv_path>/bin/pip show zango` (the `zango` CLI is a Click command group and has **no** `--version` option — `zango --version` errors with `No such option: --version`; use `zango --help` to list available commands instead)
 
 3. **Save config** - Write `.claude/zango-config.json` (use absolute path for venv):
    ```json
@@ -300,7 +300,13 @@ The Django app runs locally in a virtualenv. Only Postgres and Redis run in Dock
    cd <PROJECT_NAME> && <venv_path>/bin/python manage.py runserver 0.0.0.0:8000
    ```
 
-8. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200, then share credentials.
+8. **Start the Celery worker** (in ANOTHER separate terminal — REQUIRED, not optional):
+   ```bash
+   cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
+   ```
+   **Mandatory from the start:** venv mode (unlike Docker) runs no worker unless you start one. Async Celery tasks — app creation, and any in-app `.delay()` task — are never consumed with `runserver` alone; they sit pending forever. Always run the worker alongside `runserver`. If an async operation "hangs", suspect the missing worker first — not the API.
+
+9. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200, then share credentials.
 
 ---
 
@@ -408,7 +414,10 @@ docker compose -f deploy/docker_compose_db.yml ps
 # 4. Start the development server (run in a separate terminal)
 cd <PROJECT_NAME> && <venv_path>/bin/python manage.py runserver 0.0.0.0:8000
 
-# 5. Verify the platform is up
+# 5. Start the Celery worker (run in ANOTHER terminal — REQUIRED for async tasks)
+cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
+
+# 6. Verify the platform is up
 curl -s -o /dev/null -w "%{http_code}" -L http://localhost:8000/platform
 ```
 
@@ -425,8 +434,8 @@ cd <PROJECT_NAME> && <venv_path>/bin/python manage.py ws_migrate <app_name>
 cd <PROJECT_NAME> && <venv_path>/bin/python manage.py sync_static <app_name>
 cd <PROJECT_NAME> && <venv_path>/bin/python manage.py collectstatic --noinput
 
-# Update apps (sync policies, tasks, etc.)
-cd <PROJECT_NAME> && <venv_path>/bin/zango update-apps --app_name <app_name>
+# Sync policies / tasks after code changes: use the App Panel APIs (HTTP, mode-independent),
+# NOT `zango update-apps`. See SKILL.md STEP 5 and app-panel-api.md (Policies / Tasks sync).
 
 # Start Celery worker (in a separate terminal)
 cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info

@@ -321,9 +321,9 @@ Workflows add status/tag management and state transitions to CRUD records.
 
 ```python
 # In workflow.py
-from ...packages.workflow.base.base import BaseWorkflow
+from ...packages.workflow.base.engine import WorkflowBase
 
-class ProgramWorkflow(BaseWorkflow):
+class ProgramWorkflow(WorkflowBase):
     class Meta:
         model = Program
         on_create_status = "initiated"  # Initial status when record created
@@ -513,7 +513,7 @@ def get_workflow_obj(self, **kwargs):
         **kwargs: Can include object_instance for existing records
 
     Returns:
-        BaseWorkflow or None: Workflow instance if configured, None otherwise
+        WorkflowBase or None: Workflow instance if configured, None otherwise
     """
     workflow_class = getattr(self, "workflow", None)
     if workflow_class:
@@ -838,10 +838,10 @@ class ServiceTypeCrudView(BaseCrudView):
 
 ```python
 # workflow.py
-from ...packages.workflow.base.base import BaseWorkflow
+from ...packages.workflow.base.engine import WorkflowBase
 from .models import Program
 
-class ProgramWorkflow(BaseWorkflow):
+class ProgramWorkflow(WorkflowBase):
     class Meta:
         model = Program
         on_create_status = "initiated"

@@ -315,6 +315,43 @@ def get_country_autocomplete_options(self, request, search_query, form_data):
 - For field named `country_code`: method must be `get_country_code_autocomplete_options`
 - Pattern: `get_{field_name}_autocomplete_options`
 
+### ForeignKey Fields (dropdowns)
+
+A `ZForeignKey` on the model needs **no special field class** — `BaseForm` is a Django `ModelForm` (the metaclass sets `fields = "__all__"`), so the FK is already a `ModelChoiceField`. Just declare it with a plain `ModelField` so it survives into the rendered form (undeclared fields are dropped) and to set its label/placeholder:
+
+```python
+# models.py: department = ZForeignKey(Department, on_delete=models.CASCADE)
+department = ModelField(label="Department", placeholder="Select department", required=True)
+```
+
+How it renders (from the crud package): the FK's `ModelChoiceField` maps to a **`SelectFieldWidget`** dropdown. The options come from the related model's queryset automatically — `enum` = the related row PKs, `enumNames` = `str(instance)` for each row (so the FK target model's `__str__` controls the labels). You submit the PK as a string.
+
+**Large or filtered related tables** — don't embed every row. Add autocomplete so options are fetched server-side via a `SelectFieldWidget`/async lookup:
+
+```python
+department = ModelField(label="Department", required=True, autocomplete={"enabled": True, "keys": 2})
+
+def get_department_autocomplete_options(self, request, search_query, form_data):
+    from ..masters.models import Department
+    qs = Department.objects.all()
+    if search_query:
+        qs = qs.filter(name__icontains=search_query)
+    return [{"value": str(d.id), "label": str(d)} for d in qs[:20]]
+```
+
+`value` is the PK (as a string) and must match what the FK expects on save. (Same `get_<field>_autocomplete_options` mechanism documented above — it works identically for FK fields.)
+
+### File / Image Fields (uploads)
+
+A model `FileField`/`ImageField` also needs no special field class — declare it with `ModelField`:
+
+```python
+# models.py: receipt = models.FileField(upload_to="receipts/")
+receipt = ModelField(label="Receipt", required=False)
+```
+
+How it renders (from the crud package): a `forms.FileField` maps to **`FileFieldWidget`** with `ui:format: "data-url"` — the browser uploads the file inline as a data-URL, and `form.save()` persists it like any model file. For an existing record, the field's default is rendered as the file's absolute URL so the current file is shown.
+
 ### CustomSchemaField - Advanced JSON Schema Fields
 
 For complex fields using React JSON Schema Form (rjsf). Allows full JSON schema and UI schema control.

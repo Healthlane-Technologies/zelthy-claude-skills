@@ -121,35 +121,24 @@ See [app-panel-api.md](../app-panel-api.md) for programmatic task scheduling usi
 
 After creating or modifying tasks in your codebase, you must sync them to make them available in the platform.
 
-### Method 1: Via Command Line
+### Via API (use this)
 
-> **Setup mode:** Docker syntax shown. For venv mode, use the venv variant from SKILL.md STEP 5.
-
-```bash
-docker compose -f deploy/docker_compose.yml exec app bash -c \
-  "cd <PROJECT_NAME> && zango update-apps --app_name <app_name>"
-```
-
-This command syncs tasks, policies, and other app configurations.
-
-### Method 2: Via App Panel UI
-
-1. Navigate to **Tasks** menu
-2. Click the **Sync** button
-3. Wait for the loading indicator to complete
-4. New tasks will appear in the list
-
-### Method 3: Via API (Preferred for automation)
+This is the "Sync Tasks" button in the platform UI. It's a plain HTTP call — identical in Docker and venv mode:
 
 ```bash
 curl -s -b /tmp/zango_cookies -X POST \
   "http://localhost:8000/api/v1/apps/$APP_UUID/tasks/" \
   -H "X-CSRFToken: $CSRF" \
-  -H "Referer: http://localhost:8000/platform/" \
-  -H "Content-Length: 0"
+  -H "Referer: http://localhost:8000/platform/"
 ```
 
-See [app-panel-api.md](../app-panel-api.md) → Tasks → Sync Tasks for full details.
+See [app-panel-api.md](../app-panel-api.md) → Tasks (sync async tasks) for full details.
+
+> **Do NOT use `zango update-apps` to sync tasks.** That command pulls/deploys app code from a git remote and is not part of the local dev loop. Use the API above.
+
+### Via App Panel UI (manual alternative)
+
+1. Navigate to **Tasks** menu → click **Sync** → wait for it to complete; new tasks appear in the list.
 
 ## Restarting Celery Service
 
