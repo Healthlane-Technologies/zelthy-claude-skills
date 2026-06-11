@@ -12,11 +12,14 @@ def <transition_name>_condition(self, request, object_instance, **kwargs):
     Check if transition can be performed.
 
     Returns:
-        tuple: (allowed: bool, message: str)
+        bool: True to allow the transition, a falsy value to block it.
     """
     # Validation logic
-    return True, "Transition allowed"
+    return True
 ```
+
+> **Return a bare boolean — not a tuple.** The engine uses the condition's return value *directly* in a boolean test (`is_transition_allowed` → `if self.is_transition_allowed(...)`). It never unpacks a `(bool, message)` tuple, and a non-empty tuple like `(False, "...")` is **always truthy**, so returning a tuple silently fails to block the transition. Return `False` (or any falsy value) to block, `True` to allow. There is no place to surface a rejection message from a condition method; do validation that needs user-facing errors in a transition `form` instead. (This matches the tag condition methods in tags.md.)
+
 
 ### Example Conditions
 
@@ -25,24 +28,24 @@ def draft_to_active_condition(self, request, object_instance, **kwargs):
     """Check if record can be activated"""
     # Check required fields
     if not object_instance.name:
-        return False, "Name is required before activation"
+        return False
 
     if not object_instance.email:
-        return False, "Email is required before activation"
+        return False
 
     # Check business rules
     if not object_instance.is_valid_for_activation():
-        return False, "Record must meet all validation criteria"
+        return False
 
-    return True, "Transition allowed"
+    return True
 
 def active_to_closed_condition(self, request, object_instance, **kwargs):
     """Check if record can be closed"""
     # Check dependencies
     if object_instance.has_pending_tasks():
-        return False, "Cannot close - pending tasks exist"
+        return False
 
-    return True, "Ready to close"
+    return True
 ```
 
 ---
@@ -210,19 +213,19 @@ class PatientWorkflow(WorkflowBase):
     def draft_to_pending_condition(self, request, object_instance, **kwargs):
         """Check if ready for submission"""
         if not object_instance.name:
-            return False, "Patient name is required"
+            return False
 
         if not object_instance.email and not object_instance.phone:
-            return False, "Either email or phone is required"
+            return False
 
-        return True, "Ready for submission"
+        return True
 
     def pending_to_approved_condition(self, request, object_instance, **kwargs):
         """Check if can be approved"""
         if not object_instance.is_complete():
-            return False, "All required fields must be filled"
+            return False
 
-        return True, "Ready for approval"
+        return True
 
     # Done methods
     def pending_to_approved_done(self, request, object_instance, transaction_obj):
@@ -328,17 +331,19 @@ status_transitions = [
 
 **Solution**: Check condition passes and method name matches `<transition_name>_done`
 
-### Transition Failing Silently
+### Condition Not Blocking the Transition
 
-**Problem**: Condition returning single value instead of tuple
+**Problem**: A `_condition` method returns a `(bool, message)` tuple. The engine evaluates the
+return value as a plain boolean and never unpacks it — a non-empty tuple (even `(False, "...")`)
+is always truthy, so the transition is allowed regardless.
 
-**Solution**:
+**Solution**: Return a bare boolean.
 ```python
-# Wrong
-return False
-
-# Correct
+# Wrong — tuple is always truthy, never blocks
 return False, "Error message"
+
+# Correct — bare boolean actually blocks
+return False
 ```
 
 ### Object Not Saving Changes
@@ -400,9 +405,11 @@ def approved_to_active_done(self, request, object_instance, transaction_obj):
     """After manual activation, trigger auto transitions"""
     # Check if there are follow-up system transitions
     if should_auto_transition(object_instance):
-        # Execute system transition
-        workflow_obj = self.get_workflow_object(object_instance)
-        workflow_obj.execute_transition("on_approval_auto_activate", allow_system=True)
+        # Inside a *_done / *_condition method, `self` IS the workflow instance, so call
+        # execute_transition directly. Do NOT call self.get_workflow_object(...) here — that
+        # helper lives on the CRUD detail/table view (it instantiates the workflow class from
+        # crud_view_instance.workflow), not on the workflow instance.
+        self.execute_transition("on_approval_auto_activate", allow_system=True)
 ```
 
 ### Use Cases for System Transitions

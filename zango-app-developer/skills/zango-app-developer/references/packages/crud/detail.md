@@ -1040,5 +1040,5 @@ class MyModelCrudView(BaseCrudView):
 - **Views**: `references/packages/crud/views.md` - BaseCrudView, permission methods
 - **Tables**: `references/packages/crud/tables.md` - Column types, row actions, include_in_detail parameter
 - **Forms**: `references/packages/crud/forms.md` - Form field types, validation
-- **Workflows**: `references/packages/workflow/workflow.md` - Status/tag management
+- **Workflows**: `references/packages/workflow/overview.md` - Status/tag management
 - **Policies**: `references/core/policies.md` - Permission configuration

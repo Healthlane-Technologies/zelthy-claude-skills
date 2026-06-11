@@ -285,16 +285,18 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
    ```bash
    docker compose -f deploy/docker_compose.yml restart celery
    ```
-   *Venv mode:* restart the celery worker process manually (kill and rerun):
+   *Venv mode:* restart the celery worker process manually (kill and rerun). The worker does **not** auto-reload, so it must be restarted whenever `tasks.py` or any code it imports changes:
    ```bash
-   cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
+   cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
    ```
+   *(The `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` prefix prevents the macOS Celery fork() crash; add `--pool=threads` if the worker still crashes. Harmless on Linux. See bootstrap-templates.md → Venv Mode Bootstrap Step 8.)*
 
 #### Frontend Setup (One-time — do this once after backend, before writing any frontend code)
 
 4. **Set up frontend app** (skip if `<workspace>/frontend/` already exists):
    - Create React app: `npx @zango-core/create-zango-app frontend` inside the workspace directory
    - Configure `.env` with `VITE_PROXY_ROUTES` for all backend routes — **never add `/app`** (that's a frontend route, not a backend proxy)
+   - **To iterate with the dev frontend on `localhost:3000` (`npm run dev`):** add `CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"]` to the project's `settings.py` and restart `runserver`, or submits will fail with 403 CSRF. See [frontend/appbuilder.md](references/frontend/appbuilder.md).
    - See [frontend/appbuilder.md](references/frontend/appbuilder.md)
 
 5. **Create app module** (skip if `backend/app/` already exists):
