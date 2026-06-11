@@ -84,7 +84,6 @@ Zango is an open-source multi-tenant Django meta-framework for building custom b
 | Command | Description |
 |---------|-------------|
 | `zango start-project <name>` | Create a new Zango project with DB setup and platform user |
-| `zango update-apps --app_name <app_name>` | **Git-based deploy/release pipeline** — pulls app code from the configured git remote, runs migrations, applies fixtures/releases, and syncs policies/tasks. NOT for the local dev loop — during development sync via the App Panel APIs instead (see app-panel-api.md Policies / Tasks) |
 | `zango install-package` | Install a package from the Zango package registry |
 | `zango list-packages` | List available packages |
 | `zango git-setup` | Setup Git integration for an app |

@@ -264,7 +264,7 @@ docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> 
 docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> && python manage.py sync_static <app_name> && python manage.py collectstatic --noinput"
 
 # Sync policies / tasks after code changes: use the App Panel APIs (HTTP, mode-independent),
-# NOT `zango update-apps`. See SKILL.md STEP 5 and app-panel-api.md (Policies / Tasks sync).
+# See SKILL.md STEP 5 and app-panel-api.md (Policies / Tasks sync).
 ```
 
 ---
@@ -435,7 +435,7 @@ cd <PROJECT_NAME> && <venv_path>/bin/python manage.py sync_static <app_name>
 cd <PROJECT_NAME> && <venv_path>/bin/python manage.py collectstatic --noinput
 
 # Sync policies / tasks after code changes: use the App Panel APIs (HTTP, mode-independent),
-# NOT `zango update-apps`. See SKILL.md STEP 5 and app-panel-api.md (Policies / Tasks sync).
+# See SKILL.md STEP 5 and app-panel-api.md (Policies / Tasks sync).
 
 # Start Celery worker (in a separate terminal)
 cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info

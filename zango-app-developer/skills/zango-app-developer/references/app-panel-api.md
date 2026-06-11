@@ -226,8 +226,6 @@ curl -s -b /tmp/zango_cookies -X POST \
   -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/"
 ```
 
-**Use this — not `zango update-apps`** — for the local dev sync loop. `update-apps` pulls/deploys app code from a git remote (see zango-architecture.md) and is not part of building features locally. (Listing tasks: `GET /api/v1/apps/<uuid>/tasks/`.)
-
 > After syncing tasks, restart the Celery worker so it picks up the changed `tasks.py` (see SKILL.md "Restart Celery").
 
 ---

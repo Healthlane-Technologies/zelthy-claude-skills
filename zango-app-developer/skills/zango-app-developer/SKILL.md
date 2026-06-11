@@ -279,8 +279,7 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
      "http://localhost:8000/api/v1/apps/$APP_UUID/tasks/" \
      -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/"
    ```
-   **Do NOT use `zango update-apps` for this** — that command is for pulling/deploying app code from a git remote, not for the local dev sync loop.
-
+   
 3. **Restart Celery** (if tasks.py created or modified):
    *Docker mode:*
    ```bash

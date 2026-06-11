@@ -134,8 +134,6 @@ curl -s -b /tmp/zango_cookies -X POST \
 
 See [app-panel-api.md](../app-panel-api.md) → Tasks (sync async tasks) for full details.
 
-> **Do NOT use `zango update-apps` to sync tasks.** That command pulls/deploys app code from a git remote and is not part of the local dev loop. Use the API above.
-
 ### Via App Panel UI (manual alternative)
 
 1. Navigate to **Tasks** menu → click **Sync** → wait for it to complete; new tasks appear in the list.
