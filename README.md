@@ -7,7 +7,7 @@ A Claude Code plugin marketplace by [Healthlane Technologies](https://zelthy.com
 **Step 1 — Add this repo as a marketplace:**
 
 ```bash
-claude plugin marketplace add Healthlane-Technologies/zelthy-claude-skills@plugin_creation
+claude plugin marketplace add Healthlane-Technologies/zelthy-claude-skills
 ```
 
 **Step 2 — Install the plugin:**
