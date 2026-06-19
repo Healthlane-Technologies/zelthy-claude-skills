@@ -45,6 +45,16 @@ from zango.apps.appauth.models import UserRoleModel
 | `npm run build:zango` | string | - | Single-file build for Zango platform deployment (IIFE format). |
 | `npm run preview` | string | - | Preview the production build locally. |
 
+> **Running the dev frontend on `localhost:3000` against the backend — required backend CSRF setting.** `npm run dev` serves the app from `http://localhost:3000` (a different origin than the backend on `:8000`). Django will reject any POST/PUT/DELETE (form submits, workflow transitions, mutations) from that origin with a 403 CSRF error unless `localhost:3000` is a trusted origin. Add this to the project's Django settings — `<PROJECT_NAME>/<PROJECT_NAME>/settings.py` (venv mode) — then restart `runserver`:
+> ```python
+> CSRF_TRUSTED_ORIGINS = [
+>     "http://localhost:3000",
+>     # or allow all ngrok sessions (dev only):
+>     # "https://*.ngrok-free.app",
+> ]
+> ```
+> This is a **dev-only** convenience for iterating on frontend changes quickly without rebuilding/redeploying into the platform. The deployed single-file build (`npm run build:zango`) is served same-origin from `:8000` and does not need this. (In Docker mode the same value can be supplied via the `CSRF_TRUSTED_ORIGINS` env var in `deploy/.env`.)
+
 ### Code Examples
 
 ```bash

@@ -207,9 +207,9 @@ class Program(DynamicModelBase):
     # No status field - workflow package handles this!
 
 # In workflow.py - Define statuses and transitions
-from ...packages.workflow.base.base import BaseWorkflow
+from ...packages.workflow.base.engine import WorkflowBase
 
-class ProgramWorkflow(BaseWorkflow):
+class ProgramWorkflow(WorkflowBase):
     class Meta:
         model = Program
         on_create_status = "draft"

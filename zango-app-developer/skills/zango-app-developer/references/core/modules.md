@@ -629,16 +629,50 @@ backend/utils/
 
 ---
 
+## Seeding / querying app models from the Django shell
+
+To create seed data or inspect app models from `manage.py shell`, two things are required: set the tenant, then import models by their **full workspace-rooted path**. A bare `from backend.<module>.models import X` fails with `ModuleNotFoundError: No module named 'backend'` — `backend...` only works as a relative import inside an already-loaded workspace module, not as a top-level import.
+
+```python
+from django.db import connection
+from zango.apps.shared.tenancy.models import TenantModel
+
+# 1. Switch into the app's tenant schema (required in the shell; views/tasks do this automatically)
+connection.set_tenant(TenantModel.objects.get(name="<app_name>"))
+
+# 2. Import models with the full path: workspaces.<app_name>.backend.<module>.models
+from workspaces.<app_name>.backend.masters.models import Department, ExpenseCategory
+from workspaces.<app_name>.backend.employees.models import Employee
+
+Department.objects.get_or_create(code="ENG", defaults={"name": "Engineering"})
+```
+
+`<app_name>` is the workspace/tenant name (the folder under `workspaces/`). The project root is on `sys.path`, so `workspaces.<app_name>` resolves as a namespace package even though `workspaces/` and `workspaces/<app_name>/` have no `__init__.py`. (`<app_name>/backend/` and each module folder **do** need their `__init__.py`.)
+
+Run non-interactively with a heredoc:
+```bash
+cd <PROJECT_NAME> && PATH="<venv_path>/bin:$PATH" python manage.py shell <<'PY'
+from django.db import connection
+from zango.apps.shared.tenancy.models import TenantModel
+connection.set_tenant(TenantModel.objects.get(name="<app_name>"))
+from workspaces.<app_name>.backend.masters.models import Department
+print(Department.objects.count())
+PY
+```
+
+---
+
 ## Troubleshooting
 
 ### Module Not Found Error
 
-**Problem**: `ModuleNotFoundError: No module named 'backend.mymodule'`
+**Problem**: `ModuleNotFoundError: No module named 'backend.mymodule'` (or `No module named 'backend'`)
 
 **Solutions**:
 - Check `__init__.py` exists in module folder
 - Verify path in settings.json matches folder structure
 - Use dots, not slashes: `"backend.mymodule"` not `"backend/mymodule"`
+- **In `manage.py shell` / scripts:** `backend...` is **not** importable on its own — it is only valid as a relative import *inside* a loaded workspace module. From the shell, import app models with the full workspace-rooted path: `from workspaces.<app_name>.backend.<module>.models import MyModel`. (`<app_name>` is the tenant/workspace name; the project root is on `sys.path` and `workspaces.<app>` resolves as a namespace package.) See core/modules.md → "Seeding / querying app models from the Django shell".
 
 ### 404 Not Found on Module URL
 

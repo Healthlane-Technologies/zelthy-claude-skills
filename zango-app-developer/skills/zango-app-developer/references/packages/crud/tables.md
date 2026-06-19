@@ -221,6 +221,29 @@ transitions = WorkflowTransitionsCol(display_as="Available Actions")
 - Excluded from exports and detail view
 - Auto-generates `_getval` returning transitions list
 
+> **⚠️ Known platform bug — prefer `row_actions` for workflow transitions.** The built-in `WorkflowTransitionsCell` (the React cell behind this column) calls a context hook inside a `try/catch`. When a row animates out after a transition is submitted (rows are wrapped in `AnimatePresence`), the cell re-renders detached from its table provider, the hook throws, and React crashes the page with **"Rendered more hooks than during the previous render"** (minified **React error #300**) — typically *after submitting a transition*. This is in platform code; an app developer cannot patch it from app code.
+>
+> **Recommended pattern (used by production apps):** drive workflow transitions through **`row_actions`** instead of `WorkflowTransitionsCol`. Keep `StatusCol` for status display, and add a `process_row_action_<key>` (plus optional `can_perform_row_action_<key>` to show/hide per status/role) that instantiates the workflow and calls `execute_transition`:
+> ```python
+> from ...packages.crud.table.column import StatusCol, ActionsCol
+>
+> class MyTable(ModelTable):
+>     status = StatusCol(display_as="Status")
+>     actions = ActionsCol(display_as="Actions")
+>     row_actions = [{"name": "Approve", "key": "approve", "type": "button"}]
+>
+>     def can_perform_row_action_approve(self, request, obj):
+>         return obj.status == "pending"   # bare boolean
+>
+>     def process_row_action_approve(self, request, obj):
+>         from .workflow import MyWorkflow
+>         workflow = MyWorkflow(request=request, object_instance=obj,
+>                               crud_view_instance=self.crud_view_instance)
+>         success, response = workflow.execute_transition("pending_to_approved")
+>         return success, {"message": response} if isinstance(response, str) else response
+> ```
+> See the row-actions reference below (`process_row_action_<action_key>`). Only use `WorkflowTransitionsCol` if you have confirmed the platform cell has been fixed.
+
 ---
 
 ## Custom Column Display

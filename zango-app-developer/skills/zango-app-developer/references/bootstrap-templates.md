@@ -263,8 +263,8 @@ docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> 
 # Sync static files
 docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> && python manage.py sync_static <app_name> && python manage.py collectstatic --noinput"
 
-# Update apps (sync policies, tasks, etc.)
-docker compose -f deploy/docker_compose.yml exec app bash -c "cd <PROJECT_NAME> && SINGLE_BEAT_REDIS_SERVER=redis://redis:6379/1 single-beat zango update-apps --app_name <app_name>"
+# Sync policies / tasks after code changes: use the App Panel APIs (HTTP, mode-independent),
+# See SKILL.md STEP 5 and app-panel-api.md (Policies / Tasks sync).
 ```
 
 ---
@@ -279,11 +279,17 @@ The Django app runs locally in a virtualenv. Only Postgres and Redis run in Dock
 
 2. **Venv setup** - Ask for an existing venv path or a new one (default: `./venv`):
    - New: `python3 -m venv <venv_path> && <venv_path>/bin/pip install zango`
-   - Existing: verify with `<venv_path>/bin/zango --version`
+   - Existing: verify with `<venv_path>/bin/pip show zango` (the `zango` CLI is a Click command group and has **no** `--version` option — `zango --version` errors with `No such option: --version`; use `zango --help` to list available commands instead)
 
-3. **Save config** - Write `.claude/zango-config.json` (use absolute path for venv):
+3. **Save config** - Write `.claude/zango-config.json` (use absolute path for venv). Persist the gathered project name and platform admin credentials here too — they are passed to `start-project` as CLI flags and reported back to the user as access info:
    ```json
-   { "setup_mode": "venv", "venv_path": "/absolute/path/to/venv" }
+   {
+     "setup_mode": "venv",
+     "venv_path": "/absolute/path/to/venv",
+     "project_name": "zango_project",
+     "platform_username": "platform_admin@zango.dev",
+     "platform_user_password": "Zango@123"
+   }
    ```
 
 4. **Create DB-only files** - Use the templates below (`docker_compose_db.yml` and `.env` venv variant).
@@ -295,12 +301,36 @@ The Django app runs locally in a virtualenv. Only Postgres and Redis run in Dock
 
 6. **Bootstrap project** - Run from project root (see Bootstrap Commands section below for the full `zango start-project` invocation).
 
+6a. **Add `FIELD_ENCRYPTION_KEY` to the server's root `.env`** — **REQUIRED, do this immediately after `start-project`, before adding any secrets provider.**
+
+   `start-project` auto-generates a `.env` in the **project root** (the directory you ran it from, i.e. the parent of `<PROJECT_NAME>/`) containing only `POSTGRES_*`, `REDIS_*`, `PROJECT_NAME`, `UPDATE_APPS_ON_STARTUP`. **This** is the file the dev server reads — Django settings load it via `environ.Env.read_env(BASE_DIR.parent/.env)`. It does **not** read `deploy/.env` (that file is only consumed by `docker_compose_db.yml` for the Postgres container). `FIELD_ENCRYPTION_KEY` is **not** written by `start-project` and defaults to `""`, so adding a secrets provider fails with: `FIELD_ENCRYPTION_KEY defined incorrectly: Fernet key must be 32 url-safe base64-encoded bytes.`
+
+   Generate a key and append it to the root `.env` (run from the project root, the same dir you ran `start-project` from):
+   ```bash
+   echo "FIELD_ENCRYPTION_KEY=$(<venv_path>/bin/python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" >> .env
+   ```
+   Then (re)start `runserver` and the worker so they pick up the new value. If the server was already running, it must be restarted — env vars are read at startup.
+
 7. **Start the development server** (in a separate terminal):
    ```bash
    cd <PROJECT_NAME> && <venv_path>/bin/python manage.py runserver 0.0.0.0:8000
    ```
 
-8. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200, then share credentials.
+8. **Start the Celery worker** (in ANOTHER separate terminal — REQUIRED, not optional):
+   ```bash
+   cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
+   ```
+   **Mandatory from the start:** venv mode (unlike Docker) runs no worker unless you start one. Async Celery tasks — app creation, and any in-app `.delay()` task — are never consumed with `runserver` alone; they sit pending forever. Always run the worker alongside `runserver`. If an async operation "hangs", suspect the missing worker first — not the API.
+
+   **macOS fork() crash (apply on darwin):** Celery's default `prefork` pool calls `fork()`, which the macOS Objective-C runtime forbids — the worker crashes (often while processing the first task) with `objc[...]: +[... initialize] may have been in progress in another thread when fork() was called. ... crashing instead`. The `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` prefix above prevents this while keeping the prefork pool. If it still crashes, fall back to a non-forking pool: append `--pool=threads` (or `--pool=solo`). On Linux/Docker the env var is harmless, so it is safe to always include it.
+
+8a. **Start Celery beat** (in ANOTHER separate terminal — required if the app uses scheduled/periodic tasks):
+   ```bash
+   cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+   ```
+   The Docker stack always runs a dedicated `celery_beat` service; **Without beat, scheduled tasks never fire** (the worker only consumes tasks that something enqueues; beat is what enqueues them on schedule) Skip this only if the app has no periodic/scheduled tasks.
+
+9. **Wait for health** - Poll `http://localhost:8000/platform` until HTTP 200, then share credentials.
 
 ---
 
@@ -346,28 +376,23 @@ volumes:
 
 ### File: `deploy/.env` (Venv mode)
 
+**Important — two different `.env` files in venv mode:**
+- **`deploy/.env`** (this file) is read **only** by `docker_compose_db.yml` to provision the Postgres container. Practically only the `POSTGRES_*` values matter here.
+- **`<project-root>/.env`** (the parent of `<PROJECT_NAME>/`) is auto-generated by `start-project` and is the file the **Django dev server / Celery worker** actually read (`environ.Env.read_env(BASE_DIR.parent/.env)`). `FIELD_ENCRYPTION_KEY` must live **there** — see Venv Mode Bootstrap Step 6a. Putting it only in `deploy/.env` will NOT fix the Fernet key error.
+
+Where the other gathered values go (so they are **not** needed in `deploy/.env`):
+- **`PROJECT_NAME`** — `start-project` auto-writes it into the project-root `.env`; nothing to do.
+- **`PLATFORM_USERNAME` / `PLATFORM_USER_PASSWORD`** — passed only as `start-project` CLI flags (`--platform_username` / `--platform_user_password`) to create the platform admin login; they are not read from any `.env` afterward. Persist them in `.claude/zango-config.json` and report them to the user as login credentials.
+
 The key difference from Docker mode: `POSTGRES_HOST=localhost` and `REDIS_HOST=localhost` because the app runs on the host machine, not inside a container.
 
 ```env
 COMPOSE_PROJECT_NAME=zango-a1b2
-PLATFORM_USERNAME=platform_admin@zango.dev
-PLATFORM_USER_PASSWORD=Zango@123
-PROJECT_NAME=zango_project
 POSTGRES_USER=zango_admin
 POSTGRES_PASSWORD=zangopass
 POSTGRES_DB=zango
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-REDIS_HOST=localhost
-REDIS_PORT=6379
-PLATFORM_DOMAIN_URL=localhost
-CSRF_TRUSTED_ORIGINS=http://localhost:3000
-FIELD_ENCRYPTION_KEY=<generate-fernet-key>
-```
-
-Generate `FIELD_ENCRYPTION_KEY`:
-```bash
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
 ### File: `.claude/zango-config.json`
@@ -377,7 +402,10 @@ Create this file in the project root to persist setup mode and venv path for the
 ```json
 {
   "setup_mode": "venv",
-  "venv_path": "/absolute/path/to/venv"
+  "venv_path": "/absolute/path/to/venv",
+  "project_name": "zango_project",
+  "platform_username": "platform_admin@zango.dev",
+  "platform_user_password": "Zango@123"
 }
 ```
 
@@ -393,7 +421,12 @@ docker compose -f deploy/docker_compose_db.yml up -d
 docker compose -f deploy/docker_compose_db.yml ps
 
 # 3. Bootstrap the Zango project (replace placeholders with values from .env)
-<venv_path>/bin/zango start-project <PROJECT_NAME> \
+#    IMPORTANT: prepend the venv's bin to PATH. `zango start-project` internally
+#    shells out to bare `django-admin startproject ...` (subprocess with shell=True),
+#    which resolves `django-admin` from PATH. Calling `<venv_path>/bin/zango` directly
+#    does NOT put `<venv_path>/bin` on PATH, so django-admin is not found and bootstrap
+#    fails with: `/bin/sh: django-admin: command not found`.
+PATH="<venv_path>/bin:$PATH" <venv_path>/bin/zango start-project <PROJECT_NAME> \
   --db_name="<POSTGRES_DB>" \
   --db_user="<POSTGRES_USER>" \
   --db_password="<POSTGRES_PASSWORD>" \
@@ -408,7 +441,16 @@ docker compose -f deploy/docker_compose_db.yml ps
 # 4. Start the development server (run in a separate terminal)
 cd <PROJECT_NAME> && <venv_path>/bin/python manage.py runserver 0.0.0.0:8000
 
-# 5. Verify the platform is up
+# 5. Start the Celery worker (run in ANOTHER terminal — REQUIRED for async tasks)
+#    macOS: keep the OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES prefix to avoid the fork() crash
+#    (see Step 8 in Venv Mode Bootstrap above; add --pool=threads if it still crashes).
+cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
+
+# 5b. Start Celery beat (ANOTHER terminal) — REQUIRED if the app has scheduled/periodic tasks.
+#     Docker runs a dedicated celery_beat service; venv does not. Without beat, scheduled tasks never fire.
+cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+# 6. Verify the platform is up
 curl -s -o /dev/null -w "%{http_code}" -L http://localhost:8000/platform
 ```
 
@@ -425,14 +467,15 @@ cd <PROJECT_NAME> && <venv_path>/bin/python manage.py ws_migrate <app_name>
 cd <PROJECT_NAME> && <venv_path>/bin/python manage.py sync_static <app_name>
 cd <PROJECT_NAME> && <venv_path>/bin/python manage.py collectstatic --noinput
 
-# Update apps (sync policies, tasks, etc.)
-cd <PROJECT_NAME> && <venv_path>/bin/zango update-apps --app_name <app_name>
+# Sync policies / tasks after code changes: use the App Panel APIs (HTTP, mode-independent),
+# See SKILL.md STEP 5 and app-panel-api.md (Policies / Tasks sync).
 
 # Start Celery worker (in a separate terminal)
-cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
+# macOS: OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES avoids the fork() crash (add --pool=threads if needed).
+cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
 
 # Start Celery beat (in a separate terminal)
-cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> beat -l info \
+cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> beat -l info \
   --scheduler django_celery_beat.schedulers:DatabaseScheduler
 ```
 

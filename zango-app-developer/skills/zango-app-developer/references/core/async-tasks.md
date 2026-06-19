@@ -96,9 +96,33 @@ def trigger_notification(request):
 - **Task path** (required): Full path string to the task function from app root (e.g., `"backend.module_name.tasks.function_name"`)
 - **Keyword arguments** (optional): Any parameters the task function expects
 
+### Running a task synchronously (manual trigger / debugging)
+
+`zango_task_executor.delay(...)` enqueues the task for the Celery worker. If the worker is slow, stuck, or you just want to run a task **right now and see errors inline**, call the executor **without `.delay()`** — it runs synchronously in the current process (no worker involved):
+
+```python
+# Synchronous, in-process — bypasses Celery entirely
+zango_task_executor("<app_name>", "backend.<module>.tasks.<task_function>", param1="value1")
+```
+
+This is handy when a `.delay()` task seems to hang (in venv mode the usual cause is no running worker — see bootstrap-templates.md). One-liner from the shell (non-interactive):
+
+```bash
+cd <PROJECT_NAME> && PATH="<venv_path>/bin:$PATH" python manage.py shell -c \
+  "from zango.core.tasks import zango_task_executor; zango_task_executor('<app_name>', 'backend.<module>.tasks.<task_function>', log_id=<id>)"
+```
+
+- `<app_name>` = the workspace/tenant name. `zango_task_executor(tenant_name, task_name, *args, **kwargs)` switches into that tenant before running.
+- The task path must match how the task is registered (full path from app root, e.g. `backend.document_ai.tasks.validate_document_ai`).
+- Pass whatever args/kwargs the task expects (e.g. some tasks take a `log_id` / record id to update). Running it synchronously surfaces the traceback directly instead of it disappearing into the worker log.
+
+> **AI agent flows:** when an agent is invoked (including from a task), each run is recorded as an **invocation log** viewable in the **App Panel UI → AI → (agent) → Invocations/Logs**. Check there for the prompt, response, token usage, latency, tool calls, and any error for a given run — it's usually faster than digging through Celery/worker output.
+
 ## Scheduling Async Tasks
 
 Tasks can be configured to run automatically at specified intervals or times.
+
+> **Scheduled tasks require a running Celery *beat* process** (separate from the worker). Beat is what enqueues scheduled tasks at their due time; the worker then executes them. Without beat, a scheduled task is configured but **never fires**. In **Docker** mode the `celery_beat` service runs it automatically. In **venv** mode you must start beat yourself — see bootstrap-templates.md → Venv Mode Bootstrap **Step 8a** (`celery -A <PROJECT_NAME> beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler`). This is the scheduling analogue of the "missing worker" trap.
 
 ### Configuration via App Panel UI
 
@@ -121,35 +145,22 @@ See [app-panel-api.md](../app-panel-api.md) for programmatic task scheduling usi
 
 After creating or modifying tasks in your codebase, you must sync them to make them available in the platform.
 
-### Method 1: Via Command Line
+### Via API (use this)
 
-> **Setup mode:** Docker syntax shown. For venv mode, use the venv variant from SKILL.md STEP 5.
-
-```bash
-docker compose -f deploy/docker_compose.yml exec app bash -c \
-  "cd <PROJECT_NAME> && zango update-apps --app_name <app_name>"
-```
-
-This command syncs tasks, policies, and other app configurations.
-
-### Method 2: Via App Panel UI
-
-1. Navigate to **Tasks** menu
-2. Click the **Sync** button
-3. Wait for the loading indicator to complete
-4. New tasks will appear in the list
-
-### Method 3: Via API (Preferred for automation)
+This is the "Sync Tasks" button in the platform UI. It's a plain HTTP call — identical in Docker and venv mode:
 
 ```bash
 curl -s -b /tmp/zango_cookies -X POST \
   "http://localhost:8000/api/v1/apps/$APP_UUID/tasks/" \
   -H "X-CSRFToken: $CSRF" \
-  -H "Referer: http://localhost:8000/platform/" \
-  -H "Content-Length: 0"
+  -H "Referer: http://localhost:8000/platform/"
 ```
 
-See [app-panel-api.md](../app-panel-api.md) → Tasks → Sync Tasks for full details.
+See [app-panel-api.md](../app-panel-api.md) → Tasks (sync async tasks) for full details.
+
+### Via App Panel UI (manual alternative)
+
+1. Navigate to **Tasks** menu → click **Sync** → wait for it to complete; new tasks appear in the list.
 
 ## Restarting Celery Service
 

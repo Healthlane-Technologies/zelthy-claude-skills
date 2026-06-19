@@ -69,11 +69,19 @@ See [bootstrap-templates.md](references/bootstrap-templates.md) → Venv Mode fo
 
 ### Post-Bootstrap: Create App
 
+**Venv mode prerequisite:** the Celery worker must be running (see bootstrap steps), or app creation's `task_id` never deploys. Docker mode runs the worker automatically.
+
 Use App Panel API (Capability 3) to automate:
 1. Authenticate via API
 2. Create app via `POST /api/v1/apps/` - poll `task_id` until `deployed == true`
 3. Configure domain via `PUT /api/v1/apps/<uuid>/`
-4. Add domain to `/etc/hosts`: `127.0.0.1 <domain>`
+4. Add domain to `/etc/hosts`: `127.0.0.1 <domain>` — **required, not optional.** The domain does NOT auto-resolve localhost, so the entry must exist or the app is unreachable.
+   - Try non-interactively: `grep -q '<domain>' /etc/hosts || echo "127.0.0.1 <domain>" | sudo tee -a /etc/hosts`
+   - If `sudo` fails (no non-interactive password), **stop and ask the user to run it themselves** — give them the exact line to paste:
+     ```bash
+     echo "127.0.0.1 <domain>" | sudo tee -a /etc/hosts
+     ```
+   - Wait for the user to confirm before continuing;
 5. **Install packages in ORDER**: appbuilder → crud → workflow
    - **CRITICAL:** Fetch latest versions BEFORE each install (workflow version changes after crud install)
    - See [app-panel-api.md](references/app-panel-api.md)
@@ -188,6 +196,18 @@ Based on what you need to build, identify the relevant references to read before
 | AI agents (run, stream, memory, files, errors) | [ai-agents.md](references/ai-agents.md) |
 | App Panel API (create apps, roles, AI via curl) | [app-panel-api.md](references/app-panel-api.md) |
 
+#### Configuring a Zango AI Agent (high-level)
+
+A working AI agent is **not** just code — the provider, prompt(s), and agent record must all exist in the App Panel. Do these in order; each is a required deliverable:
+
+1. **Provider (BLOCKING)** — ensure an AI provider exists and is enabled. The API key is a secret entered by the **user** in the App Panel UI — never ask for it in chat. Re-list providers and confirm `is_enabled == true` and capture `provider_id` **before** writing any agent code. Don't "ask later" and forget.
+2. **Tools** — write `@tool` functions in code, then **sync tools** via API.
+3. **Prompt(s)** — create via the prompts API (registers them in the App Panel; prompt text in code alone does nothing).
+4. **Agent record** — create via the agents API, referencing `provider_id` + prompt(s) + tool names. Without this, `get_agent("name")` raises `AgentNotFound`.
+5. **Verify** — list agents and prompts via API and confirm they appear. Only then is setup complete.
+
+Full steps, endpoints, and the ordered checklist: [ai-agents.md](references/ai-agents.md) and [app-panel-api.md](references/app-panel-api.md) → AI Agents → End-to-end setup order.
+
 ### STEP 4: Implement
 
 Read the relevant reference docs identified in STEP 3 **before writing any code**. Use exact patterns, attributes, and examples from those docs — don't improvise Zango-specific APIs.
@@ -245,32 +265,38 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
      <venv_path>/bin/python manage.py ws_migrate <app_name>
    ```
 
-2. **Sync policies and tasks** (if policies.json or tasks.py created or modified):
-   *Docker mode:*
+2. **Sync policies and tasks** (if policies.json or tasks.py created or modified) — use the dedicated App Panel APIs (these are exactly the "Sync Policies" / "Sync Tasks" buttons in the platform UI). They are plain HTTP calls, identical in Docker and venv mode. Requires an authenticated session — see [app-panel-api.md](references/app-panel-api.md) for login + `$CSRF`/`$APP_UUID`.
    ```bash
-   docker compose -f deploy/docker_compose.yml exec app bash -c \
-     "cd <PROJECT_NAME> && zango update-apps --app_name <app_name>"
-   ```
-   *Venv mode:*
-   ```bash
-   cd <PROJECT_NAME> && <venv_path>/bin/zango update-apps --app_name <app_name>
-   ```
+   # Sync policies (after policies.json changes)
+   curl -s -b /tmp/zango_cookies -X POST \
+     "http://localhost:8000/api/v1/apps/$APP_UUID/policies/?action=sync_policies" \
+     -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/" \
+     -H "Content-Type: multipart/form-data; boundary=----WebKitFormBoundary" \
+     --data-raw '------WebKitFormBoundary--'
 
+   # Sync tasks (after tasks.py changes)
+   curl -s -b /tmp/zango_cookies -X POST \
+     "http://localhost:8000/api/v1/apps/$APP_UUID/tasks/" \
+     -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/"
+   ```
+   
 3. **Restart Celery** (if tasks.py created or modified):
    *Docker mode:*
    ```bash
    docker compose -f deploy/docker_compose.yml restart celery
    ```
-   *Venv mode:* restart the celery worker process manually (kill and rerun):
+   *Venv mode:* restart the celery worker process manually (kill and rerun). The worker does **not** auto-reload, so it must be restarted whenever `tasks.py` or any code it imports changes:
    ```bash
-   cd <PROJECT_NAME> && <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
+   cd <PROJECT_NAME> && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES <venv_path>/bin/celery -A <PROJECT_NAME> worker -l info
    ```
+   *(The `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` prefix prevents the macOS Celery fork() crash; add `--pool=threads` if the worker still crashes. Harmless on Linux. See bootstrap-templates.md → Venv Mode Bootstrap Step 8.)*
 
 #### Frontend Setup (One-time — do this once after backend, before writing any frontend code)
 
 4. **Set up frontend app** (skip if `<workspace>/frontend/` already exists):
    - Create React app: `npx @zango-core/create-zango-app frontend` inside the workspace directory
    - Configure `.env` with `VITE_PROXY_ROUTES` for all backend routes — **never add `/app`** (that's a frontend route, not a backend proxy)
+   - **To iterate with the dev frontend on `localhost:3000` (`npm run dev`):** add `CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"]` to the project's `settings.py` and restart `runserver`, or submits will fail with 403 CSRF. See [frontend/appbuilder.md](references/frontend/appbuilder.md).
    - See [frontend/appbuilder.md](references/frontend/appbuilder.md)
 
 5. **Create app module** (skip if `backend/app/` already exists):
@@ -456,6 +482,7 @@ import { WorkflowStatus, WorkflowTags } from '@zango-core/crud/table';
 - **Policies**: Always create `policies.json` in each module that has views; always sync after changes
 - **Packages**: Always install in order: appbuilder → crud → workflow
 - **Workflow**: Never create manual status fields on models — use the workflow package
+- **Secrets / API keys**: NEVER ask the user to paste an API key (`sk-ant-...`, `sk-...`) or any secret into the conversation. For AI providers, direct the user to enter the key themselves in the App Panel UI (see [ai-agents.md](references/ai-agents.md) Step 3) — never route a secret through chat, curl, or a file you write
 - **Setup mode**: Always read `.claude/zango-config.json` before running management commands — docker and venv use different command forms
 - **Debugging (Docker)**: Check logs: `docker compose -f deploy/docker_compose.yml logs app`
 - **Debugging (Venv)**: Check the terminal running `manage.py runserver`; DB/Redis issues show in `docker compose -f deploy/docker_compose_db.yml logs`

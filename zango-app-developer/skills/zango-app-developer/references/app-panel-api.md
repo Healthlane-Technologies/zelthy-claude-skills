@@ -82,7 +82,19 @@ Headers: X-CSRFToken, Referer
 → {success, response: {message, app_uuid}}
 ```
 
-Domain config example: `domains=[{"domain":"myapp.local","is_primary":true}]` — URL-encode when sending as form data.
+Domain config example: `domains=[{"domain":"myapp.localhost","is_primary":true}]` — URL-encode when sending as form data.
+
+**Domain naming for local dev:** the value is stored verbatim and tenant resolution is an exact Host-header match (`Domain.objects.get(domain=<host>)`) — there is **no** required TLD or suffix. You do NOT need a `.com`/`.zango.com`-style FQDN. Use `<appname>.localhost` (e.g. `expense.localhost`, `crm.localhost`):
+- It's a clear, app-scoped name you map in `/etc/hosts` → `127.0.0.1 <appname>.localhost`.
+- The domain must still be added to `/etc/hosts` (see SKILL.md);
+
+**`date_format` / `datetime_format` / `timezone` are validated against fixed choices — guessing fails.** The value sent is the exact strftime `id` (left column), not the display label. Use these directly; no need to fetch the dropdown first:
+
+- **`date_format`** (one of): `%d %b %Y` · `%d %B %Y` · `%d/%m/%Y` · `%d/%m/%y` · `%m/%d/%y`
+- **`datetime_format`** (one of): `%d %b %Y %H:%M` · `%d %b %Y %I:%M %p` · `%d %B %Y %H:%M` · `%d %B %Y %I:%M %p` · `%d/%m/%Y %H:%M` · `%d/%m/%y %I:%M %p` · `%m/%d/%y %H:%M` · `%d/%m/%Y %I:%M %p`
+- **`timezone`**: any valid pytz name (e.g. `Asia/Kolkata`, `UTC`, `America/New_York`)
+
+If you ever need the authoritative list at runtime, `GET /api/v1/apps/<uuid>/?include_dropdown_options=true` returns them under `dropdown_options.{date_formats,datetime_formats,timezones}` — but prefer the values above to avoid an extra round-trip.
 
 ---
 
@@ -100,9 +112,22 @@ Optional: ?search=<term>&include_dropdown_options=true
 ### Create Role
 ```
 POST /api/v1/apps/<uuid>/roles/
-Body: name=<name>&policies=<comma-separated-ids>
+Body: name=<name>  [+ one policies=<id> per policy]
 → {success, response: {message, role_id}}
 ```
+
+**`policies` is a many-to-many (PK list) — pass one repeated param per ID, never a comma-separated string, and OMIT it entirely when there are none:**
+- ✅ No policies yet (the normal case when creating roles before policies exist): send only `name`.
+  ```bash
+  curl -s -b /tmp/zango_cookies -X POST "http://localhost:8000/api/v1/apps/$APP_UUID/roles/" \
+    -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/" \
+    -F "name=Manager"
+  ```
+- ✅ With policies — repeat `-F "policies=<id>"` for each ID: `-F "policies=1" -F "policies=3"`
+- ❌ `policies=1,2,3` → fails with `Incorrect type. Expected pk value, received str.` (the whole string is treated as one PK)
+- ❌ `policies=` (empty) → same error (empty string is treated as a PK). Don't send the param at all if empty.
+
+> Roles are normally created **before** any policies exist, so create them with `name` only, then attach policies later via the policy endpoints (see "Update Policy (assign roles)").
 
 ### Get / Update Role
 ```
@@ -113,6 +138,7 @@ PUT /api/v1/apps/<uuid>/roles/<id>/
 Body: name, policies, policy_groups, is_active
 → {success, response: {message, role_id}}
 ```
+**Same `policies` rule as Create:** repeat `-F "policies=<id>"` per ID; never comma-separated; omit when empty.
 
 ---
 
@@ -184,6 +210,26 @@ Use `-F` for each role — **not** `--data-raw`. Policy ID for `AllowFromAnywher
 
 ---
 
+## Tasks (sync async tasks)
+
+The platform's **"Sync Tasks"** button maps to a plain POST on the tasks endpoint — it registers/updates the app's `tasks.py` entries (`ws.sync_tasks()`). Call this after creating or modifying `tasks.py`.
+
+```bash
+POST /api/v1/apps/<uuid>/tasks/
+Headers: X-CSRFToken, Referer
+→ {success: true, response: {message: "Tasks synced successfully"}}
+```
+
+```bash
+curl -s -b /tmp/zango_cookies -X POST \
+  "http://localhost:8000/api/v1/apps/$APP_UUID/tasks/" \
+  -H "X-CSRFToken: $CSRF" -H "Referer: http://localhost:8000/platform/"
+```
+
+> After syncing tasks, restart the Celery worker so it picks up the changed `tasks.py` (see SKILL.md "Restart Celery").
+
+---
+
 ## Packages
 
 Available: `appbuilder`, `communication`, `crud`, `workflow`.
@@ -246,7 +292,7 @@ Default theme config:
 
 ## Secrets
 
-Secrets store credentials encrypted. Requires `FIELD_ENCRYPTION_KEY` in `deploy/.env`.
+Secrets store credentials encrypted. Requires a valid `FIELD_ENCRYPTION_KEY` in the `.env` the server reads — `deploy/.env` in Docker mode, but the auto-generated project-root `.env` (parent of `<PROJECT_NAME>/`) in venv mode. See core/secrets.md and bootstrap-templates.md → Venv Mode Bootstrap Step 6a.
 
 Key naming: `^[A-Z][a-z0-9_]*$` (e.g. `Stripe_secret`, `Sendgrid_api_key`).
 
@@ -300,6 +346,18 @@ All AI endpoints are under `/api/v1/apps/<app_uuid>/ai/`. Body format is JSON un
 ```
 http://localhost:8000/api/v1/apps/<APP_UUID>/ai/<resource>/
 ```
+
+### End-to-end setup order — a working agent is NOT done until ALL of these exist
+
+Setting up a Zango AI agent is **not** finished when the tool/task code is written. An agent only works when the **provider, prompt(s), and the agent record itself** all exist in the App Panel. Do these in order and do not skip ahead:
+
+1. **Provider (BLOCKING)** — a provider with an API key must exist and be enabled. The key is entered by the **user** in the App Panel UI (see [ai-agents.md](ai-agents.md) Step 3). **Do not proceed past this step until you have re-listed providers and confirmed one exists and `is_enabled == true` and captured its integer `provider_id`.** If the user hasn't done it yet, stop and wait — everything below depends on it.
+2. **Tools** — write `@tool` functions in code, then **sync tools** (`POST .../ai/tools/sync/`).
+3. **Prompt(s)** — create each prompt via `POST .../ai/prompts/` (first version is auto-active). This creates the record in the App Panel — writing prompt text only in code does NOT register it.
+4. **Agent record** — create the agent via `POST .../ai/agents/`, referencing `provider_id` (step 1), the prompt(s) (step 3), and tool names (step 2). Without this the agent does not exist and `get_agent("name")` raises `AgentNotFound`.
+5. **Verify in App Panel** — `GET .../ai/agents/` and `GET .../ai/prompts/` and confirm your agent + prompts are listed. Only then is setup complete.
+
+> **Common failure to avoid:** creating tools + task code but never creating the prompt or agent records (steps 3–4), or starting code before the provider key is confirmed (step 1). Treat steps 1, 3, 4 as mandatory deliverables, not optional follow-ups.
 
 ---
 
@@ -586,12 +644,12 @@ Body (JSON):
 - `output_schema`: `"Text"` | `"JSON"` | `"Markdown"`
 - **`output_json_schema` is REQUIRED when `output_schema` is `"JSON"`** — omitting it will cause agent creation to fail.
 
-  **Schema rules differ by provider:**
+  **Both OpenAI and Anthropic enforce strict structured outputs** — write the schema to satisfy the strict rules and it works on either provider. (Zango passes `output_json_schema` to Anthropic via the *native* json_schema structured-output path — `output_config.format = {"type": "json_schema", "schema": ...}` — which is just as strict as OpenAI, **not** lenient.)
 
-  **OpenAI** enforces strict structured outputs — three rules apply:
-  1. Every `object` must have `"additionalProperties": false`
-  2. Every key listed in `properties` must also appear in `required`
-  3. Nullable fields must use `anyOf` syntax — `{"type": ["string", "null"]}` shorthand is **not** accepted
+  **Required for both providers:**
+  1. Every `object` (top-level and every nested one) must have `"additionalProperties": false`. Omitting it on Anthropic fails with: `Anthropic - For 'object' type, 'additionalProperties' must be explicitly set to false`.
+  2. Every key listed in `properties` must also appear in `required`.
+  3. Nullable fields must use `anyOf` syntax — `{"type": ["string", "null"]}` shorthand is **not** accepted.
 
   ```json
   "output_json_schema": {
@@ -608,7 +666,7 @@ Body (JSON):
   }
   ```
 
-  For nested objects under OpenAI, apply the same rules recursively:
+  Apply the same rules recursively to nested objects:
   ```json
   "address": {
     "anyOf": [
@@ -624,20 +682,6 @@ Body (JSON):
       },
       {"type": "null"}
     ]
-  }
-  ```
-
-  **Anthropic** is lenient — standard JSON Schema works without the strict rules:
-  ```json
-  "output_json_schema": {
-    "type": "object",
-    "properties": {
-      "summary":     {"type": "string"},
-      "is_urgent":   {"type": "boolean"},
-      "priority":    {"type": "integer"},
-      "tags":        {"type": "array"},
-      "assigned_to": {"type": ["string", "null"]}
-    }
   }
   ```
 

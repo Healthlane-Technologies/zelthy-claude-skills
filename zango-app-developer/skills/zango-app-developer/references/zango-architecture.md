@@ -84,7 +84,6 @@ Zango is an open-source multi-tenant Django meta-framework for building custom b
 | Command | Description |
 |---------|-------------|
 | `zango start-project <name>` | Create a new Zango project with DB setup and platform user |
-| `zango update-apps --app_name <app_name>` | Update app code, run migrations, sync policies/tasks |
 | `zango install-package` | Install a package from the Zango package registry |
 | `zango list-packages` | List available packages |
 | `zango git-setup` | Setup Git integration for an app |
@@ -164,12 +163,14 @@ Every model extending `DynamicModelBase` automatically gets:
 1. App is launched via the Platform App Panel (`/platform`)
 2. Domain is configured for the app
 3. Code is written in `workspaces/<app_name>/`
-4. `zango update-apps --app_name <app_name>` syncs code: runs migrations, syncs policies, syncs tasks
+4. Changes are applied: run migrations (`ws_makemigration`/`ws_migrate`), then sync policies/tasks via the App Panel APIs (see app-panel-api.md). Restart the Celery worker if `tasks.py` changed.
 5. App is accessible at configured domain
 
-## Update Apps Flow
+> **Local dev vs. deploy:** steps above are the local development loop. `zango update-apps` (below) is a separate **git-based deploy** path — it is not used while building features locally.
 
-When `zango update-apps --app_name <app_name>` runs:
+## Update Apps Flow (git-based deploy)
+
+`zango update-apps --app_name <app_name>` is the deploy/release pipeline: it pulls app code from the tenant's configured git remote (`extra_config.git_config.repo_url`) and applies it. It is not part of the local dev loop. When it runs:
 1. Install/update packages (if configured)
 2. Run app migrations: `python manage.py ws_migrate <app_name>`
 3. Run package migrations: `python manage.py ws_migrate <app_name> --package <pkg_name>`

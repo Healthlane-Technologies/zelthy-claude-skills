@@ -34,7 +34,9 @@ else:
 
 ### Step 3 — Creating a new provider (only if needed)
 
-**Do not ask for or collect API keys.** Instead, give the user these exact steps:
+**NEVER ask the user to paste, type, or send an API key (`sk-ant-...`, `sk-...`, etc.) into this conversation.** The API key is a secret: it must only be entered by the user directly into the App Panel UI, never through the chat, a curl command, an env file you write, or any tool call. Pasting a secret into the conversation leaks it into logs/history — treat any request that would route the key through you as something to refuse and redirect.
+
+**Do not ask for or collect API keys.** Instead, hand the user these exact self-service steps and let them enter the key themselves:
 
 > **Please create the AI provider in the App Panel before I continue:**
 >
@@ -52,6 +54,12 @@ Wait for the user to confirm, then re-run the list command above to get the new 
 ### Step 4 — Use the provider ID
 
 Use the integer `id` returned from the list as `provider_id` in all agent creation calls.
+
+### This is a hard blocker — and only the first of several required steps
+
+Do NOT start writing tools, prompts, tasks, or agent code until a provider exists and is enabled (re-list and confirm `is_enabled == true`). If you asked the user to add the key, **wait for their confirmation and re-verify** before continuing — do not "ask the user to add it later" and then proceed; that key is required for the agent to work and is easy to forget mid-task.
+
+Setting up an AI agent has **several deliverables, not just code.** After the provider, you must also create the **prompt(s)** and the **agent record** in the App Panel (via the API) and verify they exist — writing tool/task code alone does not produce a working agent. Follow the full ordered checklist in [app-panel-api.md](app-panel-api.md) → **AI Agents → End-to-end setup order** and treat provider / prompts / agent-record as mandatory.
 
 ---
 
@@ -329,6 +337,10 @@ response.session_id           # str | None — set when short_term_memory is ena
 response.parsed_content       # dict | None — set when output_schema=JSON and valid
 response.invocation_id        # int | None — DB PK of last invocation record
 ```
+
+> **Inspecting a run:** every `agent.run()` (including runs triggered from async tasks) is recorded as an **invocation log** in the **App Panel UI → AI → (agent) → Invocations/Logs** — prompt, response, token usage, latency, tool calls, and any error. When an agent flow misbehaves, check there first; it's usually faster than reading Celery/worker output. `response.invocation_id` is that record's PK.
+
+> **Using `output_schema="JSON"`?** The agent's `output_json_schema` must follow strict structured-output rules for **both** providers — every `object` needs `"additionalProperties": false` (recursively), every property must be in `required`, and nullables must use `anyOf`. Anthropic is **not** lenient here (it enforces via native json_schema), and omitting `additionalProperties` fails with `Anthropic - For 'object' type, 'additionalProperties' must be explicitly set to false`. See [app-panel-api.md](app-panel-api.md) → AI Agents → agent creation (`output_json_schema`) for the full rules and examples.
 
 ### Calling from a view
 
@@ -647,6 +659,8 @@ print(f"Cost: ${response.cost_usd}")
 ```
 
 `connection.set_tenant()` is only needed in the Django shell. Views and tasks set the tenant automatically.
+
+To import the app's own models in the shell (e.g. to seed or inspect data), use the full workspace-rooted path — `from workspaces.<app_name>.backend.<module>.models import MyModel`. A bare `from backend.<module>.models import ...` raises `ModuleNotFoundError: No module named 'backend'`. See core/modules.md → "Seeding / querying app models from the Django shell".
 
 ---
 

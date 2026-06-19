@@ -14,17 +14,18 @@ App secrets store API keys, credentials, and other sensitive values encrypted in
 
 ## Prerequisites
 
-`FIELD_ENCRYPTION_KEY` must be set in `deploy/.env`. This is a 32-byte Fernet key used to encrypt all secret values at rest.
+`FIELD_ENCRYPTION_KEY` must be set in **the `.env` the running server reads**, and it must be a valid 32-byte url-safe base64 Fernet key. If it is missing or empty, adding a secrets provider fails with: `FIELD_ENCRYPTION_KEY defined incorrectly: Fernet key must be 32 url-safe base64-encoded bytes.`
+
+**Which `.env`?** — this differs by setup mode:
+- **Docker mode:** `deploy/.env` (the app container reads it).
+- **Venv mode:** the project-root `.env` (parent of `<PROJECT_NAME>/`) that `start-project` auto-generates — **not** `deploy/.env`. The dev server loads it via `environ.Env.read_env(BASE_DIR.parent/.env)`. See bootstrap-templates.md → Venv Mode Bootstrap Step 6a.
 
 Generate one at bootstrap time:
 ```bash
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-Add to `deploy/.env`:
-```env
-FIELD_ENCRYPTION_KEY=<generated-fernet-key>
-```
+Add it to the correct `.env` for your mode, then restart the server (and worker) so it's picked up.
 
 **Never change this key after secrets have been created** — existing encrypted values will become unreadable.
 

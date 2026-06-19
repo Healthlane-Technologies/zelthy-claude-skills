@@ -321,9 +321,9 @@ Workflows add status/tag management and state transitions to CRUD records.
 
 ```python
 # In workflow.py
-from ...packages.workflow.base.base import BaseWorkflow
+from ...packages.workflow.base.engine import WorkflowBase
 
-class ProgramWorkflow(BaseWorkflow):
+class ProgramWorkflow(WorkflowBase):
     class Meta:
         model = Program
         on_create_status = "initiated"  # Initial status when record created
@@ -385,13 +385,13 @@ class ProgramCrudView(BaseCrudView):
 
 ### Workflow Features
 
-- **Automatic status initialization**: When a record is created, `on_create_status` is set
+- **Automatic status initialization**: When a record is created *through the CRUD view's create flow* (`form.save()` in the view), the CRUD base calls `get_workflow_obj(object_instance=...)` and then `workflow_obj.execute_transition(workflow_obj.Meta.on_create_status)`, which creates the `WorkflowState` row at `on_create_status`. Two prerequisites: the view must set `workflow = YourWorkflow`, and the workflow `Meta` must define `on_create_status`. **Gotcha:** this only fires on the CRUD create path — objects created directly via the ORM (e.g. `Model.objects.create(...)`, data migrations, shell, bulk imports) get **no** `WorkflowState`, so `get_current_status()` falls back to `on_create_status` only lazily and no creation transaction is recorded. Initialize those explicitly by instantiating the workflow and calling `execute_transition(on_create_status)` yourself.
 - **Status display**: `StatusCol` automatically shows current status with color badge
-- **Transitions display**: `WorkflowTransitionsCol` shows available transitions based on current status
+- **Transitions display**: prefer driving transitions through **`row_actions`** (`process_row_action_*` calling `execute_transition`). The built-in `WorkflowTransitionsCol` has a known platform bug that crashes the page with "Rendered more hooks than during the previous render" (React error #300) after a transition submit — see tables.md → WorkflowTransitionsCol for the cause and the row-actions pattern.
 - **Role-based transitions**: Transitions can be restricted by role
 - **Workflow history**: Track all status changes with timestamps
 
-See `references/packages/workflow/workflow.md` for complete workflow documentation.
+See `references/packages/workflow/overview.md` for complete workflow documentation.
 
 ---
 
@@ -513,7 +513,7 @@ def get_workflow_obj(self, **kwargs):
         **kwargs: Can include object_instance for existing records
 
     Returns:
-        BaseWorkflow or None: Workflow instance if configured, None otherwise
+        WorkflowBase or None: Workflow instance if configured, None otherwise
     """
     workflow_class = getattr(self, "workflow", None)
     if workflow_class:
@@ -838,10 +838,10 @@ class ServiceTypeCrudView(BaseCrudView):
 
 ```python
 # workflow.py
-from ...packages.workflow.base.base import BaseWorkflow
+from ...packages.workflow.base.engine import WorkflowBase
 from .models import Program
 
-class ProgramWorkflow(BaseWorkflow):
+class ProgramWorkflow(WorkflowBase):
     class Meta:
         model = Program
         on_create_status = "initiated"
@@ -1406,5 +1406,5 @@ After creating CRUD views, verify:
 - **Forms**: `references/packages/crud/forms.md` - Form field types, validation, custom schema
 - **Tables**: `references/packages/crud/tables.md` - Column types, row actions, custom display
 - **Detail Views**: `references/packages/crud/detail.md` - Detail class, sections, custom rendering
-- **Workflows**: `references/packages/workflow/workflow.md` - Status/tag management, transitions
+- **Workflows**: `references/packages/workflow/overview.md` - Status/tag management, transitions
 - **Policies**: `references/core/policies.md` - Permission configuration, policy features
