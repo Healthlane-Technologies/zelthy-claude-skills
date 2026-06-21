@@ -1,6 +1,6 @@
 ---
 name: zango-app-developer
-description: Use this skill when the user wants to bootstrap a Zango development environment (Docker-based setup or virtualenv setup), create a Zango app, add modules to a Zango app, implement backend or frontend features on a Zango project, or work with Zango models, views, forms, tables, workflows, policies, async tasks, React components, CrudHandler, FormRenderer, or ZangoApp. Triggers on mentions of "Zango", "zango app", "zango project", "zango environment", "zango setup", "DynamicModelBase", "BaseCrudView", "CrudHandler", "FormRenderer", "ZangoApp", "React component", "frontend", "zango module", "CRUD view", "create CRUD", "add CRUD", "workflow", "create workflow", "add workflow", "status transitions", "custom page", "routes", "menu", "navbar", "theme" or requests to build business applications using the Zango framework.
+description: Use this skill when the user wants to bootstrap a Zango development environment (Docker-based setup or virtualenv setup), create a Zango app, add modules to a Zango app, implement backend or frontend features on a Zango project, or work with Zango models, views, forms, tables, workflows, policies, async tasks, email, SMS, React components, CrudHandler, FormRenderer, or ZangoApp. Triggers on mentions of "Zango", "zango app", "zango project", "zango environment", "zango setup", "DynamicModelBase", "BaseCrudView", "CrudHandler", "FormRenderer", "ZangoApp", "React component", "frontend", "zango module", "CRUD view", "create CRUD", "add CRUD", "workflow", "create workflow", "add workflow", "status transitions", "custom page", "routes", "menu", "navbar", "theme", "send email", "send SMS", "communication" or requests to build business applications using the Zango framework.
 ---
 
 # Zango App Developer
@@ -177,6 +177,7 @@ Based on what you need to build, identify the relevant references to read before
 | Model | [core/models.md](references/core/models.md) |
 | CRUD view (list/create/edit/delete) | [core/modules.md](references/core/modules.md), [core/models.md](references/core/models.md), [packages/crud/views.md](references/packages/crud/views.md), [packages/crud/forms.md](references/packages/crud/forms.md), [packages/crud/tables.md](references/packages/crud/tables.md) |
 | Workflow | [packages/workflow/overview.md](references/packages/workflow/overview.md) + other files in `packages/workflow/` |
+| Email / SMS communication | [packages/communication/overview.md](references/packages/communication/overview.md) |
 | Policies | [core/policies.md](references/core/policies.md) |
 | Async task | [core/async-tasks.md](references/core/async-tasks.md) |
 | Frontend app setup | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
