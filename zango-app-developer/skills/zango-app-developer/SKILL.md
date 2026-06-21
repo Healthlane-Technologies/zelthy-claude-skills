@@ -179,9 +179,9 @@ Based on what you need to build, identify the relevant references to read before
 | Workflow | [packages/workflow/overview.md](references/packages/workflow/overview.md) + other files in `packages/workflow/` |
 | Policies | [core/policies.md](references/core/policies.md) |
 | Async task | [core/async-tasks.md](references/core/async-tasks.md) |
-| Frontend app setup | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
+| Frontend app setup | [frontend/appbuilder/index.md](references/frontend/appbuilder/index.md) |
 | App module (serve React build) | [templates/app-module/README.md](references/templates/app-module/README.md) |
-| Custom frontend page / table / form | [frontend/crud.md](references/frontend/crud.md), [frontend/form.md](references/frontend/form.md) |
+| Custom frontend page / table / form | [frontend/crud/index.md](references/frontend/crud/index.md), [frontend/form/index.md](references/frontend/form/index.md) |
 | Routes and menus | [packages/appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md) |
 | Secrets / encrypted fields | [core/secrets.md](references/core/secrets.md) |
 | AI tools (define, ToolParam, ToolSafety) | [ai-agents.md](references/ai-agents.md) |
@@ -271,7 +271,7 @@ Rule: count levels up to app root, then add one more dot to reach `packages/`. S
 4. **Set up frontend app** (skip if `<workspace>/frontend/` already exists):
    - Create React app: `npx @zango-core/create-zango-app frontend` inside the workspace directory
    - Configure `.env` with `VITE_PROXY_ROUTES` for all backend routes — **never add `/app`** (that's a frontend route, not a backend proxy)
-   - See [frontend/appbuilder.md](references/frontend/appbuilder.md)
+   - See [frontend/appbuilder/index.md](references/frontend/appbuilder/index.md)
 
 5. **Create app module** (skip if `backend/app/` already exists):
    - See [templates/app-module/README.md](references/templates/app-module/README.md)
@@ -338,10 +338,11 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 
 | Task | Reference |
 |------|-----------|
-| App setup, routes, menus, theme, auth, navbar | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
-| CrudHandler, tables, detail views, hooks | [frontend/crud.md](references/frontend/crud.md) |
-| FormRenderer (server-driven and local RJSF) | [frontend/form.md](references/frontend/form.md) |
-| WorkflowStatus, WorkflowTags | [frontend/workflow.md](references/frontend/workflow.md) |
+| App setup, routes, menus, theme, auth, navbar | [frontend/appbuilder/index.md](references/frontend/appbuilder/index.md) |
+| CrudHandler, tables, detail views, hooks | [frontend/crud/index.md](references/frontend/crud/index.md) |
+| FormRenderer (server-driven and local RJSF) | [frontend/form/index.md](references/frontend/form/index.md) |
+| WorkflowStatus, WorkflowTags | [frontend/workflow/index.md](references/frontend/workflow/index.md) |
+| Implement a common frontend pattern | — (see Common Flows below) |
 | App module (serve React build from backend) | [templates/app-module/README.md](references/templates/app-module/README.md) |
 
 ### Critical Rules
@@ -354,6 +355,7 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 6. **Custom page export**: name in `pages/index.js` MUST exactly match the `component` field in the AppBuilder route config
 7. **Proxy routes**: include ALL backend routes in `VITE_PROXY_ROUTES` in `.env` — never add `/app` (that's a frontend route)
 8. **Backend form response format**: `{ response: { form: { json_schema, ui_schema, form_data } } }`
+9. **Flows first**: Before scaffolding, check Common Flows for a matching recipe. Use the exact combo shown.
 
 ### Scaffolding Patterns
 
@@ -443,6 +445,12 @@ import { WorkflowStatus, WorkflowTags } from '@zango-core/crud/table';
 <WorkflowStatus apiUrl="/api/entity/?object_uuid={{uuid}}" onStatusChange={() => refetch()} />
 <WorkflowTags apiUrl="/api/entity/?object_uuid={{uuid}}" onTagChange={() => refetch()} />
 ```
+
+### Common Flows
+
+Copy-paste recipes for common implementation patterns. Check [Common-Flows.md](references/frontend/Common-Flows.md) before scaffolding.
+
+14 flows: Route-Based Detail, Drawer Detail, Custom Table Body, Custom Stats Header, Server-Driven Form, Custom Page with CrudHandler, Standalone Workflow, Nested CRUD in Tabs, Dynamic API Endpoints, Multi-Tab Detail, Status-Dependent Form, PDF Export with Filters, Modal-Within-CRUD, App Branding & Theming.
 
 ---
 
