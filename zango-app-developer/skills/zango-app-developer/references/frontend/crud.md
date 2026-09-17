@@ -90,12 +90,197 @@ Three ways to drive a table. Pick one per component; do not mix shapes.
 > ```js
 > // useTable() — FLAT
 > const t = useTable();
-> t.searchTerm; t.setSearchTerm("x"); t.currentPage; t.goToNextPage(); t.handleRowClick(row);
+> t.searchTerm; t.setSearchTerm("x"); t.currentPage; t.goToNextPage(); t.handleRowClick(rowWrapper);
 >
 > // useCrud() — NAMESPACED
 > const c = useCrud();
 > c.search.term; c.search.setTerm("x"); c.pagination.currentPage; c.pagination.goToNextPage(); c.row.onClick(e, row);
 > ```
+
+## How to host the hooks
+
+Every hook needs an engine above it. There are three ways to provide one.
+Patterns A and B are what real Zango apps use; C is available but rarely chosen.
+
+### A. CrudHandler + customTableBody (most common)
+
+`CrudHandler` mounts `TableProvider`, calls `useCrud()`, and publishes it via
+`CrudProvider`. Your custom body renders inside all of that, so it can call
+`useCrud()` and get the live engine while you own every pixel of the list.
+
+Use this when you want a custom list layout — cards, kanban, calendar — but are
+happy to let the package own fetching, the toolbar, and the detail route.
+
+```jsx
+import { CrudHandler } from '@zango-core/crud/table';
+import { useCrud } from '@zango-core/crud/core';
+
+/* MUST be module scope — see the stable-reference trap below. */
+function ProgramCards() {
+  const crud = useCrud();
+  const rows = crud.data ?? [];
+  if (crud.isLoading && rows.length === 0) return <Skeleton />;
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      {rows.map((row) => <Card key={row.object_uuid} row={row} />)}
+    </div>
+  );
+}
+
+<CrudHandler
+  api_endpoint="/api/programs/"
+  showHeader={false}
+  showPagination={false}
+  enableDetailViewRoute
+  defaultDetailView="navigate"
+  customTableBody={ProgramCards}
+/>
+```
+
+### B. TableProvider + useCrud + CrudProvider (full control)
+
+Mount the engine yourself when you want no `CrudHandler` chrome at all — your
+own header, toolbar and pagination. Re-publish the `useCrud()` result through
+`CrudProvider` so slotted children can read it without prop drilling.
+
+```jsx
+import { TableProvider, CrudProvider } from '@zango-core/crud/table';
+import { useCrud } from '@zango-core/crud/core';
+
+function PageInner() {
+  const crud = useCrud();
+  return (
+    <CrudProvider value={crud}>
+      <MyHeader />
+      <MyToolbar />
+      <MyTable rows={crud.data} />
+      <MyPager {...crud.pagination} />
+    </CrudProvider>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <TableProvider apiUrl="/api/orders/">
+      <PageInner />
+    </TableProvider>
+  );
+}
+```
+
+### C. The packaged Crud* components (available, rarely used)
+
+`useCrud()` also returns prop bags — `headerProps`, `toolbarProps`, `tableProps`,
+`paginationProps`, `filterProps`, `detailProps`, `addFormProps` — that spread
+onto the components in `@zango-core/crud/ui`. This works, but apps that reach
+for the hooks usually want their own markup, which is the whole reason they left
+`CrudHandler`. Prefer A or B unless you specifically want the package's look.
+
+```jsx
+import { CrudHeader, CrudTable, CrudPagination } from '@zango-core/crud/ui';
+const crud = useCrud();
+<CrudHeader {...crud.headerProps} />
+<CrudTable {...crud.tableProps} />
+<CrudPagination {...crud.paginationProps} />
+```
+
+> **Import note:** `useCrud` lives in `@zango-core/crud/core` (headless, no CSS)
+> and is re-exported from `/table`. Prefer `/core` for it; use `/table` for
+> `CrudHandler`, `TableProvider` and the `useTable*` hooks.
+
+---
+
+## Known traps
+
+Each of these cost a real app real debugging time. All verified against source.
+
+### `useCrud().filters` does not drive the query
+
+`crud.filters.setFilter()` / `setFilterObj()` write to state that **never reaches
+the provider's query** — the filter appears to apply, but the rows only change on
+reload. Use `useTableFilters()`, which mutates `TableProvider` state directly.
+
+```jsx
+// ✗ writes persist but rows don't refetch
+const crud = useCrud();
+crud.filters.setFilter('status', 'active');
+
+// ✓ actually filters
+import { useTableFilters } from '@zango-core/crud/table';
+const { filterObj, setFilter, removeFilter } = useTableFilters();
+setFilter('status', 'active');
+```
+
+Read `crud.filters.filterObj` for display if you like, but perform writes through
+`useTableFilters()`.
+
+### `crud.filters.columns` is always `[]`
+
+Hardcoded empty in `useCrud`, deliberately: it makes `shapeFilterProps` emit
+`undefined` so `FilterContainer` falls back to the table context's transformed
+columns. Raw `metadata.columns` uses a snake_case shape the filter inputs cannot
+key off. Never read `crud.filters.columns` — source your filter column list from
+table metadata instead.
+
+### `customTableBody` / `customMainDetail` must be stable references
+
+`CrudHandler` remounts the section whenever the component's identity changes, so
+an arrow function defined during render remounts (and refetches) on every parent
+render. Declare the component at module scope, or memoize it.
+
+```jsx
+// ✗ new identity every render → remount loop
+<CrudHandler customTableBody={() => <OrdersTable bare />} />
+
+// ✓ stable module-scope declaration
+function BareOrdersTable() { return <OrdersTable bare />; }
+<CrudHandler customTableBody={BareOrdersTable} />
+```
+
+### `detail.open(row)` needs a TanStack `Row<T>`, not a data object
+
+`crud.detail.open` is typed `(row: Row<T>) => void` and forwards to
+`handleRowClick`, which expects the Row wrapper. But `crud.data` is plain `T[]`.
+Inside a custom body there is no Row to hand it.
+
+```jsx
+// ✗ crud.data items are not Row<T>
+crud.detail.open(crud.data[0]);
+
+// ✓ get real Row objects off the table instance
+const rows = crud.table?.getRowModel().rows ?? [];
+crud.detail.open(rows[0]);
+
+// ✓ or skip the drawer and route yourself
+navigate(`/app/programs/${row.object_uuid}`);
+```
+
+`useTable().handleRowClick` has the same `Row<T>` requirement. Note also that in
+`useTable`'s **standalone** branch (called *with* an endpoint, outside a
+provider) `handleRowClick` is a no-op — row clicks only work on the context
+branch, i.e. inside `TableProvider` or `CrudHandler`.
+
+### `WorkflowStatus` / `WorkflowTags` self-fetch
+
+Their internal `useWorkflow` reads `apiUrl` from `DetailViewContext`, not just
+the prop — so withholding the prop cannot stop a duplicate `fetch_item_details`.
+Only *not mounting* them does. Gate the mount on `workflowDetails` so the hook
+short-circuits on data that is already present.
+
+```jsx
+if (!workflowDetails) return null;
+return <WorkflowStatus workflowDetails={workflowDetails} … />;
+```
+
+### Do not forward `onChanged` inside a `DetailViewProvider`
+
+`useWorkflow`'s `toggleTag` / `executeTransition` already `await
+context.refreshDetail()` before invoking your callback. Refreshing again in
+`onStatusChange` / `onTagChange` refetches the record a second time — one toggle,
+two visible reloads. Forward your own refresh **only** when there is no provider
+above you (`useDetailViewContext()` returns `null`).
+
+---
 
 ## Provider hierarchy
 
@@ -199,8 +384,11 @@ function OrdersTable() {
         placeholder="Search orders…"
       />
       <ul>
-        {t.data.map((row) => (
-          <li key={row.id} onClick={() => t.handleRowClick(row)}>{row.name}</li>
+        {/* Row<T> wrappers — handleRowClick needs them, plain data items won't do. */}
+        {(t.table?.getRowModel().rows ?? []).map((r) => (
+          <li key={r.original.id} onClick={() => t.handleRowClick(r)}>
+            {r.original.name}
+          </li>
         ))}
       </ul>
       <button disabled={!t.hasPreviousPage} onClick={t.goToPreviousPage}>Prev</button>
@@ -258,12 +446,12 @@ useCrud<T = TableRowData>(options?: UseCrudOptions): UseCrudReturn<T>
 |-----------|---|
 | `features` | `{ add?, edit?, delete?, upload?, download? }` |
 | `search` | `{ term, setTerm, debouncedTerm, isActive }` |
-| `filters` | `{ filterObj, setFilterObj, setFilter, removeFilter, clearFilters, hasFilter, getFilter, activeCount, debouncedFilterObj, columns }` |
+| `filters` | `{ filterObj, setFilterObj, setFilter, removeFilter, clearFilters, hasFilter, getFilter, activeCount, debouncedFilterObj, columns }` — ⚠️ **writes here do not drive the query** (use `useTableFilters()`), and `columns` is always `[]`. See Known traps. |
 | `pagination` | `{ currentPage, setCurrentPage, totalPages, rowsPerPage, setRowsPerPage, hasNextPage, hasPreviousPage, canGoNext, canGoPrevious, goToNextPage, goToPreviousPage, goToFirstPage, goToLastPage, pageNumbers, startRow, endRow, isInfiniteScroll, fetchMoreOnBottomReached? }` |
 | `selection` | `{ selectedRows, selectRow, selectAll, clearSelection, selectedCount, isAllSelected, isSomeSelected, hasSelection, isRowSelected, selectedRowIds, toggleRows, getSelectedData }` |
 | `columns` | `{ definitions, visibility, setVisibility, order, setOrder, pinning, setPinning, sorting, setSorting, wrap, setWrap }` |
 | `row` | `{ onClick(event, row), onClickAction, navigateUrl?, customClickHandler? }` |
-| `detail` | `{ selectedRow, selectedObjectUuid, drawerOpen, open(row), close(), navigateNext(), navigatePrevious(), canNavigateNext, canNavigatePrevious }` |
+| `detail` | `{ selectedRow, selectedObjectUuid, drawerOpen, open(row), close(), navigateNext(), navigatePrevious(), canNavigateNext, canNavigatePrevious }` — ⚠️ `open()` takes a TanStack `Row<T>`, not an item from `crud.data`. See Known traps. |
 | `actions` | `{ refresh, refetch, invalidateCache, executeRowAction(actionKey, objectUuid), executeTransition(transitionName, objectUuid) }` |
 | `workflow` | `{ details, transitions, tags }` |
 | `ui` | `{ hideControls, setHideControls, filterLayout }` |
@@ -271,8 +459,10 @@ useCrud<T = TableRowData>(options?: UseCrudOptions): UseCrudReturn<T>
 
 ### Composing with the /ui components
 
-The prop bags line up one-to-one with the presentational components. This is the
-whole point of `useCrud` — you own the layout, the package owns the wiring.
+The prop bags line up one-to-one with the presentational components, so you can
+let the package render its own chrome while you arrange it. This is hosting
+pattern C — it works, but most apps that reach for `useCrud` want their own
+markup and render the state directly instead.
 
 ```jsx
 import { TableProvider, useCrud } from "@zango-core/crud/table";
@@ -491,7 +681,7 @@ export default function Wrapper({ objectUuid }) {
 
 ---
 
-# Part 2 — CrudHandler (drop-in)
+# Part 2 — CrudHandler (reference)
 
 `CrudHandler` renders a complete table — header, search, filters, pagination,
 detail drawer — from one endpoint. Fully supported; not deprecated.
@@ -499,12 +689,20 @@ detail drawer — from one endpoint. Fully supported; not deprecated.
 **It is the same engine as Part 1, pre-wired.** Internally it renders
 `TableProvider`, calls `useCrud()`, publishes the result through `CrudProvider`,
 and spreads the prop bags onto the `Crud*` components. So anything you render
-inside it can call `useCrudContext()`, `useTableContext()` or the slice hooks
-without prop drilling.
+inside it can call `useCrud()`, `useCrudContext()`, `useTableContext()` or the
+slice hooks without prop drilling.
 
-**Reach for it when** a standard table is what you want. **Reach for the hooks
-when** you control the markup — a kanban board, a calendar, a card grid, or any
-layout the drop-in does not produce.
+**That makes it two things at once**, and the difference matters:
+
+- **As a drop-in** — `<CrudHandler api_endpoint="…" />` on its own, when a
+  standard table is exactly what you want.
+- **As a host for the hooks** — hosting pattern A in Part 1. You pass
+  `customTableBody` (or `customHeader` / `customMainDetail`), and that component
+  calls `useCrud()` to render your own layout on the package's engine. This is
+  the most common way real apps use both.
+
+So reading this section is not a fallback to the "old" way. The props below are
+what you configure when hosting hooks, and `customTableBody` is the seam.
 
 ```jsx
 import { CrudHandler } from "@zango-core/crud/table";
@@ -554,7 +752,7 @@ export function Users() {
 |------|------|-------------|
 | `customHeader` | ComponentType \| string | Replace the header. A string renders as the title. |
 | `customUtilities` | ComponentType | Replace the utilities/action bar. |
-| `customTableBody` | ComponentType | Replace the table body — this is how you get kanban, calendar or card layouts. |
+| `customTableBody` | ComponentType | Replace the table body — this is how you get kanban, calendar or card layouts, and the seam for hosting `useCrud()`. ⚠️ Must be a **stable** component reference. |
 | `customPagination` | ComponentType | Replace pagination. |
 | `customDrawerDetail` | ComponentType | Custom drawer detail. Receives **only** `{ selectedRow, open, onClose }`. |
 | `customMainDetail` | ComponentType | Custom full-page detail for route-based navigation. Receives fetched data — see below. |
@@ -697,23 +895,28 @@ function UserDrawerBody({ open, onClose }) {
 ```jsx
 // Custom list layout (kanban / calendar / cards) via customTableBody.
 // The body reads table state from context — no props needed.
-import { CrudHandler, useTable } from "@zango-core/crud/table";
+// Module scope keeps the component reference stable.
+import { CrudHandler } from "@zango-core/crud/table";
+import { useCrud } from "@zango-core/crud/core";
 
 function KanbanBody() {
-  const { data, isLoading, handleRowClick } = useTable();
-  if (isLoading) return <p>Loading…</p>;
+  const crud = useCrud();
+  if (crud.isLoading) return <p>Loading…</p>;
 
-  const columns = ["todo", "in_progress", "done"];
+  // Real Row<T> wrappers — crud.data items alone can't open the detail view.
+  const rows = crud.table?.getRowModel().rows ?? [];
+  const statuses = ["todo", "in_progress", "done"];
+
   return (
     <div className="flex gap-4">
-      {columns.map((status) => (
+      {statuses.map((status) => (
         <div key={status} className="flex-1">
           <h3>{status}</h3>
-          {data
-            .filter((row) => row.workflow_status?.current_status === status)
-            .map((row) => (
-              <article key={row.object_uuid} onClick={() => handleRowClick(row)}>
-                {row.title}
+          {rows
+            .filter((r) => r.original.workflow_status?.current_status === status)
+            .map((r) => (
+              <article key={r.original.object_uuid} onClick={() => crud.detail.open(r)}>
+                {r.original.title}
               </article>
             ))}
         </div>

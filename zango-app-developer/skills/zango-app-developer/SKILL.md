@@ -379,6 +379,9 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 1. **Imports**: `@zango-core/crud/table` for hooks/CrudHandler/WorkflowStatus/WorkflowTags, `@zango-core/crud/ui` for the `Crud*` presentational components, `@zango-core/crud/form` for FormRenderer — never `@zango-core/crud`
 1b. **`useCrud()` takes no `apiUrl`** — it reads the surrounding `TableProvider`. Passing one leaves `table` null and loads no data. `scrollMode` is `"pagination"`, never `"paginated"`.
 1c. **Hook return shapes differ**: `useTable()` is flat (`t.searchTerm`, `t.currentPage`); `useCrud()` is namespaced (`c.search.term`, `c.pagination.currentPage`). Mixing them yields `undefined`, not an error.
+1d. **Filter writes go through `useTableFilters()`**, never `crud.filters.setFilter()` — the latter persists but never reaches the query, so rows only change on reload. `crud.filters.columns` is always `[]`.
+1e. **`customTableBody` / `customMainDetail` must be stable component refs** (module scope or memoized). An inline arrow remounts and refetches on every parent render.
+1f. **`crud.detail.open(row)` needs a TanStack `Row<T>`** — `crud.data` items are plain objects. Use `crud.table?.getRowModel().rows`, or route to the detail URL yourself.
 2. **Server API fields**: snake_case — `json_schema`, `ui_schema`, `form_data`, `status_label`, `next_transitions`, `tag_details`, `display_name`, `tag_label`
 3. **Local RJSF fields**: camelCase — `schema`, `uiSchema`, `formData`
 4. **StatusCol data**: `{ status_label: "Active", status_color: "#12B76A" }`
@@ -399,38 +402,54 @@ export default {{PageName}};
 
 #### Two ways to build a CRUD page
 
-**Hooks (preferred when you control the layout).** `TableProvider` owns the
-engine; `useCrud()` returns state plus prop bags you spread onto the `Crud*`
-components from `@zango-core/crud/ui`.
+**A. Custom list layout — `CrudHandler` + `customTableBody` calling `useCrud()`.**
+Most common. The handler owns fetching, toolbar and detail route; the body owns
+the markup. The body MUST be a stable module-scope component.
 ```jsx
-import { TableProvider, useCrud } from '@zango-core/crud/table';
-import { CrudHeader, CrudToolbar, CrudTable, CrudPagination } from '@zango-core/crud/ui';
+import { CrudHandler } from '@zango-core/crud/table';
+import { useCrud } from '@zango-core/crud/core';
 
-const Layout = () => {
-  const crud = useCrud();              // no arguments — endpoint comes from TableProvider
+function {{PageName}}Cards() {          // module scope — NOT an inline arrow
+  const crud = useCrud();
+  const rows = crud.data ?? [];
+  if (crud.isLoading && rows.length === 0) return null;
+  return <div>{rows.map((r) => <Card key={r.object_uuid} row={r} />)}</div>;
+}
+
+<CrudHandler
+  api_endpoint="{{endpoint}}"
+  customTableBody={{{PageName}}Cards}
+  enableDetailViewRoute
+  defaultDetailView="navigate"
+/>
+```
+
+**B. Full control — mount the engine yourself.** No CrudHandler chrome at all.
+```jsx
+import { TableProvider, CrudProvider } from '@zango-core/crud/table';
+import { useCrud } from '@zango-core/crud/core';
+
+const Inner = () => {
+  const crud = useCrud();               // no arguments — endpoint comes from TableProvider
   return (
-    <>
-      <CrudHeader {...crud.headerProps} />
-      <CrudToolbar {...crud.toolbarProps} />
-      <CrudTable {...crud.tableProps} />
-      <CrudPagination {...crud.paginationProps} />
-    </>
+    <CrudProvider value={crud}>
+      <MyHeader /><MyTable rows={crud.data} /><MyPager {...crud.pagination} />
+    </CrudProvider>
   );
 };
 
 const {{PageName}} = () => (
-  <TableProvider apiUrl="{{endpoint}}"><Layout /></TableProvider>
+  <TableProvider apiUrl="{{endpoint}}"><Inner /></TableProvider>
 );
 ```
 
-**CrudHandler (drop-in, when a standard table is what you want).**
+**C. Plain drop-in — when a standard table is what you want.**
 ```jsx
 import { CrudHandler } from '@zango-core/crud/table';
 <CrudHandler api_endpoint="{{endpoint}}" headerProps={{ title: "{{Title}}" }} />
 ```
-Same engine — `CrudHandler` renders `TableProvider`, calls `useCrud()`, and
-publishes it via `CrudProvider`, so anything inside it can call
-`useCrudContext()` or the `useTable*` hooks without prop drilling.
+All three run the same engine: `CrudHandler` is `TableProvider` + `useCrud()` +
+`CrudProvider` pre-wired, which is why the hooks work inside it.
 
 #### CrudHandler with custom detail drawer
 `customDrawerDetail` receives **only** `{ selectedRow, open, onClose }` — it does
