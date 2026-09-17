@@ -1,14 +1,43 @@
 # Zango CRUD Reference
 
-> Auto-generated from documentation pages. Regenerate with: `node scripts/generate-reference.js`
+**Package:** `@zango-core/crud` v2.0.0 · React 17/18
+
+> **How this reference is ordered.** The package's own README leads with
+> `CrudHandler` and calls it "the primary table component". This reference leads
+> with the **hooks** instead, because Zango app code usually needs a custom
+> layout, and the hooks are what make that possible without fighting the
+> drop-in component. **Neither path is deprecated** — `CrudHandler` is fully
+> supported and documented in full below. Use the drop-in when a standard table
+> is what you want; use the hooks when you control the markup.
 
 ## Quick Import Reference
 ```js
-import { CrudHandler, useTable, TableBody, TableHeader, TableUtilities, TablePagination, TableSearch, TableAddButton } from '@zango-core/crud/table';
-import { WorkflowStatus, WorkflowTags, DetailViewProvider } from '@zango-core/crud/table';
+// Headless logic (no UI, no CSS)
+import { useCrud, CrudProvider, useCrudContext } from '@zango-core/crud/core';
+
+// Table engine + all table hooks + CrudHandler
+import { CrudHandler, TableProvider, useTable } from '@zango-core/crud/table';
 import { useTableSearch, useTableFilters, useTablePagination, useTableSelection, useTableColumns, useTableActions } from '@zango-core/crud/table';
+import { DetailViewProvider, useDetailView, useWorkflow, WorkflowStatus, WorkflowTags } from '@zango-core/crud/table';
+
+// Presentational components that pair with useCrud prop bags
+import { CrudTable, CrudHeader, CrudToolbar, CrudPagination, CrudFilters, CrudDetailDrawer } from '@zango-core/crud/ui';
+
+// Forms
+import { FormRenderer, FormHandler, useForm } from '@zango-core/crud/form';
+
 import type { TableCustomClasses, TableCustomStyles } from '@zango-core/crud/table';
 ```
+
+### Entry points
+
+| Import | Contents |
+|--------|----------|
+| `@zango-core/crud` | Everything (convenience root barrel). |
+| `@zango-core/crud/core` | Headless logic only — `useCrud`, `CrudProvider`, types. No UI, no CSS. |
+| `@zango-core/crud/ui` | Presentational `Crud*` components and cells. |
+| `@zango-core/crud/form` | `FormRenderer`, `FormHandler`, `useForm`, theming. |
+| `@zango-core/crud/table` | Table engine — `CrudHandler`, `TableProvider`, all `useTable*` hooks. |
 
 ## API Response Formats
 
@@ -26,7 +55,7 @@ The raw endpoint returns **DataTables format** (not a `response.table_data` wrap
 { "draw": 0, "recordsTotal": 25, "recordsFiltered": 25, "data": [{ "id": 1, "object_uuid": "uuid", "workflow_status": { "status_label": "Active", "status_color": "#12B76A" }, "row_actions": [{ "name": "Edit", "key": "edit", "type": "form" }] }] }
 ```
 
-> **Note:** `CrudHandler` internally normalizes this — the DataTables format only matters when calling the endpoint directly (e.g. in a custom `fetch` inside `customTableBody`). Read from `data.data` (the array), not `data.response.table_data`.
+> **Note:** The hooks and `CrudHandler` both normalize this internally — the DataTables format only matters when calling the endpoint directly (e.g. in a custom `fetch`). Read from `data.data` (the array), not `data.response.table_data`.
 
 ### Detail View (GET ?action=fetch_item_details&object_uuid=UUID)
 ```json
@@ -42,67 +71,561 @@ The raw endpoint returns **DataTables format** (not a `response.table_data` wrap
 
 ---
 
+# Part 1 — Hooks (primary)
 
-## CrudHandler (Core Component)
+## Choosing a hook
 
-**Sections:** Import | Quick Start | Required Props | Section Visibility Controls | Route Controls | Drawer Configuration | Custom Component Overrides | Additional Configuration | Header Configuration (headerProps) | Utilities Configuration | Examples
+Three ways to drive a table. Pick one per component; do not mix shapes.
 
-### Props
+| You want | Use | Return shape |
+|----------|-----|--------------|
+| Everything in one call, flat property names | `useTable()` | **flat** |
+| Everything plus ready-made prop bags for `Crud*` components | `useCrud()` | **namespaced** |
+| Just one concern (search, pagination, …) | slice hooks | flat, per-concern |
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `api_endpoint` | string | - | The API endpoint to fetch table data from. Example: /api/crud/ |
-| `showHeader` | boolean | true | Show or hide the header section. |
-| `showUtilities` | boolean | true | Show or hide the utilities panel (search, filters, actions). |
-| `showBody` | boolean | true | Show or hide the table body. |
-| `showPagination` | boolean | true | Show or hide pagination controls. |
-| `enableDetailViewRoute` | boolean | false | Enable /detail-view/:object_uuid route and  |
-| `customHeader` | ReactNode | string | - | Replace the default header. Can be a component or HTML string. |
-| `customUtilities` | ReactNode | - | Replace the utilities/action bar section. |
-| `customTableBody` | ReactNode | - | Replace the default table body. |
-| `customPagination` | ReactNode | - | Replace the default pagination. |
-| `customDrawerDetail` | ReactNode | - | Provide a custom drawer-style detail view. Automatically receives fetched detail data. |
-| `customMainDetail` | ReactNode | - | Provide a custom main detail view for route-based navigation. Automatically receives fetched detail data. |
-| `tableId` | string | - | Unique identifier for the table, used for state management. Auto-generated from api_endpoint if not provided. |
-| `columns` | any[] | - | Array of column definitions for client-side column configuration. |
-| `className` | string | - | Custom CSS class for the main container. |
-| `style` | React.CSSProperties | - | Custom inline styles for the main container. |
-| `customClass` | TableCustomClasses | - | Object with CSS class overrides for table elements. |
-| `customStyle` | TableCustomStyles | - | Object with dynamic style functions for table elements. |
-| `headerProps.showSearch` | boolean | - | Show/hide search in header. |
-| `headerProps.showFilters` | boolean | - | Show/hide filter controls. |
-| `headerProps.showActions` | boolean | - | Show/hide action buttons. |
-| `headerProps.searchPlaceholder` | string | - | Custom search placeholder text. |
-| `headerProps.title` | string | - | Header title text. |
-| `headerProps.customLeftActions` | ReactNode | - | Custom actions on the left side. |
-| `headerProps.customRightActions` | ReactNode | - | Custom actions on the right side. |
-| `has_add_perm` | boolean | true | Show/hide the  |
-| `has_upload_perm` | boolean | false | Show/hide the upload button in utilities. |
-| `has_download_perm` | boolean | true | Show/hide the download button in utilities. |
-| `show_search` | boolean | true | Show/hide search input in utilities bar. |
-| `show_filters_button` | boolean | true | Show/hide filters toggle button. |
-| `show_column_options` | boolean | true | Show/hide column visibility options. |
-| `utilityProps.showSearch` | boolean | true | Override: show/hide search input. |
-| `utilityProps.showUpload` | boolean | false | Override: show/hide upload button. |
-| `utilityProps.showDownload` | boolean | true | Override: show/hide download button. |
-| `utilityProps.showFiltersButton` | boolean | true | Override: show/hide filters toggle button. |
-| `utilityProps.showColumnOptions` | boolean | true | Override: show/hide column visibility options. |
-| `utilityProps.searchPlaceholder` | string | - | Custom search placeholder text. |
-| `utilityProps.extraLeftActions` | ReactNode | - | Additional actions on the left. |
-| `utilityProps.extraRightActions` | ReactNode | - | Additional actions on the right. |
+> **⚠️ The single biggest trap: flat vs namespaced.**
+> `useTable()` and `useCrud()` return **different shapes for the same data**.
+> Mixing them up silently yields `undefined`, not an error.
+>
+> ```js
+> // useTable() — FLAT
+> const t = useTable();
+> t.searchTerm; t.setSearchTerm("x"); t.currentPage; t.goToNextPage(); t.handleRowClick(row);
+>
+> // useCrud() — NAMESPACED
+> const c = useCrud();
+> c.search.term; c.search.setTerm("x"); c.pagination.currentPage; c.pagination.goToNextPage(); c.row.onClick(e, row);
+> ```
 
-### Code Examples
+## Provider hierarchy
+
+```
+TableProvider              owns TableContext + QueryClient + TanStack Table instance
+  └─ CrudProvider          owns CrudContext (the useCrud result)
+       └─ DetailViewProvider   single-record detail + workflow
+```
+
+`TableProvider` requires `apiUrl` and creates its own `QueryClient`. You do not
+need to supply `QueryClientProvider` yourself.
+
+```jsx
+<TableProvider apiUrl="/api/orders">
+  <YourLayout />
+</TableProvider>
+```
+
+| `TableProvider` prop | Type | Notes |
+|---------------------|------|-------|
+| `apiUrl` | string | **required** |
+| `children` | ReactNode | **required** |
+| `columns` | TableColumn[] | Client-side column overrides. |
+| `tableId` | string | Auto-derived from `apiUrl` when omitted. |
+| `enableDetailViewRoute` | boolean | Enables `/detail-view/:object_uuid`. |
+| `scrollMode` | `"pagination" \| "infinite"` | Falls back to API metadata. |
+| `filterLayout` | `"sidebar" \| "horizontal"` | Falls back to API metadata. |
+| `renderActions` / `renderStatus` / `renderTags` / `renderWorkflowTransitions` | fn | Cell render props (moved here from `useTableData`). |
+
+## Provider requirements
+
+Getting this wrong throws at runtime rather than failing quietly.
+
+| Hook | Provider | Outside the provider |
+|------|----------|----------------------|
+| `useTableContext` | `TableProvider` | **throws** |
+| `useTableSearch` | `TableProvider` | **throws** |
+| `useTableFilters` | `TableProvider` | **throws** |
+| `useTableColumns` | `TableProvider` | **throws** |
+| `useTableSelection` | `TableProvider` | **throws** |
+| `useTableActions` | `TableProvider` | **throws** |
+| `useCrudContext` | `CrudProvider` | **throws** |
+| `useCrud` | `TableProvider` | does not throw, but `table` is `null` and data never loads |
+| `useTable` | optional (dual-mode) | safe |
+| `useTablePagination` | optional (accepts overrides) | safe |
+| `useDetailView` | `DetailViewProvider` optional | safe |
+| `useWorkflow` | `DetailViewProvider` optional (auto-syncs) | safe |
+| `useDetailViewContext` | `DetailViewProvider` | returns `null` |
+| `useOptionalCrudContext` | `CrudProvider` | returns `null` |
+| `useTableRowActions` | none (own local state) | standalone |
+| `useTableData` | `QueryClientProvider` only | supplied by `TableProvider` |
+
+---
+
+## useTable() — flat, everything in one call
+
+Dual-mode. Reads `TableContext` when given no endpoint; creates a standalone
+TanStack Table instance when given one. Never throws.
+
+```ts
+useTable<T = TableRowData>(props?: {
+  api_endpoint?: string;
+  apiUrl?: string;      // legacy alias for api_endpoint
+  columns?: ColumnDef<T>[];
+  tableId?: string;
+}): UseTableReturn<T>
+```
+
+Returns a **flat** object (~90 keys). Grouped here by concern for readability —
+but every key sits at the top level.
+
+| Group | Keys |
+|-------|------|
+| Data | `data`, `flatData`, `isLoading`, `isFetching`, `error`, `totalCount`, `totalDBRowCount` |
+| Search | `searchTerm`, `setSearchTerm(term)`, `debouncedSearchTerm`, `isSearchActive` |
+| Filters | `filterObj`, `setFilterObj(obj)`, `debouncedFilterObj`, `activeFilterCount`, `clearFilters()`, `setFilter(key, value)`, `removeFilter(key)`, `hasFilter(key)`, `getFilter(key)` |
+| Pagination | `currentPage`, `setCurrentPage(p)`, `totalPages`, `rowsPerPage`, `setRowsPerPage(n)`, `hasNextPage`, `hasPreviousPage`, `canGoNext`, `canGoPrevious`, `pageNumbers`, `goToFirstPage()`, `goToLastPage()`, `goToNextPage()`, `goToPreviousPage()`, `startRow`, `endRow` |
+| Selection | `selectedRows`, `setSelectedRows`, `selectRow(row)`, `selectAll()`, `clearSelection()`, `selectedCount`, `isAllSelected`, `isSomeSelected`, `hasSelection`, `selectedRowIds`, `isRowSelected(row)`, `toggleRows(rows)`, `selectByIds(ids)`, `deselectByIds(ids)`, `getSelectedData()`, `withSelectedRows(cb)` |
+| Columns | `columnVisibility`, `setColumnVisibility`, `columnOrder`, `setColumnOrder`, `columnPinning`, `setColumnPinning`, `sorting`, `setSorting`, `visibleColumns`, `hiddenColumns`, `visibleColumnCount`, `hiddenColumnCount`, `totalColumnCount`, `toggleColumnVisibility(id)`, `showColumn(id)`, `hideColumn(id)`, `showAllColumns()`, `hideAllColumns()`, `isColumnVisible(id)`, `moveColumn(columnId, toIndex)`, `pinColumnLeft(id)`, `pinColumnRight(id)`, `unpinColumn(id)` |
+| Detail | `selectedDetailObjectUuid`, `setSelectedDetailObjectUuid`, `selectedDetailRow`, `detailDrawerOpen`, `setDetailDrawerOpen(open)`, `handleRowClick(row, event?)`, `closeDetailDrawer()`, `navigateToNextEntry?()`, `navigateToPreviousEntry?()` |
+| Actions | `refresh()`, `refetch()`, `invalidateCache()`, `isRefreshing`, `canRefresh`, `hasError`, `exportData(format?)`, `printData()`, `performBulkAction(action, rows?)`, `resetTable()`, `getTableSummary()`, `handleUploadClick()`, `handleDownloadClick()` |
+| Meta | `apiUrl`, `tableId`, `metadata`, `isInfiniteScroll`, `table`, `columns`, `rawResponse?`, `rawTableData?` |
+
+> **Signature traps.** These differ from what older docs claim:
+> - `moveColumn(columnId, toIndex)` — not `(fromIndex, toIndex)`
+> - `hiddenColumns` is `string[]` — not `ColumnDef[]`
+> - `isRowSelected(row)` takes a TanStack `Row<T>` — not an id string
+
+```jsx
+import { TableProvider, useTable } from "@zango-core/crud/table";
+
+function OrdersTable() {
+  const t = useTable();
+  if (t.isLoading) return <p>Loading…</p>;
+
+  return (
+    <div>
+      <input
+        value={t.searchTerm}
+        onChange={(e) => t.setSearchTerm(e.target.value)}
+        placeholder="Search orders…"
+      />
+      <ul>
+        {t.data.map((row) => (
+          <li key={row.id} onClick={() => t.handleRowClick(row)}>{row.name}</li>
+        ))}
+      </ul>
+      <button disabled={!t.hasPreviousPage} onClick={t.goToPreviousPage}>Prev</button>
+      <span>Page {t.currentPage + 1} of {t.totalPages}</span>
+      <button disabled={!t.hasNextPage} onClick={t.goToNextPage}>Next</button>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <TableProvider apiUrl="/api/orders">
+      <OrdersTable />
+    </TableProvider>
+  );
+}
+```
+
+---
+
+## useCrud() — namespaced, with prop bags
+
+Feature-complete CRUD state plus prebuilt prop bags you spread onto the `Crud*`
+components from `@zango-core/crud/ui`. This is the composable path.
+
+```ts
+useCrud<T = TableRowData>(options?: UseCrudOptions): UseCrudReturn<T>
+```
+
+> **⚠️ `useCrud` takes no `apiUrl` and no `tableId`.** Some published examples
+> show `useCrud({ apiUrl: "/api/orders" })` — that is wrong and will not
+> type-check. The endpoint comes from the surrounding `TableProvider`.
+> `useCrud` must be called inside one; used standalone its `table` is always
+> `null` and no data loads.
+
+| `UseCrudOptions` | Type |
+|------------------|------|
+| `initialFilters` | `Record<string, unknown>` |
+| `initialSort` | `SortingState` |
+| `initialPage` | number |
+| `rowsPerPage` | number |
+| `scrollMode` | `"pagination" \| "infinite"` |
+| `filterLayout` | `"sidebar" \| "horizontal"` |
+| `enableDetailView` | boolean |
+| `defaultDetailView` | `"drawer" \| "navigate" \| "custom" \| "none"` |
+| `navigateUrl` | string |
+| `formProps` | `Record<string, unknown>` |
+| `config` | `Record<string, unknown>` |
+
+> **⚠️ `scrollMode` is `"pagination"`,** not `"paginated"`.
+
+**Return shape** — flat at the top, namespaced underneath:
+
+| Top level | `data`, `flatData`, `totalCount`, `totalDBRowCount`, `isLoading`, `isFetching`, `error`, `metadata`, `isMetadataLoading`, `features`, `table` |
+|-----------|---|
+| `features` | `{ add?, edit?, delete?, upload?, download? }` |
+| `search` | `{ term, setTerm, debouncedTerm, isActive }` |
+| `filters` | `{ filterObj, setFilterObj, setFilter, removeFilter, clearFilters, hasFilter, getFilter, activeCount, debouncedFilterObj, columns }` |
+| `pagination` | `{ currentPage, setCurrentPage, totalPages, rowsPerPage, setRowsPerPage, hasNextPage, hasPreviousPage, canGoNext, canGoPrevious, goToNextPage, goToPreviousPage, goToFirstPage, goToLastPage, pageNumbers, startRow, endRow, isInfiniteScroll, fetchMoreOnBottomReached? }` |
+| `selection` | `{ selectedRows, selectRow, selectAll, clearSelection, selectedCount, isAllSelected, isSomeSelected, hasSelection, isRowSelected, selectedRowIds, toggleRows, getSelectedData }` |
+| `columns` | `{ definitions, visibility, setVisibility, order, setOrder, pinning, setPinning, sorting, setSorting, wrap, setWrap }` |
+| `row` | `{ onClick(event, row), onClickAction, navigateUrl?, customClickHandler? }` |
+| `detail` | `{ selectedRow, selectedObjectUuid, drawerOpen, open(row), close(), navigateNext(), navigatePrevious(), canNavigateNext, canNavigatePrevious }` |
+| `actions` | `{ refresh, refetch, invalidateCache, executeRowAction(actionKey, objectUuid), executeTransition(transitionName, objectUuid) }` |
+| `workflow` | `{ details, transitions, tags }` |
+| `ui` | `{ hideControls, setHideControls, filterLayout }` |
+| Prop bags | `headerProps`, `toolbarProps`, `tableProps`, `paginationProps`, `filterProps`, `detailProps`, `addFormProps` |
+
+### Composing with the /ui components
+
+The prop bags line up one-to-one with the presentational components. This is the
+whole point of `useCrud` — you own the layout, the package owns the wiring.
+
+```jsx
+import { TableProvider, useCrud } from "@zango-core/crud/table";
+import {
+  CrudHeader, CrudToolbar, CrudTable, CrudPagination, CrudFilters, CrudDetailDrawer,
+} from "@zango-core/crud/ui";
+
+function OrdersLayout() {
+  const crud = useCrud();
+
+  return (
+    <div className="grid grid-cols-[240px_1fr] gap-4">
+      <aside>
+        <CrudFilters {...crud.filterProps} />
+      </aside>
+
+      <main>
+        <CrudHeader {...crud.headerProps} />
+        <CrudToolbar {...crud.toolbarProps} />
+        <CrudTable {...crud.tableProps} />
+        <CrudPagination {...crud.paginationProps} />
+      </main>
+
+      <CrudDetailDrawer {...crud.detailProps} />
+    </div>
+  );
+}
+
+export default function Orders() {
+  return (
+    <TableProvider apiUrl="/api/orders">
+      <OrdersLayout />
+    </TableProvider>
+  );
+}
+```
+
+### Sharing crud state with deep children
+
+`useCrud` returns a value; `CrudProvider` publishes it. Children then read it
+with `useCrudContext()` instead of prop drilling.
+
+```jsx
+import { TableProvider, CrudProvider, useCrud, useCrudContext } from "@zango-core/crud/table";
+
+function OrderCount() {
+  const crud = useCrudContext();        // throws outside CrudProvider
+  return <p>{crud.totalCount} orders</p>;
+}
+
+function OrdersRoot() {
+  const crud = useCrud();               // no arguments
+  return (
+    <CrudProvider value={crud}>
+      <OrderCount />
+    </CrudProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <TableProvider apiUrl="/api/orders">
+      <OrdersRoot />
+    </TableProvider>
+  );
+}
+```
+
+Use `useOptionalCrudContext()` when a component may render outside a
+`CrudProvider` — it returns `null` instead of throwing.
+
+> Anything rendered inside a `CrudHandler` can also call `useCrudContext()`,
+> because `CrudHandler` publishes its own `useCrud` result. See Part 2.
+
+---
+
+## Slice hooks
+
+Each covers one concern and reads the surrounding `TableProvider`. All return
+**flat** objects. All except `useTablePagination` and `useTableRowActions`
+throw when used outside `TableProvider`.
+
+| Hook | Signature | Returns |
+|------|-----------|---------|
+| `useTableSearch` | `useTableSearch()` | `searchTerm`, `setSearchTerm`, `debouncedSearchTerm` — three keys only |
+| `useTableFilters` | `useTableFilters()` | `filterObj`, `setFilterObj`, `debouncedFilterObj`, `activeFilterCount`, `clearFilters`, `setFilter`, `removeFilter`, `hasFilter`, `getFilter` |
+| `useTablePagination` | `useTablePagination(overrides?)` | `currentPage`, `setCurrentPage`, `totalPages`, `rowsPerPage`, `setRowsPerPage`, `totalCount`, `canGoNext`, `canGoPrevious`, `hasNextPage`, `hasPreviousPage`, `pageNumbers`, `startRow`, `endRow`, `goToFirstPage`, `goToLastPage`, `goToNextPage`, `goToPreviousPage`, `isInfiniteScroll` |
+| `useTableSelection` | `useTableSelection()` | `selectedRows`, `setSelectedRows`, `selectRow`, `selectAll`, `clearSelection`, `selectedCount`, `isAllSelected`, `isSomeSelected`, `hasSelection`, `selectedRowIds`, `isRowSelected`, `toggleRows`, `selectByIds`, `deselectByIds`, `getSelectedData`, `withSelectedRows` |
+| `useTableColumns` | `useTableColumns()` | `columns`, `columnVisibility`, `setColumnVisibility`, `columnOrder`, `setColumnOrder`, `columnPinning`, `setColumnPinning`, `sorting`, `setSorting`, `visibleColumns`, `hiddenColumns`, `visibleColumnCount`, `hiddenColumnCount`, `totalColumnCount`, `toggleColumnVisibility`, `showColumn`, `hideColumn`, `showAllColumns`, `hideAllColumns`, `isColumnVisible`, `moveColumn`, `pinColumnLeft`, `pinColumnRight`, `unpinColumn` |
+| `useTableActions` | `useTableActions()` | `refresh`, `refetch`, `invalidateCache`, `isRefreshing`, `canRefresh`, `isLoading`, `isFetching`, `hasError`, `error`, `exportData`, `printData`, `performBulkAction`, `resetTable`, `getTableSummary`, `apiUrl`, `tableId`, `config`, `features` |
+
+> **Slice hooks are narrower than `useTable`.** `isSearchActive`,
+> `handleUploadClick` and `handleDownloadClick` exist on `useTable()` only —
+> not on `useTableSearch()` or `useTableActions()`.
+| `useTableRowActions` | `useTableRowActions(options?)` | Row-action menu state. Standalone — no provider needed. |
+| `useTableContext` | `useTableContext()` | Raw `TableContext` value. |
+
+```jsx
+import { TableProvider, useTableSearch, useTablePagination } from "@zango-core/crud/table";
+
+function SearchBar() {
+  const { searchTerm, setSearchTerm } = useTableSearch();
+  return <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />;
+}
+
+function Pager() {
+  const { currentPage, totalPages, goToNextPage, hasNextPage } = useTablePagination();
+  return (
+    <>
+      <span>{currentPage + 1} / {totalPages}</span>
+      <button disabled={!hasNextPage} onClick={goToNextPage}>Next</button>
+    </>
+  );
+}
+```
+
+### useTableData() — the raw engine
+
+Lowest level. Fetches and normalizes; no table instance, no UI. Needs only a
+`QueryClientProvider` (which `TableProvider` supplies).
+
+```ts
+useTableData({
+  apiUrl?: string;
+  tableId?: string;
+  tableMetadata?: TableMetadata;
+  columns?: ColumnDef<TableRowData>[];
+  preferProvidedColumns?: boolean;        // default true
+  scrollMode?: "pagination" | "infinite";
+  filterLayout?: "sidebar" | "horizontal";
+})
+```
+
+> Cell render props were removed from this hook. They now live on
+> `TableProvider` (`renderActions`, `renderStatus`, `renderTags`,
+> `renderWorkflowTransitions`).
+
+---
+
+## Detail and workflow hooks
+
+### useDetailView()
+
+```ts
+useDetailView(options?: { apiUrl?: string; enabled?: boolean }): {
+  data: DetailViewData | null;
+  loading: boolean;
+  error: Error | null;
+  workflowDetails: WorkflowDetails | undefined;   // undefined, not null
+  rowActions: unknown[] | undefined;
+  refresh: () => Promise<void>;                   // returns a Promise
+  objectUuid: string | undefined;
+}
+```
+
+### useDetailViewContext()
+
+Reads the shared `DetailViewProvider` value. Returns `null` outside one —
+null-safe, never throws.
+
+### useWorkflow()
+
+```ts
+useWorkflow(options?: {
+  apiUrl?: string;
+  initialWorkflowDetails?: WorkflowDetails;
+  staticData?: unknown;                 // bypasses the API call
+  objectUuid?: string;
+  beforeTransition?: (t: Transition) => Promise<void> | void;
+  afterTransition?: (t: Transition, success: boolean) => Promise<void> | void;
+  beforeTagChange?: (tag: TagDetail, newState: string) => Promise<void> | void;
+  afterTagChange?: (tag: TagDetail, success: boolean) => Promise<void> | void;
+}): {
+  workflowDetails: WorkflowDetails | undefined;
+  loading: boolean;
+  error: Error | null;
+  executeTransition: (t: Transition) => Promise<boolean>;
+  toggleTag: (tag: TagDetail) => Promise<boolean>;
+  refreshWorkflow: () => Promise<void>;
+  handleFormSubmit; setWorkflowDetails; onCancel;
+}
+```
+
+Auto-syncs with `DetailViewProvider` when rendered inside one.
+
+```jsx
+import { DetailViewProvider, useDetailView, useWorkflow } from "@zango-core/crud/table";
+
+function OrderDetail() {
+  const { data, loading } = useDetailView();
+  const { workflowDetails, executeTransition } = useWorkflow();
+
+  if (loading) return <p>Loading…</p>;
+
+  return (
+    <div>
+      <h2>{data?.title}</h2>
+      <p>Status: {workflowDetails?.current_status_meta?.status_label}</p>
+      {workflowDetails?.next_transitions?.map((t) => (
+        <button key={t.name} onClick={() => executeTransition(t)}>
+          {t.display_name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function Wrapper({ objectUuid }) {
+  return (
+    <DetailViewProvider apiUrl="/api/orders" objectUuid={objectUuid}>
+      <OrderDetail />
+    </DetailViewProvider>
+  );
+}
+```
+
+---
+
+# Part 2 — CrudHandler (drop-in)
+
+`CrudHandler` renders a complete table — header, search, filters, pagination,
+detail drawer — from one endpoint. Fully supported; not deprecated.
+
+**It is the same engine as Part 1, pre-wired.** Internally it renders
+`TableProvider`, calls `useCrud()`, publishes the result through `CrudProvider`,
+and spreads the prop bags onto the `Crud*` components. So anything you render
+inside it can call `useCrudContext()`, `useTableContext()` or the slice hooks
+without prop drilling.
+
+**Reach for it when** a standard table is what you want. **Reach for the hooks
+when** you control the markup — a kanban board, a calendar, a card grid, or any
+layout the drop-in does not produce.
 
 ```jsx
 import { CrudHandler } from "@zango-core/crud/table";
+
+export function Users() {
+  return <CrudHandler api_endpoint="/api/users/" />;
+}
 ```
 
-```jsx
-<CrudHandler api_endpoint="/api/users" />
-```
+## Props
+
+`api_endpoint` is the only required prop.
+
+### Core
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `api_endpoint` | string | — | **Required.** URL of a Zango CRUD view. |
+| `tableId` | string | auto | Identifier for state management. Derived from `api_endpoint` when omitted. |
+| `columns` | unknown[] | — | Client-side column definitions. |
+| `className` | string | — | Class for the main container. |
+| `style` | React.CSSProperties | — | Inline styles for the main container. |
+
+### Section visibility
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `showHeader` | boolean | true | Show/hide the header section. |
+| `showUtilities` | boolean | true | Show/hide the utilities panel. |
+| `showBody` | boolean | true | Show/hide the table body. |
+| `showPagination` | boolean | true | Show/hide pagination controls. |
+| `showAddButton` | boolean | metadata | Show/hide the add button. Falls back to API metadata. |
+
+### Behaviour
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `enableDetailViewRoute` | boolean | false | Enable the `/detail-view/:object_uuid` route. |
+| `scrollMode` | `"pagination" \| "infinite"` | metadata | Pagination or infinite scroll. |
+| `filterLayout` | `"sidebar" \| "horizontal"` | metadata | Filter panel placement. |
+| `detailDrawerSize` | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | `"md"` | Detail drawer width. Precedence: this prop → `metadata.detail_config.drawer_size` → `"md"`. (A source comment claims `"lg"`; the code uses `"md"`.) |
+| `defaultDetailView` | `"drawer" \| "navigate" \| "custom" \| "none"` | — | What a row click does. |
+
+### Section replacement
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `customHeader` | ComponentType \| string | Replace the header. A string renders as the title. |
+| `customUtilities` | ComponentType | Replace the utilities/action bar. |
+| `customTableBody` | ComponentType | Replace the table body — this is how you get kanban, calendar or card layouts. |
+| `customPagination` | ComponentType | Replace pagination. |
+| `customDrawerDetail` | ComponentType | Custom drawer detail. Receives **only** `{ selectedRow, open, onClose }`. |
+| `customMainDetail` | ComponentType | Custom full-page detail for route-based navigation. Receives fetched data — see below. |
+
+> **⚠️ The two detail props are NOT symmetric.** This trips people up.
+>
+> **`customDrawerDetail` gets no fetched data** — exactly
+> `{ selectedRow, open, onClose }`. To load the record, call `useDetailView()`
+> inside your component or wrap it in `DetailViewProvider`. Examples that
+> destructure `data` or `workflowDetails` from this prop are wrong.
+>
+> **`customMainDetail` does get fetched data**, injected by `DetailWrapper`:
+> `apiUrl`, `data`, `loading`, `error`, `workflowDetails`, `generalDetails`
+> (i.e. `data.general_details`), `sections`, `rowActions`, `objectUuid`, `pk`,
+> `onRefresh`. Note these are **camelCase**, unlike the snake_case API payload.
+
+### Utilities
+
+Available both as top-level shortcuts and inside `utilityProps`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `showSearch` | boolean | true | Search input in the utilities bar. |
+| `showFiltersButton` | boolean | true | Filters toggle button. |
+| `showColumnOptions` | boolean | true | Column visibility menu. |
+| `showUpload` | boolean | false | Upload button. |
+| `showDownload` | boolean | true | Download button. |
+| `searchPlaceholder` | string | — | Search placeholder text. |
+| `extraLeftActions` | ReactNode | — | Extra actions on the left. |
+| `extraRightActions` | ReactNode | — | Extra actions on the right. |
+
+`utilityProps` accepts all of the above plus icon/label overrides:
+`filterIcon`, `filterLabel`, `filterIconPosition`, `filterBadgeClassName`,
+`filterBadgeStyle`, `hideFilterIcon`, `hideFilterBadge`, `downloadIcon`,
+`downloadLabel`, `downloadIconPosition`, `hideDownloadIcon`.
+
+### headerProps
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `headerProps.title` | string | Header title text. |
+| `headerProps.showSearch` | boolean | Show/hide search in header. |
+| `headerProps.showFilters` | boolean | Show/hide filter controls. |
+| `headerProps.showActions` | boolean | Show/hide action buttons. |
+| `headerProps.searchPlaceholder` | string | Search placeholder. |
+| `headerProps.customLeftActions` | ReactNode | Custom actions, left. |
+| `headerProps.customRightActions` | ReactNode | Custom actions, right. |
+
+### Render props
+
+Customize individual cell types without replacing the body.
+
+| Prop | Receives |
+|------|----------|
+| `renderActions` | `{ actions, row, onActionClick, menuOpen, setMenuOpen }` |
+| `renderStatus` | `{ value, statusValue, isObject, isString, isHtml }` |
+| `renderTags` | `{ tags, visibleTags, remainingTags, hasMoreTags, maxVisible }` |
+| `renderWorkflowTransitions` | `{ transitions, visibleTransitions, dropdownTransitions, row, onTransitionClick, menuOpen, setMenuOpen }` |
+
+### Styling and forms
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `customClass` | TableCustomClasses | CSS class overrides for table elements. |
+| `customStyle` | TableCustomStyles | Dynamic style functions for table elements. |
+| `formProps` | FormProps | Forwarded to every `FormRenderer` this handler renders (add form, row-action forms). Accepts `showConfirmAlert`, `customConfirmAlert`, `confirmTitle`, `confirmMessage`, `confirmText`, `cancelText`. |
+
+## Examples
 
 ```jsx
-// Hide specific sections
+// Hide sections
 <CrudHandler
   api_endpoint="/api/users"
   showHeader={false}
@@ -112,111 +635,99 @@ import { CrudHandler } from "@zango-core/crud/table";
 ```
 
 ```jsx
-// Replace entire sections with custom components
+// Replace sections
 <CrudHandler
   api_endpoint="/api/products"
-  customHeader={<MyCustomHeader />}
-  customUtilities={<MyCustomUtilities />}
-  customTableBody={<MyCustomBody />}
-  customPagination={<MyCustomPagination />}
-/>
-```
-
-```json
-// GET /api/users/?action=get_table_metadata
-{
-  "response": {
-    "table_metadata": {
-      "columns": [...],
-      "filters": [...],
-      "has_add_perm": true,
-      "has_upload_perm": false,
-      "has_download_perm": true,
-      "utilities_config": {
-        "show_search": true,
-        "show_filters_button": true,
-        "show_column_options": true
-      }
-    }
-  }
-}
-```
-
-```jsx
-<CrudHandler
-  api_endpoint="/api/users"
-  enableDetailViewRoute={true}
-  utilityProps={{
-    showUpload: true
-  }}
+  customHeader={MyCustomHeader}
+  customUtilities={MyCustomUtilities}
+  customTableBody={MyCustomBody}
+  customPagination={MyCustomPagination}
 />
 ```
 
 ```jsx
+// Header and utilities configuration
 <CrudHandler
   api_endpoint="/api/crud"
   headerProps={{
     title: "User Management",
     showSearch: true,
-    showFilters: true,
-    showActions: true,
     searchPlaceholder: "Search users...",
-    customLeftActions: <Button>Import</Button>,
-    customRightActions: <Button>Export</Button>
+    customRightActions: <Button>Export</Button>,
   }}
   utilityProps={{
-    showSearch: false,
     showUpload: true,
-    showDownload: true,
-    showFiltersButton: true,
-    showColumnOptions: true,
+    showColumnOptions: false,
     searchPlaceholder: "Quick search...",
-    extraLeftActions: <Button>Bulk Actions</Button>,
-    extraRightActions: <Button>Settings</Button>
   }}
   className="custom-table-wrapper"
-  style={{ height: '600px' }}
+  style={{ height: "600px" }}
 />
 ```
 
 ```jsx
-<CrudHandler
-  api_endpoint="/api/orders"
-  customHeader="Order Management"
-  customUtilities={<MyAdvancedFilters />}
-  headerProps={{
-    showSearch: false,
-    customRightActions: <RefreshButton />
-  }}
-  utilityProps={{
-    showSearch: true,
-    showColumnOptions: false
-  }}
-/>
+// Custom drawer detail — fetch the record yourself
+import { CrudHandler, DetailViewProvider, useDetailView } from "@zango-core/crud/table";
+
+function UserDrawer({ selectedRow, open, onClose }) {
+  const objectUuid = selectedRow?.original?.object_uuid;
+  return (
+    <DetailViewProvider apiUrl="/api/users" objectUuid={objectUuid}>
+      <UserDrawerBody open={open} onClose={onClose} />
+    </DetailViewProvider>
+  );
+}
+
+function UserDrawerBody({ open, onClose }) {
+  const { data, loading, workflowDetails } = useDetailView();
+  if (!open) return null;
+  if (loading) return <p>Loading…</p>;
+  return (
+    <aside>
+      <h2>{data?.title}</h2>
+      <p>{workflowDetails?.current_status_meta?.status_label}</p>
+      <button onClick={onClose}>Close</button>
+    </aside>
+  );
+}
+
+<CrudHandler api_endpoint="/api/users" customDrawerDetail={UserDrawer} />
 ```
 
 ```jsx
-<CrudHandler
-  api_endpoint="/api/users"
-  customDrawerDetail={({ selectedRow, open, onClose, data, workflowDetails }) => (
-    <UserDetailDrawer
-      user={data}
-      workflowDetails={workflowDetails}
-      isOpen={open}
-      onClose={onClose}
-    />
-  )}
-  customMainDetail={({ data, workflowDetails, onRefresh }) => (
-    <UserDetailPage
-      userData={data}
-      workflowDetails={workflowDetails}
-      onRefresh={onRefresh}
-    />
-  )}
-/>
+// Custom list layout (kanban / calendar / cards) via customTableBody.
+// The body reads table state from context — no props needed.
+import { CrudHandler, useTable } from "@zango-core/crud/table";
+
+function KanbanBody() {
+  const { data, isLoading, handleRowClick } = useTable();
+  if (isLoading) return <p>Loading…</p>;
+
+  const columns = ["todo", "in_progress", "done"];
+  return (
+    <div className="flex gap-4">
+      {columns.map((status) => (
+        <div key={status} className="flex-1">
+          <h3>{status}</h3>
+          {data
+            .filter((row) => row.workflow_status?.current_status === status)
+            .map((row) => (
+              <article key={row.object_uuid} onClick={() => handleRowClick(row)}>
+                {row.title}
+              </article>
+            ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+<CrudHandler api_endpoint="/api/tasks" customTableBody={KanbanBody} />
 ```
 
 ---
+
+# Part 3 — Components, styling and advanced customization
 
 ## Table Styling (Styling)
 
@@ -566,192 +1077,6 @@ interface ActionButtonState {
 }
 ```
 
----
-
-## useTable() (Hook)
-
-**Sections:** Overview | Context Values | Full Signature | Usage Examples
-
-### Props
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `data` | array | - | Array of items currently rendered in the body. |
-| `totalCount` | number | - | Total items across all pages. |
-| `isLoading` | boolean | - | Loading state for list fetches. |
-| `currentPage` | number | - | Current page number. |
-| `rowsPerPage` | number | - | Items per page. |
-| `totalPages` | number | - | Total number of pages. |
-| `hasPreviousPage` | boolean | - | Whether a previous page exists. |
-| `hasNextPage` | boolean | - | Whether a next page exists. |
-| `setCurrentPage` | function | - | Function to change the current page. |
-| `setRowsPerPage` | function | - | Function to change page size. |
-| `selectedDetailRow` | object | null | - | Currently selected row for detail view. |
-| `openDetailDrawer` | function | - | Function to open the detail drawer. |
-| `closeDetailDrawer` | function | - | Function to close the detail drawer. |
-| `navigateToNextEntry` | function | - | Navigate to next row in detail view. |
-| `navigateToPreviousEntry` | function | - | Navigate to previous row in detail view. |
-| `searchTerm` | string | - | Current search term. |
-| `setSearchTerm` | function | - | Function to update the search term. |
-| `activeFilterCount` | number | - | Number of currently active filters. |
-| `handleRowClick` | function | - | Function to handle row clicks. |
-| `refetch` | function | - | Manually refetch the table data. |
-| `api_endpoint` | string | - | The API endpoint being used. |
-
-### Code Examples
-
-```tsx
-const {
-  // Data & State
-  data,                    // array of items rendered in the body
-  totalCount,             // total items across pages
-  isLoading,              // loading state for list fetches
-
-  // Pagination
-  currentPage,            // current page number
-  rowsPerPage,           // items per page
-  totalPages,            // total number of pages
-  hasPreviousPage,       // boolean for pagination
-  hasNextPage,           // boolean for pagination
-  setCurrentPage,        // function to change page
-  setRowsPerPage,       // function to change page size
-
-  // Selection & Navigation
-  selectedDetailRow,     // currently selected row for detail view
-  openDetailDrawer,      // function to open detail drawer
-  closeDetailDrawer,     // function to close detail drawer
-  navigateToNextEntry,   // navigate to next row in detail view
-  navigateToPreviousEntry, // navigate to previous row in detail view
-
-  // Search & Filters
-  searchTerm,            // current search term
-  setSearchTerm,         // function to update search
-  activeFilterCount,     // number of active filters
-
-  // Actions
-  handleRowClick,        // function to handle row clicks
-  refetch,              // manually refetch the table
-
-  // API
-  api_endpoint,         // the API endpoint being used
-} = useTable();
-```
-
-```jsx
-// A custom component that shows table stats
-const TableStatsBar = () => {
-  const { totalCount, currentPage, totalPages, isLoading } = useTable();
-
-  if (isLoading) return <div>Loading...</div>;
-
-  return (
-    <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg">
-      <span className="text-sm font-medium">
-        {totalCount} total records
-      </span>
-      <span className="text-sm text-gray-500">
-        Page {currentPage} of {totalPages}
-      </span>
-    </div>
-  );
-};
-
-// Use inside CrudHandler
-<CrudHandler
-  api_endpoint="/api/users"
-  customHeader={() => <TableStatsBar />}
-/>
-```
-
-```jsx
-const AdvancedSearch = () => {
-  const { searchTerm, setSearchTerm, activeFilterCount, refetch } = useTable();
-
-  return (
-    <div className="flex items-center gap-3 p-4">
-      <input
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="Search..."
-        className="flex-1 px-3 py-2 border rounded-lg"
-      />
-      <span className="text-xs text-gray-500">
-        {activeFilterCount} filters active
-      </span>
-      <button onClick={refetch} className="px-3 py-2 bg-blue-500 text-white rounded-lg">
-        Refresh
-      </button>
-    </div>
-  );
-};
-
-<CrudHandler
-  api_endpoint="/api/users"
-  customUtilities={() => <AdvancedSearch />}
-/>
-```
-
-```jsx
-const SimplePagination = () => {
-  const {
-    currentPage, totalPages, setCurrentPage,
-    hasPreviousPage, hasNextPage
-  } = useTable();
-
-  return (
-    <div className="flex items-center justify-center gap-2 py-4">
-      <button
-        disabled={!hasPreviousPage}
-        onClick={() => setCurrentPage(currentPage - 1)}
-        className="px-3 py-1 border rounded disabled:opacity-50"
-      >
-        Previous
-      </button>
-      <span className="text-sm">
-        {currentPage} / {totalPages}
-      </span>
-      <button
-        disabled={!hasNextPage}
-        onClick={() => setCurrentPage(currentPage + 1)}
-        className="px-3 py-1 border rounded disabled:opacity-50"
-      >
-        Next
-      </button>
-    </div>
-  );
-};
-
-<CrudHandler
-  api_endpoint="/api/users"
-  customPagination={() => <SimplePagination />}
-/>
-```
-
-```jsx
-const DetailNavigator = () => {
-  const {
-    selectedDetailRow,
-    navigateToNextEntry,
-    navigateToPreviousEntry,
-    closeDetailDrawer
-  } = useTable();
-
-  if (!selectedDetailRow) return null;
-
-  return (
-    <div className="flex items-center gap-2 p-2 border-b">
-      <button onClick={navigateToPreviousEntry}>Previous</button>
-      <span className="text-sm text-gray-500">
-        Viewing: {selectedDetailRow.original?.name}
-      </span>
-      <button onClick={navigateToNextEntry}>Next</button>
-      <button onClick={closeDetailDrawer} className="ml-auto">Close</button>
-    </div>
-  );
-};
-```
-
----
 
 ## Detail Views (Views)
 
@@ -1643,289 +1968,3 @@ import {
 
 ---
 
-## Hooks Reference (Hooks)
-
-**Sections:** useTable() | useTableData() | useTableSearch() | useTableFilters() | useTablePagination() | useTableSelection() | useTableColumns() | useTableActions() | useTableRowActions() | useDetailView() | useDetailViewContext() | useWorkflow()
-
-### Props
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `data` | array | - | Flat array of row objects for the current page. |
-| `totalCount` | number | - | Total number of rows across all pages. |
-| `isLoading` | boolean | - | True while data is being fetched. |
-| `currentPage` | number | - | Zero-based index of the current page. |
-| `rowsPerPage` | number | - | Number of rows displayed per page. |
-| `totalPages` | number | - | Total number of pages. |
-| `hasPreviousPage` | boolean | - | Whether a previous page exists. |
-| `hasNextPage` | boolean | - | Whether a next page exists. |
-| `setCurrentPage` | (page: number) => void | - | Navigate to a specific page. |
-| `setRowsPerPage` | (size: number) => void | - | Change the page size. |
-| `selectedDetailRow` | object | null | - | The row currently open in the detail drawer. |
-| `openDetailDrawer` | (row) => void | - | Open the detail drawer for a row. |
-| `closeDetailDrawer` | () => void | - | Close the detail drawer. |
-| `navigateToNextEntry` | () => void | - | Move the detail drawer to the next row. |
-| `navigateToPreviousEntry` | () => void | - | Move the detail drawer to the previous row. |
-| `searchTerm` | string | - | Current search query. |
-| `setSearchTerm` | (term: string) => void | - | Update the search query. |
-| `activeFilterCount` | number | - | Number of currently active filters. |
-| `handleRowClick` | (row) => void | - | Default row-click handler that opens the detail drawer. |
-| `refetch` | () => void | - | Re-fetch data from the API. |
-| `api_endpoint` | string | - | The resolved API endpoint URL. |
-| `apiUrl` | string | - | API endpoint to fetch rows from. |
-| `columns` | array | - | Column definitions. If omitted, derived from tableMetadata. |
-| `tableMetadata` | object | - | Pre-fetched metadata object. If omitted, fetched from apiUrl. |
-| `flatData` | array | - | Flat array of row objects for the current page. |
-| `totalDBRowCount` | number | - | Total row count reported by the server. |
-| `totalPages` | number | - | Computed total pages based on row count and page size. |
-| `isLoading` | boolean | - | True during the initial data load. |
-| `isFetching` | boolean | - | True during any fetch, including background refetches. |
-| `error` | Error | null | - | Error object if the fetch failed. |
-| `searchTerm` | string | - | Current search term sent to the server. |
-| `setSearchTerm` | (term: string) => void | - | Update the search term. |
-| `filterObj` | object | - | Current filter state sent to the server. |
-| `setFilterObj` | (filters: object) => void | - | Replace all active filters. |
-| `currentPage` | number | - | Zero-based current page index. |
-| `setCurrentPage` | (page: number) => void | - | Navigate to a page. |
-| `rowsPerPage` | number | - | Rows per page. |
-| `setRowsPerPage` | (size: number) => void | - | Change page size. |
-| `sorting` | array | - | Current sorting state array. |
-| `setSorting` | (sorting: array) => void | - | Update sorting. |
-| `tableMetadata` | object | - | Resolved table metadata (fetched or passed in). |
-| `columns` | array | - | Effective column definitions used by the table. |
-| `refetch` | () => void | - | Re-fetch the current page of data. |
-| `searchTerm` | string | - | The raw search input value (updates on every keystroke). |
-| `setSearchTerm` | (term: string) => void | - | Update the search input. |
-| `debouncedSearchTerm` | string | - | The debounced value actually sent to the API. |
-| `filterObj` | object | - | Current filter key-value map sent to the API. |
-| `setFilterObj` | (filters: object) => void | - | Replace the entire filter state. |
-| `activeFilterCount` | number | - | Number of non-empty filter entries. |
-| `clearFilters` | () => void | - | Remove all active filters. |
-| `hasActiveFilters` | boolean | - | True when at least one filter is active. |
-| `currentPage` | number | - | Zero-based index of the current page. |
-| `totalPages` | number | - | Total number of pages. |
-| `rowsPerPage` | number | - | Rows displayed per page. |
-| `setCurrentPage` | (page: number) => void | - | Jump to a specific page. |
-| `setRowsPerPage` | (size: number) => void | - | Change the page size (resets to page 0). |
-| `hasPreviousPage` | boolean | - | Whether navigating backward is possible. |
-| `hasNextPage` | boolean | - | Whether navigating forward is possible. |
-| `goToFirstPage` | () => void | - | Navigate to the first page. |
-| `goToLastPage` | () => void | - | Navigate to the last page. |
-| `selectedRows` | array | - | Array of currently selected row objects or IDs. |
-| `setSelectedRows` | (rows: array) => void | - | Directly set the selected rows. |
-| `isAllSelected` | boolean | - | True when every visible row is selected. |
-| `toggleSelectAll` | () => void | - | Select all visible rows, or deselect all if already selected. |
-| `toggleSelectRow` | (row) => void | - | Toggle selection for a single row. |
-| `clearSelection` | () => void | - | Deselect all rows. |
-| `visibleColumns` | array | - | Array of currently visible column definitions. |
-| `hiddenColumns` | array | - | Array of currently hidden column definitions. |
-| `toggleColumnVisibility` | (columnId: string) => void | - | Toggle a column between visible and hidden. |
-| `showColumn` | (columnId: string) => void | - | Make a specific column visible. |
-| `hideColumn` | (columnId: string) => void | - | Hide a specific column. |
-| `showAllColumns` | () => void | - | Make all columns visible. |
-| `hideAllColumns` | () => void | - | Hide all columns. |
-| `isColumnVisible` | (columnId: string) => boolean | - | Check if a column is currently visible. |
-| `moveColumn` | (columnId: string, newIndex: number) => void | - | Reorder a column to a new position. |
-| `pinColumnLeft` | (columnId: string) => void | - | Pin a column to the left side of the table. |
-| `pinColumnRight` | (columnId: string) => void | - | Pin a column to the right side of the table. |
-| `refetch` | () => void | - | Re-fetch the table data from the server. |
-| `exportTable` | () => void | - | Trigger an export of the current table data. |
-| `handleRowClick` | (row) => void | - | Default handler that opens the detail drawer for the clicked row. |
-| `selectedDetailRow` | object | null | - | The row currently displayed in the detail drawer. |
-| `openDetailDrawer` | (row) => void | - | Programmatically open the detail drawer for a row. |
-| `closeDetailDrawer` | () => void | - | Close the detail drawer. |
-| `navigateToNextEntry` | () => void | - | Move the detail drawer to the next row in the list. |
-| `navigateToPreviousEntry` | () => void | - | Move the detail drawer to the previous row in the list. |
-| `apiUrl` | string | - | API endpoint for the detail record. Automatically resolved from context if inside a DetailViewProvider. |
-| `data` | object | - | The fetched detail data for the current object. |
-| `loading` | boolean | - | True while detail data is being fetched. |
-| `error` | string | null | - | Error message if the detail fetch failed. |
-| `refresh` | () => Promise<void> | - | Re-fetch the detail data from the API. |
-| `objectUuid` | string | - | UUID of the current detail object. |
-| `workflowDetails` | object | - | Workflow data for the object (current_status, current_status_meta, next_transitions, tag_details). |
-| `rowActions` | array | - | Available row-level actions for the current object. |
-| `data` | object | - | Detail data from the shared context. |
-| `loading` | boolean | - | True while the shared detail fetch is in progress. |
-| `error` | string | null | - | Error from the shared detail fetch. |
-| `refresh` | () => Promise<void> | - | Re-fetch detail data for the entire context. |
-| `objectUuid` | string | - | UUID of the current detail object. |
-| `workflowDetails` | object | - | Workflow data from the shared context. |
-| `rowActions` | array | - | Row-level actions from the shared context. |
-| `apiUrl` | string | - | API endpoint for fetching workflow data. |
-| `beforeTransition` | (transition) => Promise<void> | - | Async callback invoked before executing a transition. |
-| `afterTransition` | (transition, success) => Promise<void> | - | Async callback invoked after a transition completes. |
-| `workflowDetails` | object | - | Full workflow data: current_status, current_status_meta, next_transitions, and tag_details. |
-| `loading` | boolean | - | True while workflow data is being fetched. |
-| `error` | string | null | - | Error message if the workflow fetch or operation failed. |
-| `refreshWorkflow` | () => Promise<void> | - | Re-fetch workflow data from the API. |
-| `executeTransition` | (transition, formData?) => Promise<boolean> | - | Execute a status transition. Optionally pass form data. Returns success boolean. |
-| `toggleTag` | (tag) => Promise<boolean> | - | Toggle a tag on or off. Returns success boolean. |
-
-### Code Examples
-
-```jsx
-import { useTable } from "@zango-core/crud/table";
-
-function OrdersPage() {
-  const { data, isLoading, totalCount, refetch } = useTable();
-  if (isLoading) return <p>Loading…</p>;
-  return <p>{totalCount} orders loaded. <button onClick={refetch}>Refresh</button></p>;
-}
-```
-
-```jsx
-import { useTableData } from "@zango-core/crud/table";
-
-function ProductList() {
-  const { flatData, isLoading, totalDBRowCount, refetch } = useTableData({
-    apiUrl: "/api/products/",
-  });
-  if (isLoading) return <p>Loading…</p>;
-  return <p>{totalDBRowCount} products found. <button onClick={refetch}>Refresh</button></p>;
-}
-```
-
-```jsx
-import { useTableSearch } from "@zango-core/crud/table";
-
-function SearchBar() {
-  const { searchTerm, setSearchTerm, debouncedSearchTerm } = useTableSearch();
-  return (
-    <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-      placeholder="Search…" />
-  );
-}
-```
-
-```jsx
-import { useTableFilters } from "@zango-core/crud/table";
-
-function FilterBar() {
-  const { filterObj, setFilterObj, activeFilterCount, clearFilters } = useTableFilters();
-  return (
-    <div>
-      <span>{activeFilterCount} filters active</span>
-      <button onClick={clearFilters}>Clear all</button>
-    </div>
-  );
-}
-```
-
-```jsx
-import { useTablePagination } from "@zango-core/crud/table";
-
-function Pager() {
-  const { currentPage, totalPages, hasPreviousPage, hasNextPage, setCurrentPage } = useTablePagination();
-  return (
-    <div>
-      <button disabled={!hasPreviousPage} onClick={() => setCurrentPage(currentPage - 1)}>Prev</button>
-      <span>Page {currentPage + 1} of {totalPages}</span>
-      <button disabled={!hasNextPage} onClick={() => setCurrentPage(currentPage + 1)}>Next</button>
-    </div>
-  );
-}
-```
-
-```jsx
-import { useTableSelection } from "@zango-core/crud/table";
-
-function BulkActions() {
-  const { selectedRows, toggleSelectAll, isAllSelected, clearSelection } = useTableSelection();
-  return (
-    <div>
-      <button onClick={toggleSelectAll}>{isAllSelected ? "Deselect All" : "Select All"}</button>
-      <span>{selectedRows.length} selected</span>
-      <button onClick={clearSelection}>Clear</button>
-    </div>
-  );
-}
-```
-
-```jsx
-import { useTableColumns } from "@zango-core/crud/table";
-
-function ColumnPicker() {
-  const { visibleColumns, hiddenColumns, toggleColumnVisibility } = useTableColumns();
-  return (
-    <ul>
-      {[...visibleColumns, ...hiddenColumns].map((col) => (
-        <li key={col.id}>
-          <label>
-            <input type="checkbox" checked={visibleColumns.includes(col)}
-              onChange={() => toggleColumnVisibility(col.id)} /> {col.header}
-          </label>
-        </li>
-      ))}
-    </ul>
-  );
-}
-```
-
-```jsx
-import { useTableActions } from "@zango-core/crud/table";
-
-function Toolbar() {
-  const { refetch, exportTable } = useTableActions();
-  return (
-    <div>
-      <button onClick={refetch}>Refresh</button>
-      <button onClick={exportTable}>Export CSV</button>
-    </div>
-  );
-}
-```
-
-```jsx
-import { useTableRowActions } from "@zango-core/crud/table";
-
-function DetailDrawerNav() {
-  const { selectedDetailRow, closeDetailDrawer, navigateToNextEntry, navigateToPreviousEntry } = useTableRowActions();
-  if (!selectedDetailRow) return null;
-  return (
-    <div>
-      <button onClick={navigateToPreviousEntry}>Prev</button>
-      <button onClick={navigateToNextEntry}>Next</button>
-      <button onClick={closeDetailDrawer}>Close</button>
-    </div>
-  );
-}
-```
-
-```jsx
-import { useDetailView } from "@zango-core/crud/table";
-
-function UserProfile() {
-  const { data, loading, error, refresh, objectUuid } = useDetailView({
-    apiUrl: "/api/users/?object_uuid=abc-123",
-  });
-  if (loading) return <p>Loading…</p>;
-  if (error) return <p>Error: {error}</p>;
-  return <p>{data.name} ({objectUuid}) <button onClick={refresh}>Refresh</button></p>;
-}
-```
-
-```jsx
-import { useDetailViewContext } from "@zango-core/crud/table";
-
-function StatusBadge() {
-  const { workflowDetails, loading } = useDetailViewContext();
-  if (loading || !workflowDetails) return null;
-  return <span className="badge">{workflowDetails.current_status_meta?.status_label}</span>;
-}
-```
-
-```jsx
-import { useWorkflow } from "@zango-core/crud/table";
-
-function ApproveButton({ objectUuid }) {
-  const { workflowDetails, executeTransition, loading } = useWorkflow({
-    apiUrl: `/api/orders/?object_uuid=${objectUuid}`,
-  });
-  if (loading || !workflowDetails) return null;
-  const approveTransition = workflowDetails.next_transitions.find((t) => t.name === "approve");
-  if (!approveTransition) return null;
-  return <button onClick={() => executeTransition(approveTransition)}>Approve</button>;
-}
-```
-
----

@@ -1,6 +1,6 @@
 ---
 name: zango-app-developer
-description: Use this skill when the user wants to bootstrap a Zango development environment (Docker-based setup or virtualenv setup), create a Zango app, add modules to a Zango app, implement backend or frontend features on a Zango project, or work with Zango models, views, forms, tables, workflows, policies, async tasks, React components, CrudHandler, FormRenderer, or ZangoApp. Triggers on mentions of "Zango", "zango app", "zango project", "zango environment", "zango setup", "DynamicModelBase", "BaseCrudView", "CrudHandler", "FormRenderer", "ZangoApp", "React component", "frontend", "zango module", "CRUD view", "create CRUD", "add CRUD", "workflow", "create workflow", "add workflow", "status transitions", "custom page", "routes", "menu", "navbar", "theme" or requests to build business applications using the Zango framework.
+description: Use this skill when the user wants to bootstrap a Zango development environment (Docker-based setup or virtualenv setup), create a Zango app, add modules to a Zango app, implement backend or frontend features on a Zango project, or work with Zango models, views, forms, tables, workflows, policies, async tasks, React components, CrudHandler, FormRenderer, or ZangoApp. Triggers on mentions of "Zango", "zango app", "zango project", "zango environment", "zango setup", "DynamicModelBase", "BaseCrudView", "CrudHandler", "useCrud", "useTable", "TableProvider", "CrudProvider", "FormRenderer", "ZangoApp", "React component", "frontend", "zango module", "CRUD view", "create CRUD", "add CRUD", "workflow", "create workflow", "add workflow", "status transitions", "custom page", "routes", "menu", "navbar", "theme" or requests to build business applications using the Zango framework.
 ---
 
 # Zango App Developer
@@ -172,10 +172,14 @@ Some entities are better visualised outside a standard table — kanban (statuse
 | Scenario | Page Type | Implementation |
 |----------|-----------|----------------|
 | Simple lookup/reference entity (Department, City, Category) — no rich detail needed | Default CRUD | `page_type: "crud"` — no React component needed |
-| Primary entity, profile/detail view, child tables in detail, custom columns/actions, OR custom list layout (kanban, calendar, cards) | Custom CRUD | `page_type: "custom"`, use `CrudHandler` — supports custom list via `customTableBody`, profile-style detail, and child tables inside detail |
+| Primary entity, profile/detail view, child tables in detail, custom columns/actions, OR custom list layout (kanban, calendar, cards) | Custom CRUD | `page_type: "custom"` — `TableProvider` + `useCrud()`/`useTable()` when you control the layout, or `CrudHandler` (with `customTableBody`) for a standard table |
 | UI has no list/detail pattern at all — dashboards, multi-step wizards, reporting screens | Fully custom | `page_type: "custom"`, hand-written React component |
 
-> **Key insight:** `CrudHandler` covers almost every use case — custom tables, kanban/calendar via `customTableBody`, profile detail views, and child entity tables. Reach for a fully custom component only when there is genuinely no list/detail structure.
+> **Key insight:** both paths run the same engine. `CrudHandler` is
+> `TableProvider` + `useCrud()` pre-wired, so start from the hooks when the
+> layout is yours and drop to `CrudHandler` when a standard table is what you
+> want. Either way, a fully hand-written component is needed only when there is
+> genuinely no list/detail structure.
 
 Based on what you need to build, identify the relevant references to read before coding:
 
@@ -365,14 +369,16 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 | Task | Reference |
 |------|-----------|
 | App setup, routes, menus, theme, auth, navbar | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
-| CrudHandler, tables, detail views, hooks | [frontend/crud.md](references/frontend/crud.md) |
+| CRUD hooks (`useCrud`, `useTable`), CrudHandler, tables, detail views | [frontend/crud.md](references/frontend/crud.md) |
 | FormRenderer (server-driven and local RJSF) | [frontend/form.md](references/frontend/form.md) |
 | WorkflowStatus, WorkflowTags | [frontend/workflow.md](references/frontend/workflow.md) |
 | App module (serve React build from backend) | [templates/app-module/README.md](references/templates/app-module/README.md) |
 
 ### Critical Rules
 
-1. **Imports**: `@zango-core/crud/table` for CrudHandler/WorkflowStatus/WorkflowTags, `@zango-core/crud/form` for FormRenderer — never `@zango-core/crud`
+1. **Imports**: `@zango-core/crud/table` for hooks/CrudHandler/WorkflowStatus/WorkflowTags, `@zango-core/crud/ui` for the `Crud*` presentational components, `@zango-core/crud/form` for FormRenderer — never `@zango-core/crud`
+1b. **`useCrud()` takes no `apiUrl`** — it reads the surrounding `TableProvider`. Passing one leaves `table` null and loads no data. `scrollMode` is `"pagination"`, never `"paginated"`.
+1c. **Hook return shapes differ**: `useTable()` is flat (`t.searchTerm`, `t.currentPage`); `useCrud()` is namespaced (`c.search.term`, `c.pagination.currentPage`). Mixing them yields `undefined`, not an error.
 2. **Server API fields**: snake_case — `json_schema`, `ui_schema`, `form_data`, `status_label`, `next_transitions`, `tag_details`, `display_name`, `tag_label`
 3. **Local RJSF fields**: camelCase — `schema`, `uiSchema`, `formData`
 4. **StatusCol data**: `{ status_label: "Active", status_color: "#12B76A" }`
@@ -391,18 +397,51 @@ export default {{PageName}};
 ```
 `src/custom/pages/index.js`: `export { default as {{PageName}} } from './{{PageName}}';`
 
-#### CrudHandler (default CRUD page inside a custom component)
+#### Two ways to build a CRUD page
+
+**Hooks (preferred when you control the layout).** `TableProvider` owns the
+engine; `useCrud()` returns state plus prop bags you spread onto the `Crud*`
+components from `@zango-core/crud/ui`.
+```jsx
+import { TableProvider, useCrud } from '@zango-core/crud/table';
+import { CrudHeader, CrudToolbar, CrudTable, CrudPagination } from '@zango-core/crud/ui';
+
+const Layout = () => {
+  const crud = useCrud();              // no arguments — endpoint comes from TableProvider
+  return (
+    <>
+      <CrudHeader {...crud.headerProps} />
+      <CrudToolbar {...crud.toolbarProps} />
+      <CrudTable {...crud.tableProps} />
+      <CrudPagination {...crud.paginationProps} />
+    </>
+  );
+};
+
+const {{PageName}} = () => (
+  <TableProvider apiUrl="{{endpoint}}"><Layout /></TableProvider>
+);
+```
+
+**CrudHandler (drop-in, when a standard table is what you want).**
 ```jsx
 import { CrudHandler } from '@zango-core/crud/table';
 <CrudHandler api_endpoint="{{endpoint}}" headerProps={{ title: "{{Title}}" }} />
 ```
+Same engine — `CrudHandler` renders `TableProvider`, calls `useCrud()`, and
+publishes it via `CrudProvider`, so anything inside it can call
+`useCrudContext()` or the `useTable*` hooks without prop drilling.
 
 #### CrudHandler with custom detail drawer
+`customDrawerDetail` receives **only** `{ selectedRow, open, onClose }` — it does
+NOT receive fetched detail data. Load the record yourself with `useDetailView()`.
 ```jsx
-import { CrudHandler } from '@zango-core/crud/table';
+import { CrudHandler, DetailViewProvider, useDetailView } from '@zango-core/crud/table';
 
-const Detail = ({ selectedRow, data, workflowDetails, open, onClose }) => {
+const DetailBody = ({ open, onClose }) => {
+  const { data, loading } = useDetailView();
   if (!open) return null;
+  if (loading) return <p>Loading…</p>;
   return (
     <div>
       <h2>{data?.title}</h2>
@@ -413,6 +452,15 @@ const Detail = ({ selectedRow, data, workflowDetails, open, onClose }) => {
     </div>
   );
 };
+
+const Detail = ({ selectedRow, open, onClose }) => (
+  <DetailViewProvider
+    apiUrl="{{endpoint}}"
+    objectUuid={selectedRow?.original?.object_uuid}
+  >
+    <DetailBody open={open} onClose={onClose} />
+  </DetailViewProvider>
+);
 
 <CrudHandler api_endpoint="{{endpoint}}" customDrawerDetail={Detail} />
 ```
