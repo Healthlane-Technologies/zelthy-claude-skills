@@ -987,6 +987,12 @@ class Meta:
     page_title = "Custom Table Title"   # Override CRUD view's page title
     detail_class = MyDetailClass         # Custom detail view class
     row_selector = {}                    # Enable row selection
+
+    serializer_class = MySerializer      # Override the generated serializer
+    export_table_name = "Patients"       # Filename/title for exports
+    card_primary_fields = ['name']       # Fields the card layout leads with
+    column_view_config = {}              # Column-options config for the FE utilities
+    data_upload_class = MyUpload         # Custom bulk-upload handler
 ```
 
 **page_title**: Overrides the page title from CRUD view.
@@ -994,6 +1000,23 @@ class Meta:
 **detail_class**: Custom detail view class. See `packages/crud/detail.md`.
 
 **row_selector**: Enable row selection. Always use empty dict: `{}`.
+
+**serializer_class**: Supply your own DRF serializer instead of the one the
+table generates from `fields`. Read at init and returned by the table's
+serializer lookup, so it wins over the generated one.
+
+**export_table_name**: Name used for downloads. Falls back to `page_title`, then
+to an empty string — set it when the export should not inherit the page title.
+
+**card_primary_fields**: List of field names the card/mobile layout treats as
+primary. Defaults to `[]`. Passed through to the frontend in table metadata.
+
+**column_view_config**: Configuration for the frontend's column-options utility.
+Defaults to `None`, and is only emitted in metadata when set.
+
+**data_upload_class**: Custom handler for the table's bulk upload. The CRUD
+view instantiates it as `data_upload_class(request=..., table_obj=...)`; when
+unset it falls back to the platform's `UploadBase`.
 
 ### UI Visibility Controls
 
