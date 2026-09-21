@@ -349,25 +349,147 @@ useTable<T = TableRowData>(props?: {
 }): UseTableReturn<T>
 ```
 
-Returns a **flat** object (~90 keys). Grouped here by concern for readability —
-but every key sits at the top level.
+Returns a **flat** object — every key below sits at the top level. This is the
+complete `UseTableReturn<T>`, grouped by concern for readability only.
 
-| Group | Keys |
-|-------|------|
-| Data | `data`, `flatData`, `isLoading`, `isFetching`, `error`, `totalCount`, `totalDBRowCount` |
-| Search | `searchTerm`, `setSearchTerm(term)`, `debouncedSearchTerm`, `isSearchActive` |
-| Filters | `filterObj`, `setFilterObj(obj)`, `debouncedFilterObj`, `activeFilterCount`, `clearFilters()`, `setFilter(key, value)`, `removeFilter(key)`, `hasFilter(key)`, `getFilter(key)` |
-| Pagination | `currentPage`, `setCurrentPage(p)`, `totalPages`, `rowsPerPage`, `setRowsPerPage(n)`, `hasNextPage`, `hasPreviousPage`, `canGoNext`, `canGoPrevious`, `pageNumbers`, `goToFirstPage()`, `goToLastPage()`, `goToNextPage()`, `goToPreviousPage()`, `startRow`, `endRow` |
-| Selection | `selectedRows`, `setSelectedRows`, `selectRow(row)`, `selectAll()`, `clearSelection()`, `selectedCount`, `isAllSelected`, `isSomeSelected`, `hasSelection`, `selectedRowIds`, `isRowSelected(row)`, `toggleRows(rows)`, `selectByIds(ids)`, `deselectByIds(ids)`, `getSelectedData()`, `withSelectedRows(cb)` |
-| Columns | `columnVisibility`, `setColumnVisibility`, `columnOrder`, `setColumnOrder`, `columnPinning`, `setColumnPinning`, `sorting`, `setSorting`, `visibleColumns`, `hiddenColumns`, `visibleColumnCount`, `hiddenColumnCount`, `totalColumnCount`, `toggleColumnVisibility(id)`, `showColumn(id)`, `hideColumn(id)`, `showAllColumns()`, `hideAllColumns()`, `isColumnVisible(id)`, `moveColumn(columnId, toIndex)`, `pinColumnLeft(id)`, `pinColumnRight(id)`, `unpinColumn(id)` |
-| Detail | `selectedDetailObjectUuid`, `setSelectedDetailObjectUuid`, `selectedDetailRow`, `detailDrawerOpen`, `setDetailDrawerOpen(open)`, `handleRowClick(row, event?)`, `closeDetailDrawer()`, `navigateToNextEntry?()`, `navigateToPreviousEntry?()` |
-| Actions | `refresh()`, `refetch()`, `invalidateCache()`, `isRefreshing`, `canRefresh`, `hasError`, `exportData(format?)`, `printData()`, `performBulkAction(action, rows?)`, `resetTable()`, `getTableSummary()`, `handleUploadClick()`, `handleDownloadClick()` |
-| Meta | `apiUrl`, `tableId`, `metadata`, `isInfiniteScroll`, `table`, `columns`, `rawResponse?`, `rawTableData?` |
+**Data**
 
-> **Signature traps.** These differ from what older docs claim:
-> - `moveColumn(columnId, toIndex)` — not `(fromIndex, toIndex)`
-> - `hiddenColumns` is `string[]` — not `ColumnDef[]`
-> - `isRowSelected(row)` takes a TanStack `Row<T>` — not an id string
+| Key | Type |
+|-----|------|
+| `data` | `T[]` — current page rows |
+| `flatData` | `T[]` — all fetched rows (infinite scroll accumulates here) |
+| `isLoading` | `boolean` — initial load |
+| `isFetching` | `boolean` — any fetch, including background refetch |
+| `error` | `Error \| null` |
+| `totalCount` | `number` |
+| `totalDBRowCount` | `number` — server-reported total |
+
+**Search**
+
+| Key | Type |
+|-----|------|
+| `searchTerm` | `string` |
+| `setSearchTerm` | `(term: string) => void` |
+| `debouncedSearchTerm` | `string` — the value actually sent |
+| `isSearchActive` | `boolean` |
+
+**Filters**
+
+| Key | Type |
+|-----|------|
+| `filterObj` | `Record<string, TableFilter>` |
+| `setFilterObj` | `(filters: Record<string, TableFilter>) => void` |
+| `debouncedFilterObj` | `Record<string, TableFilter>` |
+| `activeFilterCount` | `number` |
+| `clearFilters` | `() => void` |
+| `setFilter` | `(key: string, value: unknown) => void` |
+| `removeFilter` | `(key: string) => void` |
+| `hasFilter` | `(key: string) => boolean` |
+| `getFilter` | `(key: string) => TableFilter \| undefined` |
+
+**UI controls**
+
+| Key | Type |
+|-----|------|
+| `hideControls` | `boolean` |
+| `setHideControls` | `(hide: boolean) => void` |
+
+**Pagination**
+
+| Key | Type |
+|-----|------|
+| `currentPage` | `number` — zero-based |
+| `setCurrentPage` | `(page: number) => void` |
+| `totalPages` | `number` |
+| `rowsPerPage` | `number` |
+| `setRowsPerPage` | `(size: number) => void` |
+| `hasNextPage` / `hasPreviousPage` | `boolean` |
+| `canGoNext` / `canGoPrevious` | `boolean` |
+| `pageNumbers` | `number[]` |
+| `goToFirstPage` / `goToLastPage` / `goToNextPage` / `goToPreviousPage` | `() => void` |
+| `startRow` / `endRow` | `number` |
+
+**Table instance**
+
+| Key | Type |
+|-----|------|
+| `table` | `TanstackTable<T> \| null` — escape hatch; `getRowModel().rows` gives `Row<T>` wrappers |
+| `columns` | `ColumnDef<T>[]` |
+
+**Selection**
+
+| Key | Type |
+|-----|------|
+| `selectedRows` | `T[]` |
+| `setSelectedRows` | `(rows: T[]) => void` |
+| `selectRow` | `(row: Row<T>) => void` |
+| `selectAll` / `clearSelection` | `() => void` |
+| `selectedCount` | `number` |
+| `isAllSelected` / `isSomeSelected` / `hasSelection` | `boolean` |
+| `selectedRowIds` | `(string \| number)[]` |
+| `isRowSelected` | `(row: Row<T>) => boolean` — takes a Row, not an id |
+| `toggleRows` | `(rows: Row<T>[]) => void` |
+| `selectByIds` / `deselectByIds` | `(ids: (string \| number)[]) => void` |
+| `getSelectedData` | `() => T[]` |
+| `withSelectedRows` | `(callback: (rows: T[]) => void) => void` |
+
+**Detail drawer**
+
+| Key | Type |
+|-----|------|
+| `selectedDetailObjectUuid` | `string \| null` |
+| `setSelectedDetailObjectUuid` | `(objectUuid: string \| null) => void` |
+| `selectedDetailRow` | `Row<T> \| null` |
+| `detailDrawerOpen` | `boolean` |
+| `setDetailDrawerOpen` | `(open: boolean) => void` |
+| `handleRowClick` | `(row: Row<T>, event?: React.MouseEvent) => void` — needs a Row wrapper; no-op on the standalone branch |
+| `closeDetailDrawer` | `() => void` |
+| `navigateToNextEntry?` / `navigateToPreviousEntry?` | `() => void` — optional |
+
+**Columns (view state)**
+
+| Key | Type |
+|-----|------|
+| `columnVisibility` | `Record<string, boolean>` |
+| `setColumnVisibility` | `(visibility: Record<string, boolean>) => void` |
+| `columnOrder` | `string[]` |
+| `setColumnOrder` | `(order: string[]) => void` |
+| `columnPinning` | `ColumnPinningState` — a single `{left, right}` pair, not per-column |
+| `setColumnPinning` | `(pinning: ColumnPinningState) => void` |
+| `sorting` | `SortingState` |
+| `setSorting` | `(sorting: SortingState) => void` |
+| `visibleColumns` | `ColumnDef<T>[]` |
+| `hiddenColumns` | `string[]` — ids, not defs |
+| `visibleColumnCount` / `hiddenColumnCount` / `totalColumnCount` | `number` |
+| `toggleColumnVisibility` / `showColumn` / `hideColumn` | `(columnId: string) => void` |
+| `showAllColumns` / `hideAllColumns` | `() => void` |
+| `isColumnVisible` | `(columnId: string) => boolean` |
+| `moveColumn` | `(columnId: string, toIndex: number) => void` — not `(from, to)` |
+| `pinColumnLeft` / `pinColumnRight` / `unpinColumn` | `(columnId: string) => void` |
+
+**Actions**
+
+| Key | Type |
+|-----|------|
+| `refresh` / `refetch` / `invalidateCache` | `() => void` |
+| `isRefreshing` / `canRefresh` / `hasError` | `boolean` |
+| `exportData` | `(format?: ExportFormat) => void` |
+| `printData` | `() => void` |
+| `performBulkAction` | `(action: string, selectedRows?: T[]) => void` |
+| `resetTable` | `() => void` |
+| `getTableSummary` | `() => { totalRows, visibleRows, selectedRows, currentPage, totalPages, activeFilters, searchTerm, isLoading, isFetching }` |
+| `handleUploadClick` / `handleDownloadClick` | `() => void` |
+
+**Configuration, metadata and raw access**
+
+| Key | Type |
+|-----|------|
+| `apiUrl` | `string` — resolved endpoint |
+| `tableId` | `string` |
+| `metadata` | `Record<string, unknown> \| null` |
+| `isInfiniteScroll` | `boolean` |
+| `rawResponse?` | `unknown` — untouched server payload |
+| `rawTableData?` | `T[]` — rows before normalization |
 
 ```jsx
 import { TableProvider, useTable } from "@zango-core/crud/table";
@@ -557,7 +679,34 @@ throw when used outside `TableProvider`.
 > **Slice hooks are narrower than `useTable`.** `isSearchActive`,
 > `handleUploadClick` and `handleDownloadClick` exist on `useTable()` only —
 > not on `useTableSearch()` or `useTableActions()`.
-| `useTableRowActions` | `useTableRowActions(options?)` | Row-action menu state. Standalone — no provider needed. |
+
+### useTableRowActions() — row interaction behavior
+
+Standalone (own local state, no provider). Configures what a row click does and
+tracks the drawer/modal it opens.
+
+```ts
+useTableRowActions({
+  config?: {
+    onRowClick?: RowClickAction;
+    onRowDoubleClick?: RowClickAction;
+    drawerPosition?: "right" | "left" | "bottom" | "top";
+    drawerSize?: "sm" | "md" | "lg" | "xl" | "full";
+    customRowClickHandler?: (row: Row<unknown>, event?) => void;
+    customRowDoubleClickHandler?: (row: Row<unknown>, event?) => void;
+    modalComponent?: React.ComponentType<{ row: Row<unknown>; onClose: () => void }>;
+    navigateUrlTemplate?: string;   // "/users/{object_uuid}" or "/users/{id}"
+  };
+  apiUrl?: string;                  // falls back to context when available
+})
+```
+
+> **⚠️ Two different `RowClickAction` types share one name.** This hook's union
+> is `"drawer" | "navigate" | "modal" | "custom" | "none"`. The one exported
+> from `CrudHandler` / `useCrud` has **no `"modal"`** —
+> `"drawer" | "navigate" | "custom" | "none"`. Importing the wrong one gives a
+> confusing type error on `"modal"`.
+| `useTableRowActions` | `useTableRowActions({ config?, apiUrl? })` | `handleRowClick`, `handleRowDoubleClick`, `selectedRow`, `drawerOpen`, `modalOpen`, `setSelectedRow`, `setDrawerOpen`, `setModalOpen`, `closeDrawer`, `closeModal`, `config` — see below |
 | `useTableContext` | `useTableContext()` | Raw `TableContext` value. |
 
 ```jsx
@@ -596,6 +745,25 @@ useTableData({
 })
 ```
 
+Returns (flat):
+
+| Group | Keys |
+|-------|------|
+| Data | `flatData`, `totalDBRowCount`, `totalPages`, `totalFetched` |
+| Loading | `isLoading`, `isFetching`, `error`, `isMetadataLoading` |
+| Search | `searchTerm`, `setSearchTerm`, `debouncedSearchTerm` |
+| Filters | `filterObj`, `setFilterObj`, `debouncedFilterObj` |
+| Pagination | `currentPage`, `setCurrentPage`, `rowsPerPage`, `setRowsPerPage` |
+| Sorting | `sorting`, `setSorting` |
+| Infinite scroll | `isInfiniteScroll`, `fetchMoreOnBottomReached`, `initialFetchRef`, `hasNextPage`, `isFetchingNextPage`, `fetchNextPageError` |
+| Layout | `filterLayout` |
+| Metadata | `tableMetadata`, `columns` |
+| Raw | `rawResponse`, `rawTableData` |
+| Actions | `refetch`, `refetchAll` |
+
+Note there is **no `data`** here — only `flatData`. Page slicing and the TanStack
+table instance belong to `useTable`/`useCrud` above it.
+
 > Cell render props were removed from this hook. They now live on
 > `TableProvider` (`renderActions`, `renderStatus`, `renderTags`,
 > `renderWorkflowTransitions`).
@@ -621,7 +789,24 @@ useDetailView(options?: { apiUrl?: string; enabled?: boolean }): {
 ### useDetailViewContext()
 
 Reads the shared `DetailViewProvider` value. Returns `null` outside one —
-null-safe, never throws.
+null-safe, never throws. Inside a provider it returns the whole context **plus**
+a `refreshDetailView` convenience alias.
+
+| Key | Type |
+|-----|------|
+| `apiUrl` | `string` |
+| `objectUuid?` | `string` |
+| `data?` | `DetailViewData` |
+| `loading` | `boolean` |
+| `error` | `Error \| null` |
+| `refreshDetail` | `() => Promise<void>` |
+| `refreshDetailView` | `() => Promise<void>` — added by the hook; same thing, clearer name |
+| `rowActions?` | `unknown[]` |
+| `workflowDetails?` | `WorkflowDetails` |
+
+Because it returns `null` outside a provider, it doubles as a probe for "am I
+inside a detail view?" — which is how you decide whether to forward your own
+refresh callback (see Known traps).
 
 ### useWorkflow()
 
@@ -642,7 +827,9 @@ useWorkflow(options?: {
   executeTransition: (t: Transition) => Promise<boolean>;
   toggleTag: (tag: TagDetail) => Promise<boolean>;
   refreshWorkflow: () => Promise<void>;
-  handleFormSubmit; setWorkflowDetails; onCancel;
+  handleFormSubmit: () => Promise<void>;          // submit a form-based transition
+  setWorkflowDetails: (details: WorkflowDetails) => void;
+  onCancel: () => void;                           // reset to initial state
 }
 ```
 
