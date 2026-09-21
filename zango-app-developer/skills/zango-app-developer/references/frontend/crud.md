@@ -24,7 +24,8 @@ import { DetailViewProvider, useDetailView, useWorkflow, WorkflowStatus, Workflo
 import { CrudTable, CrudHeader, CrudToolbar, CrudPagination, CrudFilters, CrudDetailDrawer } from '@zango-core/crud/ui';
 
 // Forms
-import { FormRenderer, FormHandler, useForm } from '@zango-core/crud/form';
+// Forms — FormRenderer is the path to use; the form hooks are rarely needed
+import { FormRenderer } from '@zango-core/crud/form';
 
 import type { TableCustomClasses, TableCustomStyles } from '@zango-core/crud/table';
 ```
@@ -870,9 +871,39 @@ export default function Wrapper({ objectUuid }) {
 
 ---
 
-## Form hooks
+## Forms — use FormRenderer, not the hooks
 
-From `@zango-core/crud/form`.
+**Forms are the exception to this document.** Everywhere else the hooks are the
+primary path; for forms they are not. Use `<FormRenderer />` in server-driven
+mode, which is what real Zango apps do — by a wide margin, and for a reason.
+
+```jsx
+import { FormRenderer } from "@zango-core/crud/form";
+
+<FormRenderer
+  api_endpoint="/api/users"
+  getParams={{ action: "initialize_form" }}
+  postParams={{ form_type: "create_form" }}
+  onResponse={closeDrawer}
+/>
+```
+
+`FormRenderer` reliably drives the `api_endpoint` init/submit cycle: it GETs the
+schema, renders the fields, and POSTs back to the same endpoint.
+
+> **⚠️ `FormHandler`'s `renderFields` slot does not fire the init request** in
+> shipped builds — the form mounts and stays stuck on its loading spinner. If
+> you want custom chrome around a server-driven form, wrap `FormRenderer` in
+> your own drawer or dialog rather than reaching for `FormHandler`.
+
+See [form.md](form.md) for the full `FormRenderer` reference — props, local RJSF
+mode, and theming.
+
+### The form hooks (rarely needed)
+
+`@zango-core/crud/form` also exports three context readers. They only make sense
+inside a `FormHandler`, which supplies the `FormProvider` — most commonly in a
+`renderFooter` slot, which does work.
 
 ```ts
 useForm(): UseFormReturn                        // alias for useFormContext
@@ -905,7 +936,9 @@ useOptionalFormContext(): UseFormReturn | null  // null-safe
 | `addAnother` | `() => void` — submit and keep the form open for another entry |
 | `setFormData` | `(next: Record<string, unknown>) => void` |
 
-Typical use is a custom footer on `FormHandler`, which supplies the provider:
+The one place they earn their keep is a custom footer on `FormHandler`, whose
+`renderFooter` slot hands you the form state directly (no hook call needed) —
+and unlike `renderFields`, this slot works:
 
 ```jsx
 import { FormHandler } from "@zango-core/crud/form";
@@ -923,7 +956,8 @@ import { FormHandler } from "@zango-core/crud/form";
 />
 ```
 
-See [form.md](form.md) for `FormRenderer` and `FormHandler` themselves.
+Reach for `useForm()` itself only when a component nested deeper than that slot
+needs the same state.
 
 ---
 

@@ -382,6 +382,7 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 1d. **Filter writes go through `useTableFilters()`**, never `crud.filters.setFilter()` — the latter persists but never reaches the query, so rows only change on reload. `crud.filters.columns` is always `[]`.
 1e. **`customTableBody` / `customMainDetail` must be stable component refs** (module scope or memoized). An inline arrow remounts and refetches on every parent render.
 1f. **`crud.detail.open(row)` needs a TanStack `Row<T>`** — `crud.data` items are plain objects. Use `crud.table?.getRowModel().rows`, or route to the detail URL yourself.
+1g. **Forms use `FormRenderer`, not hooks.** Hooks are the primary path for tables; forms are the exception. `FormHandler`'s `renderFields` slot does not fire the init request in shipped builds and leaves the form on a spinner — wrap `FormRenderer` in your own drawer/dialog for custom chrome.
 2. **Server API fields**: snake_case — `json_schema`, `ui_schema`, `form_data`, `status_label`, `next_transitions`, `tag_details`, `display_name`, `tag_label`
 3. **Local RJSF fields**: camelCase — `schema`, `uiSchema`, `formData`
 4. **StatusCol data**: `{ status_label: "Active", status_color: "#12B76A" }`
