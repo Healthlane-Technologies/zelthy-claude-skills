@@ -332,6 +332,8 @@ Getting this wrong throws at runtime rather than failing quietly.
 | `useOptionalCrudContext` | `CrudProvider` | returns `null` |
 | `useTableRowActions` | none (own local state) | standalone |
 | `useTableData` | `QueryClientProvider` only | supplied by `TableProvider` |
+| `useForm` / `useFormContext` | `FormProvider` | **throws** |
+| `useOptionalFormContext` | `FormProvider` | returns `null` |
 
 ---
 
@@ -865,6 +867,63 @@ export default function Wrapper({ objectUuid }) {
   );
 }
 ```
+
+---
+
+## Form hooks
+
+From `@zango-core/crud/form`.
+
+```ts
+useForm(): UseFormReturn                        // alias for useFormContext
+useFormContext(): UseFormReturn                 // throws outside FormProvider
+useOptionalFormContext(): UseFormReturn | null  // null-safe
+```
+
+> **⚠️ `useForm()` takes no arguments.** Unlike RJSF's or react-hook-form's
+> hooks of the same name, this one is a pure context reader — literally
+> `return useFormContext()`. It throws outside a `FormProvider`. Form options
+> (`api_endpoint`, schemas, callbacks) are configured on `FormHandler` /
+> `FormRenderer`, not passed to the hook.
+
+`UseFormReturn`:
+
+| Key | Type |
+|-----|------|
+| `formData` | `Record<string, unknown>` |
+| `errors` | `any[]` — RJSF error shape |
+| `isValid` | `boolean` |
+| `isSubmitting` | `boolean` |
+| `isSubmitDisabled` | `boolean` |
+| `status` | `FormStatus` |
+| `schema` | `Record<string, any> \| null` |
+| `uiSchema` | `Record<string, any> \| null` |
+| `meta` | `Record<string, unknown> \| null` |
+| `fields` | `FormField[]` |
+| `submit` | `() => void` |
+| `reset` | `() => void` |
+| `addAnother` | `() => void` — submit and keep the form open for another entry |
+| `setFormData` | `(next: Record<string, unknown>) => void` |
+
+Typical use is a custom footer on `FormHandler`, which supplies the provider:
+
+```jsx
+import { FormHandler } from "@zango-core/crud/form";
+
+<FormHandler
+  api_endpoint="/api/users"
+  renderFooter={(form) => (
+    <div className="flex justify-end gap-2">
+      <button onClick={form.reset} disabled={form.isSubmitting}>Reset</button>
+      <button onClick={form.submit} disabled={form.isSubmitDisabled}>
+        {form.isSubmitting ? "Saving…" : "Save"}
+      </button>
+    </div>
+  )}
+/>
+```
+
+See [form.md](form.md) for `FormRenderer` and `FormHandler` themselves.
 
 ---
 
