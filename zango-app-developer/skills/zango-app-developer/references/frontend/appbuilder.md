@@ -11,11 +11,40 @@ npm run dev
 ```
 
 ## Key Imports
+
+`@zango-core/appbuilder` has a **single entry point** — no subpath exports.
+
 ```js
-import { ZangoApp, useAppContext } from '@zango-core/crm-framework';
+// App shell + context
+import { ZangoApp, useAppContext, useSmartNavigation } from '@zango-core/appbuilder';
+
+// Auth (custom login screens)
+import { useAuth, AuthProvider, useAuthConfig } from '@zango-core/appbuilder';
+import { OTPLoginForm, PasswordLoginForm, SSOButtons, RoleSelection } from '@zango-core/appbuilder';
+
+// Layout pieces
+import { Layout, Navbar, Topbar, Breadcrumbs, SmartLink } from '@zango-core/appbuilder';
+
+// API helpers
+import { callGetApi, callPostApi, buildApiUrl, getApiUrl } from '@zango-core/appbuilder';
+
+// Redirect / cookie utils
+import { validateRedirectUrl, getCookie, setCookie } from '@zango-core/appbuilder';
+
+// CRUD lives in its own package
 import { CrudHandler } from '@zango-core/crud/table';
 import { FormRenderer } from '@zango-core/crud/form';
 ```
+
+Other exports worth knowing: pages (`CrudPage`, `LoginPage`, `LogoutPage`,
+`NotFoundPage`), `CachedLogo`, `CommandPalette`, `UserProfileDrawer`,
+`DocumentHead`, the color utils (`generatePalette`, `getContrastColor`,
+`isLightColor`), and the session/profile API functions (`fetchUserProfile`,
+`switchRole`, `logoutAllSessions`, …).
+
+> **⚠️ `buildApiUrl` vs `resolveApiUrl`.** Two different functions. The one
+> exported as `buildApiUrl` is the query-param builder from `apiUrlUtils`;
+> `apiConfig`'s same-named internal export is surfaced as `resolveApiUrl`.
 
 ## Backend Models
 ```python
@@ -154,7 +183,7 @@ my-app/
 ```
 
 ```tsx
-import { ZangoApp } from '@zango-core/crm-framework';
+import { ZangoApp } from '@zango-core/appbuilder';
 import * as customPages from './custom/pages';
 
 const App = () => {
@@ -187,17 +216,28 @@ export default App;
 | `authConfig` | object | - | Authentication configuration: { customComponents, theme, card, logo, login, roleSelection, twoFactor, resetPassword, providers, messages } |
 | `config` | object | - | General app configuration. |
 | `customComponents` | object | - | Custom component overrides: { Layout, Topbar, Navbar } |
-| `showTopbar` | boolean | true | Show/hide the top navigation bar. |
-| `showNavbar` | boolean | true | Show/hide the sidebar navigation. |
+
+> **⚠️ `showTopbar` and `showNavbar` are NOT top-level props.** They live inside
+> `layoutConfig`, which is where `Layout` reads them from
+> (`finalLayoutConfig.showTopbar`). `AppProps` declares only the eight props
+> above; passing these at the top level does nothing.
+>
+> ```jsx
+> // ✗ ignored
+> <ZangoApp showTopbar={false} />
+>
+> // ✓
+> <ZangoApp layoutConfig={{ showTopbar: false, showNavbar: false }} />
+> ```
 
 ### Code Examples
 
 ```jsx
-import { ZangoApp } from '@zango-core/crm-framework';
+import { ZangoApp } from '@zango-core/appbuilder';
 ```
 
 ```jsx
-import { ZangoApp } from '@zango-core/crm-framework';
+import { ZangoApp } from '@zango-core/appbuilder';
 import * as customPages from './custom/pages';
 
 const App = () => (
@@ -209,7 +249,7 @@ const App = () => (
 ```
 
 ```jsx
-import { ZangoApp } from '@zango-core/crm-framework';
+import { ZangoApp } from '@zango-core/appbuilder';
 import * as customPages from './custom/pages';
 import CustomLogin from './custom/pages/CustomLogin';
 import DocsNavbar from './custom/components/DocsNavbar';
@@ -243,22 +283,119 @@ const App = () => (
 ```
 
 ```jsx
-import { useAppContext } from '@zango-core/crm-framework';
+import { useAppContext } from '@zango-core/appbuilder';
 
 const MyComponent = () => {
-  const {
-    appData,      // Raw initializer response
-    menu,         // Navigation menu items
-    routes,       // Application routes
-    profileInfo,  // Current user profile
-    appLogo,      // App logo URL
-    appName,      // Application name
-    theme,        // Theme colors & typography
-  } = useAppContext();
-
+  const { profileInfo, appName, theme } = useAppContext();
   return <div>Hello {profileInfo?.name}</div>;
 };
 ```
+
+---
+
+## Hooks (App Builder)
+
+The package ships a single entry point — `@zango-core/appbuilder`. There are no
+subpath exports; everything imports from the root.
+
+| Hook | Provider | Outside it |
+|------|----------|-----------|
+| `useAppContext` | `AppProvider` (supplied by `ZangoApp`) | **throws** |
+| `useAuthContext` / `useAuth` | `AuthProvider` | **throws** |
+| `useAuthConfig` | `AuthConfigProvider` | **throws** |
+| `useLoginContext` | `LoginContext` | returns `null` (never throws) |
+| `useSmartNavigation` | none | safe |
+| `useApiConfig` | `AppProvider` + a router | **throws** (calls `useAppContext`) |
+| `useRouteConfig` | `AppProvider` + a router | **throws** (calls `useAppContext`) |
+
+`ZangoApp` mounts `AppProvider` for you, so inside an app page `useAppContext`
+just works. The auth hooks are for custom login screens, which render inside
+`AuthProvider`.
+
+### useAppContext()
+
+The main one. Returns the whole initializer payload plus derived config.
+
+| Key | Type |
+|-----|------|
+| `appData` | `AppData \| null` — raw initializer response |
+| `loading` | `boolean` |
+| `error` | `string \| null` |
+| `config` | `AppConfig` |
+| `apiConfig` | `ApiConfig` |
+| `menu` | `MenuItemConfig[]` |
+| `routes` | `RouteConfig[]` |
+| `profileInfo` | `Record<string, unknown>` |
+| `appLogo` | `string` |
+| `appName` | `string` |
+| `metadata` | `Record<string, unknown>` |
+| `theme` | `ThemeConfig` |
+| `layoutConfig` | `LayoutConfigType` |
+| `topbarConfig` | `TopbarConfigType` |
+| `navbarConfig` | `NavbarConfigType` |
+| `customComponents` | `CustomComponentsType` |
+| `authConfig` | `AuthConfig` |
+| `sessionSecurity` | `SessionSecurityConfig \| null` |
+| `pageTypeRegistry` | `Record<string, unknown> \| null` |
+| `registryLoading` | `boolean` |
+| `registryError` | `string \| null` |
+| `initializerEndpoint` | `string` — used in error messaging |
+
+`routes` is the one to reach for when resolving a detail URL for a row: match
+the row's `page_key` against `routes[].extra_params.page_key` and use that
+entry's `path`. That is a router path (e.g. `/app/programs`), not the CRUD API
+endpoint.
+
+### useAuthContext() / useAuth()
+
+> **`useAuth()` is a pure alias** — literally `return useAuthContext()`. It
+> takes no arguments. Both throw outside `AuthProvider`.
+
+| Key | Type |
+|-----|------|
+| `user` | `Record<string, unknown> \| null` |
+| `loading` | `boolean` |
+| `error` | `string \| null` |
+| `isAuthenticated` | `boolean` |
+| `pendingAuth` | `AuthApiResponse \| null` |
+| `availableRoles` | `unknown[] \| null` |
+| `requiresRoleSelection` | `boolean` |
+| `authConfig` | `Record<string, unknown> \| null` |
+| `login` | `(credentials: LoginCredentials) => Promise<AuthApiResponse>` |
+| `logout` | `() => Promise<void>` |
+| `selectRole` | `(role: UserRole) => Promise<Record<string, unknown>>` |
+| `checkAuth` | `() => Promise<void>` |
+| `processAuthResult` | `(response: Record<string, unknown>) => Record<string, unknown>` |
+| `forgotPassword` | `(data: { email?, phone?, method }) => Promise<unknown>` |
+| `resetPassword` | `(data: PasswordResetRequest \| PasswordResetConfirm) => Promise<unknown>` |
+
+### useAuthConfig()
+
+Reads `AuthConfigProvider`. Returns `authConfig` plus typed getters for each
+slice: `getLoginConfig`, `getRoleSelectionConfig`, `getTwoFactorConfig`,
+`getResetPasswordConfig`, `getThemeConfig`, `getCardConfig`, `getLogoConfig`,
+`getProvidersConfig`, `getMessagesConfig`, `getCustomComponents`.
+
+### useSmartNavigation()
+
+No provider needed. Returns `{ navigateTo, isInternalRoute }` — use it when a
+destination may be either an in-app route or an external URL.
+
+### useApiConfig() / useRouteConfig()
+
+Both read the current `location` and match it against `routes`, longest path
+first (exact match, then prefix). `useRouteConfig()` returns the matched
+`RouteConfig | null`; `useApiConfig()` returns the resolved `ApiRequestConfig`
+for the current page. Both call `useAppContext()` internally, so they inherit
+its provider requirement and additionally need a router context.
+
+### useLoginContext()
+
+`LoginContext` carries a single `onLogin(result)` callback, used by custom
+multi-step login flows to report success back to the host. The hook is a bare
+`useContext`, so outside a provider it returns `null` rather than throwing —
+always null-check it. Pair it with the `withMultiStepAuth` HOC and the
+composable forms (`OTPLoginForm`, `PasswordLoginForm`, `SSOButtons`).
 
 ---
 

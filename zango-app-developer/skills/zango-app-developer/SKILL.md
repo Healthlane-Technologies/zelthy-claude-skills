@@ -1,6 +1,6 @@
 ---
 name: zango-app-developer
-description: Use this skill when the user wants to bootstrap a Zango development environment (Docker-based setup or virtualenv setup), create a Zango app, add modules to a Zango app, implement backend or frontend features on a Zango project, or work with Zango models, views, forms, tables, workflows, policies, async tasks, React components, CrudHandler, FormRenderer, or ZangoApp. Triggers on mentions of "Zango", "zango app", "zango project", "zango environment", "zango setup", "DynamicModelBase", "BaseCrudView", "CrudHandler", "useCrud", "useTable", "TableProvider", "CrudProvider", "FormRenderer", "ZangoApp", "React component", "frontend", "zango module", "CRUD view", "create CRUD", "add CRUD", "workflow", "create workflow", "add workflow", "status transitions", "custom page", "routes", "menu", "navbar", "theme" or requests to build business applications using the Zango framework.
+description: Use this skill when the user wants to bootstrap a Zango development environment (Docker-based setup or virtualenv setup), create a Zango app, add modules to a Zango app, implement backend or frontend features on a Zango project, or work with Zango models, views, forms, tables, workflows, policies, async tasks, React components, CrudHandler, FormRenderer, or ZangoApp. Triggers on mentions of "Zango", "zango app", "zango project", "zango environment", "zango setup", "DynamicModelBase", "BaseCrudView", "CrudHandler", "useCrud", "useTable", "TableProvider", "CrudProvider", "FormRenderer", "ZangoApp", "useAppContext", "useAuth", "React component", "frontend", "zango module", "CRUD view", "create CRUD", "add CRUD", "workflow", "create workflow", "add workflow", "status transitions", "custom page", "routes", "menu", "navbar", "theme" or requests to build business applications using the Zango framework.
 ---
 
 # Zango App Developer
@@ -368,7 +368,7 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 
 | Task | Reference |
 |------|-----------|
-| App setup, routes, menus, theme, auth, navbar | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
+| App setup, routes, menus, theme, auth, navbar, `useAppContext`/`useAuth` | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
 | CRUD hooks (`useCrud`, `useTable`), CrudHandler, tables, detail views | [frontend/crud.md](references/frontend/crud.md) |
 | FormRenderer (server-driven and local RJSF) | [frontend/form.md](references/frontend/form.md) |
 | WorkflowStatus, WorkflowTags | [frontend/workflow.md](references/frontend/workflow.md) |
