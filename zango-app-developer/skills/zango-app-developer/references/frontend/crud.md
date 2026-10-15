@@ -91,11 +91,11 @@ Three ways to drive a table. Pick one per component; do not mix shapes.
 > ```js
 > // useTable() — FLAT
 > const t = useTable();
-> t.searchTerm; t.setSearchTerm("x"); t.currentPage; t.goToNextPage(); t.handleRowClick(rowWrapper);
+> t.searchTerm; t.setSearchTerm("x"); t.currentPage; t.goToNextPage(); t.debouncedFilterObj;
 >
 > // useCrud() — NAMESPACED
 > const c = useCrud();
-> c.search.term; c.search.setTerm("x"); c.pagination.currentPage; c.pagination.goToNextPage(); c.row.onClick(e, row);
+> c.search.term; c.search.setTerm("x"); c.pagination.currentPage; c.pagination.goToNextPage(); c.filters.debouncedFilterObj;
 > ```
 
 ## How to host the hooks
@@ -113,30 +113,36 @@ Use this when you want a custom list layout — cards, kanban, calendar — but 
 happy to let the package own fetching, the toolbar, and the detail route.
 
 ```jsx
-import { CrudHandler } from '@zango-core/crud/table';
+import { CrudHandler, useTableContext } from '@zango-core/crud/table';
 import { useCrud } from '@zango-core/crud/core';
 
 /* MUST be module scope — see the stable-reference trap below. */
 function ProgramCards() {
   const crud = useCrud();
-  const rows = crud.data ?? [];
+  const { openDetailDrawer } = useTableContext();
+  const rows = crud.table?.getRowModel().rows ?? [];   // Row<T> wrappers
   if (crud.isLoading && rows.length === 0) return <Skeleton />;
   return (
     <div className="grid grid-cols-3 gap-4">
-      {rows.map((row) => <Card key={row.object_uuid} row={row} />)}
+      {rows.map((r) => (
+        <Card key={r.original.object_uuid} row={r.original} onClick={() => openDetailDrawer(r)} />
+      ))}
     </div>
   );
 }
 
 <CrudHandler
   api_endpoint="/api/programs/"
-  showHeader={false}
   showPagination={false}
-  enableDetailViewRoute
-  defaultDetailView="navigate"
   customTableBody={ProgramCards}
 />
 ```
+
+`customTableBody` is rendered as `<CustomTableBody />` — it receives **no
+props**. Read rows from `useCrud()`, not from a `({ data })` argument.
+
+More end-to-end examples (drawer, route detail, modal, export, tabs) live in
+[recipes.md](recipes.md).
 
 ### B. TableProvider + useCrud + CrudProvider (full control)
 
@@ -238,28 +244,70 @@ function BareOrdersTable() { return <OrdersTable bare />; }
 <CrudHandler customTableBody={BareOrdersTable} />
 ```
 
-### `detail.open(row)` needs a TanStack `Row<T>`, not a data object
+### `detail.open`, `row.onClick` and `handleRowClick` do nothing — use `openDetailDrawer`
 
-`crud.detail.open` is typed `(row: Row<T>) => void` and forwards to
-`handleRowClick`, which expects the Row wrapper. But `crud.data` is plain `T[]`.
-Inside a custom body there is no Row to hand it.
+A package bug in 2.0.0. `TableProvider`'s `handleRowClick` takes
+`(event, row)`, but `useTable()` types it `(row, event)` and passes it through
+unchanged. So every hook-level caller sends the arguments in the wrong order:
+
+- `crud.detail.open(row)` calls `handleRowClick(row)` → `row` arrives as `event`, `row` is `undefined`.
+- `crud.row.onClick(e, row)` calls `handleRowClick(row, e)` → same swap.
+- `useTable().handleRowClick(row)` → same swap.
+
+The provider only opens the drawer `if (row)`, so all three are silent no-ops.
+(The default `TableBody` calls the context directly with the right order, which
+is why stock tables work.)
 
 ```jsx
-// ✗ crud.data items are not Row<T>
-crud.detail.open(crud.data[0]);
+// ✗ no-op in 2.0.0, Row wrapper or not
+crud.detail.open(row);
 
-// ✓ get real Row objects off the table instance
+// ✓ open the package drawer
+import { useTableContext } from '@zango-core/crud/table';
+const { openDetailDrawer } = useTableContext();
 const rows = crud.table?.getRowModel().rows ?? [];
-crud.detail.open(rows[0]);
+openDetailDrawer(rows[0]);
 
-// ✓ or skip the drawer and route yourself
-navigate(`/app/programs/${row.object_uuid}`);
+// ✓ or route to the detail page (needs enableDetailViewRoute)
+navigate(`${window.location.pathname.replace(/\/$/, '')}/detail-view/${row.object_uuid}`);
 ```
 
-`useTable().handleRowClick` has the same `Row<T>` requirement. Note also that in
-`useTable`'s **standalone** branch (called *with* an endpoint, outside a
-provider) `handleRowClick` is a no-op — row clicks only work on the context
-branch, i.e. inside `TableProvider` or `CrudHandler`.
+`openDetailDrawer` accepts a plain record too (it reads `row.original || row`),
+but pass the `Row<T>` from `crud.table.getRowModel().rows`: that object becomes
+the `selectedRow` your `customDrawerDetail` receives, and it reads
+`selectedRow.original`.
+
+### `CrudHandler` drops `defaultDetailView`
+
+The prop is declared on `CrudHandlerProps` but never destructured or forwarded.
+Row-click behaviour comes only from `metadata.detail_config.default_view` or
+from a `TableBody` you render yourself.
+
+```jsx
+// ✗ ignored — rows still open the drawer
+<CrudHandler api_endpoint="/api/x/" enableDetailViewRoute defaultDetailView="navigate" />
+
+// ✓ put it on TableBody, in a module-scope component
+function NavigateTableBody() { return <TableBody defaultDetailView="navigate" />; }
+<CrudHandler api_endpoint="/api/x/" enableDetailViewRoute customTableBody={NavigateTableBody} />
+```
+
+### `DetailViewProvider` ignores `objectUuid` when `apiUrl` is set
+
+With `apiUrl`, the provider uses that URL as-is and reads the uuid **out of it**.
+`objectUuid` is only used together with `baseApiUrl` (which defaults to
+`/api/crud`, not your endpoint).
+
+```jsx
+// ✗ fetches /api/orders/?view=detail&action=fetch_item_details — no uuid
+<DetailViewProvider apiUrl="/api/orders/" objectUuid={uuid}>
+
+// ✓ uuid in the URL
+<DetailViewProvider apiUrl={`/api/orders/?object_uuid=${uuid}`}>
+
+// ✓ or base + uuid
+<DetailViewProvider baseApiUrl="/api/orders/" objectUuid={uuid}>
+```
 
 ### `WorkflowStatus` / `WorkflowTags` self-fetch
 
@@ -445,7 +493,7 @@ complete `UseTableReturn<T>`, grouped by concern for readability only.
 | `selectedDetailRow` | `Row<T> \| null` |
 | `detailDrawerOpen` | `boolean` |
 | `setDetailDrawerOpen` | `(open: boolean) => void` |
-| `handleRowClick` | `(row: Row<T>, event?: React.MouseEvent) => void` — needs a Row wrapper; no-op on the standalone branch |
+| `handleRowClick` | typed `(row: Row<T>, event?) => void`, but the context value underneath is `(event, row)` — ⚠️ calling it as typed is a no-op. Use `useTableContext().openDetailDrawer(row)`. See Known traps. |
 | `closeDetailDrawer` | `() => void` |
 | `navigateToNextEntry?` / `navigateToPreviousEntry?` | `() => void` — optional |
 
@@ -509,10 +557,10 @@ function OrdersTable() {
         placeholder="Search orders…"
       />
       <ul>
-        {/* Row<T> wrappers — handleRowClick needs them, plain data items won't do. */}
-        {(t.table?.getRowModel().rows ?? []).map((r) => (
-          <li key={r.original.id} onClick={() => t.handleRowClick(r)}>
-            {r.original.name}
+        {/* No CrudHandler here, so no drawer — link to your own detail page. */}
+        {(t.data ?? []).map((o) => (
+          <li key={o.object_uuid}>
+            <a href={`/app/orders/${o.object_uuid}`}>{o.name}</a>
           </li>
         ))}
       </ul>
@@ -575,8 +623,8 @@ useCrud<T = TableRowData>(options?: UseCrudOptions): UseCrudReturn<T>
 | `pagination` | `{ currentPage, setCurrentPage, totalPages, rowsPerPage, setRowsPerPage, hasNextPage, hasPreviousPage, canGoNext, canGoPrevious, goToNextPage, goToPreviousPage, goToFirstPage, goToLastPage, pageNumbers, startRow, endRow, isInfiniteScroll, fetchMoreOnBottomReached? }` |
 | `selection` | `{ selectedRows, selectRow, selectAll, clearSelection, selectedCount, isAllSelected, isSomeSelected, hasSelection, isRowSelected, selectedRowIds, toggleRows, getSelectedData }` |
 | `columns` | `{ definitions, visibility, setVisibility, order, setOrder, pinning, setPinning, sorting, setSorting, wrap, setWrap }` |
-| `row` | `{ onClick(event, row), onClickAction, navigateUrl?, customClickHandler? }` |
-| `detail` | `{ selectedRow, selectedObjectUuid, drawerOpen, open(row), close(), navigateNext(), navigatePrevious(), canNavigateNext, canNavigatePrevious }` — ⚠️ `open()` takes a TanStack `Row<T>`, not an item from `crud.data`. See Known traps. |
+| `row` | `{ onClick(event, row), onClickAction, navigateUrl?, customClickHandler? }` — ⚠️ `onClick` is a no-op in 2.0.0 (argument-order bug). See Known traps. |
+| `detail` | `{ selectedRow, selectedObjectUuid, drawerOpen, open(row), close(), navigateNext(), navigatePrevious(), canNavigateNext, canNavigatePrevious }` — ⚠️ `open()` is a no-op in 2.0.0; use `useTableContext().openDetailDrawer(row)`. `close()` and the navigation helpers work. See Known traps. |
 | `actions` | `{ refresh, refetch, invalidateCache, executeRowAction(actionKey, objectUuid), executeTransition(transitionName, objectUuid) }` |
 | `workflow` | `{ details, transitions, tags }` |
 | `ui` | `{ hideControls, setHideControls, filterLayout }` |
@@ -789,6 +837,12 @@ useDetailView(options?: { apiUrl?: string; enabled?: boolean }): {
 }
 ```
 
+Use it **standalone**, with an `apiUrl` that carries the uuid
+(`/api/orders/?object_uuid=${uuid}`); it adds `action=fetch_item_details` and
+`view=detail` itself. Under a `DetailViewProvider`, read
+`useDetailViewContext()` instead — `useDetailView()` there runs its own fetch
+until the provider's data arrives, so the record loads twice.
+
 ### useDetailViewContext()
 
 Reads the shared `DetailViewProvider` value. Returns `null` outside one —
@@ -839,10 +893,11 @@ useWorkflow(options?: {
 Auto-syncs with `DetailViewProvider` when rendered inside one.
 
 ```jsx
-import { DetailViewProvider, useDetailView, useWorkflow } from "@zango-core/crud/table";
+import { DetailViewProvider, useDetailViewContext, useWorkflow } from "@zango-core/crud/table";
 
 function OrderDetail() {
-  const { data, loading } = useDetailView();
+  // Under a provider, read it — useDetailView() would fetch again until the provider's data lands.
+  const { data, loading } = useDetailViewContext() ?? {};
   const { workflowDetails, executeTransition } = useWorkflow();
 
   if (loading) return <p>Loading…</p>;
@@ -862,7 +917,7 @@ function OrderDetail() {
 
 export default function Wrapper({ objectUuid }) {
   return (
-    <DetailViewProvider apiUrl="/api/orders" objectUuid={objectUuid}>
+    <DetailViewProvider apiUrl={`/api/orders/?object_uuid=${objectUuid}`}>
       <OrderDetail />
     </DetailViewProvider>
   );
@@ -1024,7 +1079,7 @@ export function Users() {
 | `scrollMode` | `"pagination" \| "infinite"` | metadata | Pagination or infinite scroll. |
 | `filterLayout` | `"sidebar" \| "horizontal"` | metadata | Filter panel placement. |
 | `detailDrawerSize` | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | `"md"` | Detail drawer width. Precedence: this prop → `metadata.detail_config.drawer_size` → `"md"`. (A source comment claims `"lg"`; the code uses `"md"`.) |
-| `defaultDetailView` | `"drawer" \| "navigate" \| "custom" \| "none"` | — | What a row click does. |
+| `defaultDetailView` | `"drawer" \| "navigate" \| "custom" \| "none"` | — | ⚠️ Declared but **ignored** in 2.0.0 — `CrudHandler` never forwards it. Use `metadata.detail_config.default_view`, or set it on a `TableBody` in `customTableBody`. |
 
 ### Section replacement
 
@@ -1145,21 +1200,22 @@ Customize individual cell types without replacing the body.
 
 ```jsx
 // Custom drawer detail — fetch the record yourself
-import { CrudHandler, DetailViewProvider, useDetailView } from "@zango-core/crud/table";
+import { CrudHandler, DetailViewProvider, useDetailViewContext } from "@zango-core/crud/table";
 
 function UserDrawer({ selectedRow, open, onClose }) {
   const objectUuid = selectedRow?.original?.object_uuid;
+  if (!open || !objectUuid) return null;
   return (
-    <DetailViewProvider apiUrl="/api/users" objectUuid={objectUuid}>
-      <UserDrawerBody open={open} onClose={onClose} />
+    // baseApiUrl + objectUuid — apiUrl + objectUuid drops the uuid
+    <DetailViewProvider baseApiUrl="/api/users/" objectUuid={objectUuid}>
+      <UserDrawerBody onClose={onClose} />
     </DetailViewProvider>
   );
 }
 
-function UserDrawerBody({ open, onClose }) {
-  const { data, loading, workflowDetails } = useDetailView();
-  if (!open) return null;
-  if (loading) return <p>Loading…</p>;
+function UserDrawerBody({ onClose }) {
+  const { data, loading, workflowDetails } = useDetailViewContext() ?? {};
+  if (loading || !data) return <p>Loading…</p>;
   return (
     <aside>
       <h2>{data?.title}</h2>
@@ -1176,16 +1232,19 @@ function UserDrawerBody({ open, onClose }) {
 // Custom list layout (kanban / calendar / cards) via customTableBody.
 // The body reads table state from context — no props needed.
 // Module scope keeps the component reference stable.
-import { CrudHandler } from "@zango-core/crud/table";
+import { CrudHandler, useTableContext } from "@zango-core/crud/table";
 import { useCrud } from "@zango-core/crud/core";
 
 function KanbanBody() {
   const crud = useCrud();
+  // crud.detail.open is a no-op in 2.0.0 — open the drawer through the context.
+  const { openDetailDrawer } = useTableContext();
   if (crud.isLoading) return <p>Loading…</p>;
 
-  // Real Row<T> wrappers — crud.data items alone can't open the detail view.
+  // Row<T> wrappers, so customDrawerDetail gets selectedRow.original.
   const rows = crud.table?.getRowModel().rows ?? [];
-  const statuses = ["todo", "in_progress", "done"];
+  // List rows carry workflow_status as { status_label, status_color } — no status key.
+  const statuses = ["To do", "In progress", "Done"];
 
   return (
     <div className="flex gap-4">
@@ -1193,9 +1252,9 @@ function KanbanBody() {
         <div key={status} className="flex-1">
           <h3>{status}</h3>
           {rows
-            .filter((r) => r.original.workflow_status?.current_status === status)
+            .filter((r) => r.original.workflow_status?.status_label === status)
             .map((r) => (
-              <article key={r.original.object_uuid} onClick={() => crud.detail.open(r)}>
+              <article key={r.original.object_uuid} onClick={() => openDetailDrawer(r)}>
                 {r.original.title}
               </article>
             ))}
@@ -1567,114 +1626,98 @@ interface ActionButtonState {
 
 ### Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `data` | object | - | Complete detail response from the API, containing all fields and nested data for the record. |
-| `api_endpoint` | string | - | The API endpoint used to fetch the detail data. |
-| `loading` | boolean | - | Whether the detail data is currently being fetched. |
-| `error` | string | null | - | Error message if the data fetch failed, or null if successful. |
-| `onRefresh` | function | - | Callback to re-fetch the detail data. Useful after performing mutations like status transitions or edits. |
-| `objectUuid` | string | - | The unique object UUID of the current record. |
-| `pk` | string | number | - | The primary key of the current record. |
-| `title` | string | - | The display title for the detail view, derived from the record data. |
-| `general_details` | object | - | General details section with a fields object. Each field is keyed by field_name and has { name, display_name, type, value, searchable, sortable }. |
-| `workflow_details` | object | - | Workflow data including current_status (string key), current_status_meta ({ name, from, to, status_label, status_color, is_form_based, is_manual }), next_transitions (array), and tag_details (array). |
-| `sections` | array | - | Array of section objects, each with key, name, title, data (object), optional extra_html, and optional form ({ is_multistep, form: { json_schema, ui_schema } }). |
-| `row_actions` | array | - | Array of available row-level actions for the current record. |
-| `configurations` | object | - | Additional configuration metadata for the detail view. |
-| `useDetailView({ apiUrl })` | Hook | - | Fetches detail data for a specific record. Returns: data, loading, error, refresh, objectUuid, workflowDetails, rowActions. |
-| `useDetailViewContext()` | Hook | - | Reads from the nearest DetailViewProvider context. Same return shape as useDetailView but from shared context. |
+The two detail slots receive **different** props. `customMainDetail` gets the
+fetched record, injected by `DetailWrapper` in **camelCase**.
+`customDrawerDetail` gets no record at all.
+
+**`customMainDetail`** (route-based, `enableDetailViewRoute`)
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `data` | object | Full `fetch_item_details` response for the record. |
+| `loading` | boolean | Whether the record is being fetched. |
+| `error` | Error \| null | Fetch error, or null. |
+| `generalDetails` | object | `data.general_details` — `{ fields }`, keyed by field name; each field has `{ name, display_name, type, value }`. |
+| `workflowDetails` | object | `current_status`, `current_status_meta` (`status_label`, `status_color`, …), `next_transitions`, `tag_details`. |
+| `sections` | array | `data.sections` — `{ key, title, data, extra_html?, form? }`. |
+| `rowActions` | array | Row actions available for the record. |
+| `objectUuid` | string | The record's uuid. |
+| `pk` | string \| number | The record's primary key. |
+| `onRefresh` | `() => Promise<void>` | Refetch the record. |
+| `apiUrl` | string | The `CrudHandler` endpoint. |
+
+Snake_case names (`general_details`, `workflow_details`, `row_actions`) are the
+API payload's keys, not props — destructuring them gets `undefined`.
+
+**`customDrawerDetail`** — exactly `{ selectedRow, open, onClose }`.
+`selectedRow` is a TanStack `Row`; the record is `selectedRow.original`. Fetch
+the detail yourself with `DetailViewProvider`.
 
 ### Code Examples
 
 ```jsx
-import React from 'react';
+// customDrawerDetail — module scope; fetch the record through a provider.
+import { DetailViewProvider, useDetailViewContext } from '@zango-core/crud/table';
 
-const CustomDrawerDetail = ({
-  selectedRow,
-  open,
-  onClose,
-  data,
-  workflow_details,
-  general_details,
-  sections,
-}) => {
-  if (!open || !data) return null;
+const ENDPOINT = '/api/users/';
+
+function DrawerBody({ onClose }) {
+  const { data, loading, workflowDetails } = useDetailViewContext() ?? {};
+  if (loading || !data) return <p className="p-6">Loading…</p>;
+  const fields = data.general_details?.fields ?? {};   // raw payload: snake_case
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between p-6 border-b">
         <h2 className="text-lg font-semibold">{data.title || 'Detail View'}</h2>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 text-xl"
-        >
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">
           &times;
         </button>
       </div>
-
-      {/* Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* General Details — fields is an object keyed by field_name */}
-        {general_details?.fields && (
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-3">
-              General Information
-            </h3>
-            <div className="space-y-2">
-              {Object.entries(general_details.fields).map(([key, field]) => (
-                <div key={key} className="flex justify-between py-2 border-b">
-                  <span className="text-sm text-gray-500">{field.display_name}</span>
-                  <span className="text-sm font-medium">{field.value}</span>
-                </div>
-              ))}
+        <div className="space-y-2">
+          {Object.entries(fields).map(([key, field]) => (
+            <div key={key} className="flex justify-between py-2 border-b">
+              <span className="text-sm text-gray-500">{field.display_name}</span>
+              <span className="text-sm font-medium">{field.value}</span>
             </div>
-          </div>
-        )}
-
-        {/* Workflow Status */}
-        {workflow_details && (
-          <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-3">
-              Workflow
-            </h3>
-            <div
-              className="inline-flex items-center px-3 py-1 rounded-full text-sm"
-              style={{
-                backgroundColor: workflow_details.current_status_meta?.status_color || '#eff6ff',
-                color: '#1d4ed8',
-              }}
-            >
-              {workflow_details.current_status_meta?.status_label || workflow_details.current_status || 'N/A'}
-            </div>
-          </div>
+          ))}
+        </div>
+        {workflowDetails && (
+          <span
+            className="inline-flex items-center px-3 py-1 rounded-full text-sm"
+            style={{ backgroundColor: workflowDetails.current_status_meta?.status_color || '#eff6ff' }}
+          >
+            {workflowDetails.current_status_meta?.status_label || workflowDetails.current_status}
+          </span>
         )}
       </div>
     </div>
   );
-};
+}
 
-export default CustomDrawerDetail;
-```
+export function CustomDrawerDetail({ selectedRow, open, onClose }) {
+  const uuid = selectedRow?.original?.object_uuid;
+  if (!open || !uuid) return null;
+  return (
+    <DetailViewProvider baseApiUrl={ENDPOINT} objectUuid={uuid}>
+      <DrawerBody onClose={onClose} />
+    </DetailViewProvider>
+  );
+}
 
-```jsx
-import CustomDrawerDetail from './CustomDrawerDetail';
-
-<CrudHandler
-  api_endpoint="/api/users"
-  customDrawerDetail={CustomDrawerDetail}
-/>
+<CrudHandler api_endpoint={ENDPOINT} customDrawerDetail={CustomDrawerDetail} />
 ```
 
 ```jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// camelCase props — injected by DetailWrapper
 const CustomMainDetail = ({
   data,
-  workflow_details,
-  general_details,
+  workflowDetails,
+  generalDetails,
   sections,
   onRefresh,
 }) => {
@@ -1698,11 +1741,11 @@ const CustomMainDetail = ({
       </h1>
 
       {/* General Details — fields is an object keyed by field_name */}
-      {general_details?.fields && (
+      {generalDetails?.fields && (
         <div className="bg-white rounded-lg border p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">General Information</h2>
           <div className="grid grid-cols-2 gap-4">
-            {Object.entries(general_details.fields).map(([key, field]) => (
+            {Object.entries(generalDetails.fields).map(([key, field]) => (
               <div key={key}>
                 <span className="text-sm text-gray-500 block">{field.display_name}</span>
                 <span className="text-sm font-medium">{field.value}</span>
@@ -1733,7 +1776,7 @@ const CustomMainDetail = ({
       ))}
 
       {/* Workflow Section */}
-      {workflow_details && (
+      {workflowDetails && (
         <div className="bg-white rounded-lg border p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Workflow</h2>
           <div>
@@ -1741,16 +1784,16 @@ const CustomMainDetail = ({
             <span
               className="inline-flex px-3 py-1 rounded-full text-sm"
               style={{
-                backgroundColor: workflow_details.current_status_meta?.status_color || '#eff6ff',
+                backgroundColor: workflowDetails.current_status_meta?.status_color || '#eff6ff',
                 color: '#1d4ed8',
               }}
             >
-              {workflow_details.current_status_meta?.status_label || workflow_details.current_status}
+              {workflowDetails.current_status_meta?.status_label || workflowDetails.current_status}
             </span>
           </div>
-          {workflow_details.next_transitions?.length > 0 && (
+          {workflowDetails.next_transitions?.length > 0 && (
             <div className="flex gap-2 mt-4">
-              {workflow_details.next_transitions.map((t) => (
+              {workflowDetails.next_transitions.map((t) => (
                 <span key={t.name} className="text-sm text-gray-600">
                   {t.display_name} &rarr; {t.to_state_meta?.status_label}
                 </span>
@@ -1777,12 +1820,16 @@ export default CustomMainDetail;
 ```jsx
 import CustomMainDetail from './CustomMainDetail';
 
+// Module scope — a component reference, not a JSX element.
+function NavigateTableBody() {
+  return <TableBody defaultDetailView="navigate" />;
+}
+
 <CrudHandler
   api_endpoint="/api/users"
+  enableDetailViewRoute
   customMainDetail={CustomMainDetail}
-  customTableBody={
-    <TableBody defaultDetailView="navigate" />
-  }
+  customTableBody={NavigateTableBody}
 />
 ```
 
@@ -1906,6 +1953,12 @@ const { data, refresh } = useDetailViewContext();
   }}
 />
 ```
+
+> **⚠️ A leading `/` means "append to the current path", not "absolute".**
+> `TableBody` builds `${window.location.pathname}${template}` when the template
+> starts with `/`, so on `/app/team` the template above goes to
+> `/app/team/users/<uuid>/profile`. A template without a leading `/` is passed
+> to `navigate()` as-is. Placeholders accept fallbacks: `{object_uuid || pk}`.
 
 ```jsx
 // Custom row click handler

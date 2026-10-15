@@ -370,6 +370,7 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 |------|-----------|
 | App setup, routes, menus, theme, auth, navbar, `useAppContext`/`useAuth` | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
 | CRUD hooks (`useCrud`, `useTable`), CrudHandler, tables, detail views | [frontend/crud.md](references/frontend/crud.md) |
+| Copy-paste recipes: card/kanban bodies, drawer & route detail, modal row click, stats header, filters, export, nested tabs, branding | [frontend/recipes.md](references/frontend/recipes.md) — **check before scaffolding** |
 | FormRenderer (server-driven and local RJSF) | [frontend/form.md](references/frontend/form.md) |
 | WorkflowStatus, WorkflowTags | [frontend/workflow.md](references/frontend/workflow.md) |
 | App module (serve React build from backend) | [templates/app-module/README.md](references/templates/app-module/README.md) |
@@ -381,7 +382,10 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 1c. **Hook return shapes differ**: `useTable()` is flat (`t.searchTerm`, `t.currentPage`); `useCrud()` is namespaced (`c.search.term`, `c.pagination.currentPage`). Mixing them yields `undefined`, not an error.
 1d. **Filter writes go through `useTableFilters()`**, never `crud.filters.setFilter()` — the latter persists but never reaches the query, so rows only change on reload. `crud.filters.columns` is always `[]`.
 1e. **`customTableBody` / `customMainDetail` must be stable component refs** (module scope or memoized). An inline arrow remounts and refetches on every parent render.
-1f. **`crud.detail.open(row)` needs a TanStack `Row<T>`** — `crud.data` items are plain objects. Use `crud.table?.getRowModel().rows`, or route to the detail URL yourself.
+1f. **Open the drawer with `useTableContext().openDetailDrawer(row)`** — in crud 2.0.0, `crud.detail.open`, `crud.row.onClick` and `useTable().handleRowClick` swap their arguments and do nothing. Pass a `Row<T>` from `crud.table?.getRowModel().rows`, or route to `detail-view/<uuid>` yourself.
+1h. **`<CrudHandler defaultDetailView=…>` is ignored** — the prop is never forwarded. Set it on a `TableBody` inside a module-scope `customTableBody`, or in backend `detail_config.default_view`.
+1i. **`DetailViewProvider` ignores `objectUuid` when `apiUrl` is set** — use `apiUrl={`${endpoint}?object_uuid=${uuid}`}` or `baseApiUrl` + `objectUuid`. Under a provider, read with `useDetailViewContext()`; `useDetailView()` there fetches a second time.
+1j. **`customTableBody` receives no props** — read rows from `useCrud()`, never `({ data }) => …`.
 1g. **Forms use `FormRenderer`, not hooks.** Hooks are the primary path for tables; forms are the exception. `FormHandler`'s `renderFields` slot does not fire the init request in shipped builds and leaves the form on a spinner — wrap `FormRenderer` in your own drawer/dialog for custom chrome.
 2. **Server API fields**: snake_case — `json_schema`, `ui_schema`, `form_data`, `status_label`, `next_transitions`, `tag_details`, `display_name`, `tag_label`
 3. **Local RJSF fields**: camelCase — `schema`, `uiSchema`, `formData`
@@ -407,22 +411,24 @@ export default {{PageName}};
 Most common. The handler owns fetching, toolbar and detail route; the body owns
 the markup. The body MUST be a stable module-scope component.
 ```jsx
-import { CrudHandler } from '@zango-core/crud/table';
+import { CrudHandler, useTableContext } from '@zango-core/crud/table';
 import { useCrud } from '@zango-core/crud/core';
 
 function {{PageName}}Cards() {          // module scope — NOT an inline arrow
   const crud = useCrud();
-  const rows = crud.data ?? [];
+  const { openDetailDrawer } = useTableContext();
+  const rows = crud.table?.getRowModel().rows ?? [];   // Row<T> wrappers
   if (crud.isLoading && rows.length === 0) return null;
-  return <div>{rows.map((r) => <Card key={r.object_uuid} row={r} />)}</div>;
+  return (
+    <div>
+      {rows.map((r) => (
+        <Card key={r.original.object_uuid} row={r.original} onClick={() => openDetailDrawer(r)} />
+      ))}
+    </div>
+  );
 }
 
-<CrudHandler
-  api_endpoint="{{endpoint}}"
-  customTableBody={{{PageName}}Cards}
-  enableDetailViewRoute
-  defaultDetailView="navigate"
-/>
+<CrudHandler api_endpoint="{{endpoint}}" customTableBody={{{PageName}}Cards} />
 ```
 
 **B. Full control — mount the engine yourself.** No CrudHandler chrome at all.
@@ -454,14 +460,14 @@ All three run the same engine: `CrudHandler` is `TableProvider` + `useCrud()` +
 
 #### CrudHandler with custom detail drawer
 `customDrawerDetail` receives **only** `{ selectedRow, open, onClose }` — it does
-NOT receive fetched detail data. Load the record yourself with `useDetailView()`.
+NOT receive fetched detail data. Load the record through `DetailViewProvider`
+(`baseApiUrl` + `objectUuid`) and read it with `useDetailViewContext()`.
 ```jsx
-import { CrudHandler, DetailViewProvider, useDetailView } from '@zango-core/crud/table';
+import { CrudHandler, DetailViewProvider, useDetailViewContext } from '@zango-core/crud/table';
 
-const DetailBody = ({ open, onClose }) => {
-  const { data, loading } = useDetailView();
-  if (!open) return null;
-  if (loading) return <p>Loading…</p>;
+const DetailBody = ({ onClose }) => {
+  const { data, loading } = useDetailViewContext() ?? {};
+  if (loading || !data) return <p>Loading…</p>;
   return (
     <div>
       <h2>{data?.title}</h2>
@@ -473,14 +479,16 @@ const DetailBody = ({ open, onClose }) => {
   );
 };
 
-const Detail = ({ selectedRow, open, onClose }) => (
-  <DetailViewProvider
-    apiUrl="{{endpoint}}"
-    objectUuid={selectedRow?.original?.object_uuid}
-  >
-    <DetailBody open={open} onClose={onClose} />
-  </DetailViewProvider>
-);
+const Detail = ({ selectedRow, open, onClose }) => {
+  const uuid = selectedRow?.original?.object_uuid;
+  if (!open || !uuid) return null;
+  return (
+    // baseApiUrl, not apiUrl — apiUrl + objectUuid drops the uuid
+    <DetailViewProvider baseApiUrl="{{endpoint}}" objectUuid={uuid}>
+      <DetailBody onClose={onClose} />
+    </DetailViewProvider>
+  );
+};
 
 <CrudHandler api_endpoint="{{endpoint}}" customDrawerDetail={Detail} />
 ```

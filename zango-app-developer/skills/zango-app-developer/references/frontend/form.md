@@ -476,8 +476,9 @@ function CreateUserForm() {
 ```
 
 ```jsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CrudHandler } from "@zango-core/crud/table";
+import { useCrud } from "@zango-core/crud/core";
 import { FormRenderer } from "@zango-core/crud/form";
 import {
   Dialog,
@@ -498,13 +499,39 @@ function UserManagement() {
     setFormDialog({ open: true, mode: "create", uuid: null });
   };
 
-  const openEditForm = (uuid) => {
-    setFormDialog({ open: true, mode: "edit", uuid });
-  };
-
   const closeForm = () => {
     setFormDialog({ open: false, mode: null, uuid: null });
   };
+
+  /* customTableBody gets no props and must keep a stable identity, so build it
+     once. It reads rows from useCrud(); setFormDialog never changes. */
+  const UsersTableBody = useMemo(
+    () =>
+      function UsersTableBody() {
+        const crud = useCrud();
+        return (
+          <table className="w-full">
+            <tbody>
+              {(crud.data ?? []).map((row) => (
+                <tr key={row.object_uuid} className="border-b hover:bg-gray-50">
+                  <td className="p-3">{row.name}</td>
+                  <td className="p-3">{row.email}</td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => setFormDialog({ open: true, mode: "edit", uuid: row.object_uuid })}
+                      className="text-indigo-600 text-sm hover:underline"
+                    >
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+      },
+    [],
+  );
 
   return (
     <div>
@@ -521,26 +548,7 @@ function UserManagement() {
             </button>
           ),
         }}
-        customTableBody={({ data }) => (
-          <table className="w-full">
-            <tbody>
-              {data?.map((row) => (
-                <tr key={row.uuid} className="border-b hover:bg-gray-50">
-                  <td className="p-3">{row.name}</td>
-                  <td className="p-3">{row.email}</td>
-                  <td className="p-3">
-                    <button
-                      onClick={() => openEditForm(row.uuid)}
-                      className="text-indigo-600 text-sm hover:underline"
-                    >
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        customTableBody={UsersTableBody}
       />
 
       {/* Add/Edit Dialog with FormRenderer */}
