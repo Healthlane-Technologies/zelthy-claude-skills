@@ -370,7 +370,7 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 |------|-----------|
 | App setup, routes, menus, theme, auth, navbar, `useAppContext`/`useAuth` | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
 | CRUD hooks (`useCrud`, `useTable`), CrudHandler, tables, detail views | [frontend/crud.md](references/frontend/crud.md) |
-| Copy-paste recipes: card/kanban bodies, drawer & route detail, modal row click, stats header, filters, export, nested tabs, branding | [frontend/recipes.md](references/frontend/recipes.md) — **check before scaffolding** |
+| Copy-paste recipes: card/kanban bodies, drawer & route detail, modal row click, stats header, filters, export, nested tabs, branding, custom toolbar, row actions in cards | [frontend/recipes.md](references/frontend/recipes.md) — **check before scaffolding** |
 | FormRenderer (server-driven and local RJSF) | [frontend/form.md](references/frontend/form.md) |
 | WorkflowStatus, WorkflowTags | [frontend/workflow.md](references/frontend/workflow.md) |
 | App module (serve React build from backend) | [templates/app-module/README.md](references/templates/app-module/README.md) |
@@ -383,9 +383,10 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 1d. **Filter writes go through `useTableFilters()`**, never `crud.filters.setFilter()` — the latter persists but never reaches the query, so rows only change on reload. `crud.filters.columns` is always `[]`.
 1e. **`customTableBody` / `customMainDetail` must be stable component refs** (module scope or memoized). An inline arrow remounts and refetches on every parent render.
 1f. **Open the drawer with `useTableContext().openDetailDrawer(row)`** — in crud 2.0.0, `crud.detail.open`, `crud.row.onClick` and `useTable().handleRowClick` swap their arguments and do nothing. Pass a `Row<T>` from `crud.table?.getRowModel().rows`, or route to `detail-view/<uuid>` yourself.
-1h. **`<CrudHandler defaultDetailView=…>` is ignored** — the prop is never forwarded. Set it on a `TableBody` inside a module-scope `customTableBody`, or in backend `detail_config.default_view`.
+1h. **`<CrudHandler defaultDetailView=…>` is ignored** — `CrudHandler` passes `metadata.detail_config.default_view` in its place. Set it on a `TableBody` inside a module-scope `customTableBody`, or in backend `detail_config.default_view`.
 1i. **`DetailViewProvider` ignores `objectUuid` when `apiUrl` is set** — use `apiUrl={`${endpoint}?object_uuid=${uuid}`}` or `baseApiUrl` + `objectUuid`. Under a provider, read with `useDetailViewContext()`; `useDetailView()` there fetches a second time.
 1j. **`customTableBody` receives no props** — read rows from `useCrud()`, never `({ data }) => …`.
+1k. **Extra buttons: `extraRightActions` (toolbar) or `headerProps.extraActions` (header).** `headerProps.customRightActions` / `customLeftActions` render nothing, and `utilityProps` only reaches a `customUtilities` component.
 1g. **Forms use `FormRenderer`, not hooks.** Hooks are the primary path for tables; forms are the exception. `FormHandler`'s `renderFields` slot does not fire the init request in shipped builds and leaves the form on a spinner — wrap `FormRenderer` in your own drawer/dialog for custom chrome.
 2. **Server API fields**: snake_case — `json_schema`, `ui_schema`, `form_data`, `status_label`, `next_transitions`, `tag_details`, `display_name`, `tag_label`
 3. **Local RJSF fields**: camelCase — `schema`, `uiSchema`, `formData`

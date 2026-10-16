@@ -539,14 +539,10 @@ function UserManagement() {
         api_endpoint="/api/users/"
         headerProps={{
           title: "User Management",
-          customRightActions: (
-            <button
-              onClick={openCreateForm}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm"
-            >
-              Add User
-            </button>
-          ),
+          // Keeps the package add button (and its add-permission check);
+          // onAddClick replaces the built-in drawer with this dialog.
+          addButtonTitle: "Add User",
+          onAddClick: openCreateForm,
         }}
         customTableBody={UsersTableBody}
       />

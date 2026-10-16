@@ -279,9 +279,10 @@ the `selectedRow` your `customDrawerDetail` receives, and it reads
 
 ### `CrudHandler` drops `defaultDetailView`
 
-The prop is declared on `CrudHandlerProps` but never destructured or forwarded.
-Row-click behaviour comes only from `metadata.detail_config.default_view` or
-from a `TableBody` you render yourself.
+The prop is declared on `CrudHandlerProps`, but `CrudHandler` overwrites it
+with `metadata.detail_config.default_view` before passing it down. Row-click
+behaviour comes only from that metadata or from a `TableBody` you render
+yourself.
 
 ```jsx
 // ✗ ignored — rows still open the drawer
@@ -290,6 +291,25 @@ from a `TableBody` you render yourself.
 // ✓ put it on TableBody, in a module-scope component
 function NavigateTableBody() { return <TableBody defaultDetailView="navigate" />; }
 <CrudHandler api_endpoint="/api/x/" enableDetailViewRoute customTableBody={NavigateTableBody} />
+```
+
+### `headerProps.customRightActions` and `utilityProps` render nothing
+
+`headerProps` is spread onto `TableHeader`, which has no `customLeftActions` /
+`customRightActions`. `utilityProps` is spread only onto a `customUtilities`
+component; the default toolbar reads the top-level props instead.
+
+```jsx
+// ✗ neither button appears
+<CrudHandler
+  api_endpoint="/api/x/"
+  headerProps={{ customRightActions: <Export /> }}
+  utilityProps={{ extraRightActions: <Export /> }}
+/>
+
+// ✓ toolbar slot, or header slot beside the add button
+<CrudHandler api_endpoint="/api/x/" extraRightActions={<Export />} />
+<CrudHandler api_endpoint="/api/x/" headerProps={{ extraActions: <Export /> }} />
 ```
 
 ### `DetailViewProvider` ignores `objectUuid` when `apiUrl` is set
@@ -1079,7 +1099,8 @@ export function Users() {
 | `scrollMode` | `"pagination" \| "infinite"` | metadata | Pagination or infinite scroll. |
 | `filterLayout` | `"sidebar" \| "horizontal"` | metadata | Filter panel placement. |
 | `detailDrawerSize` | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | `"md"` | Detail drawer width. Precedence: this prop → `metadata.detail_config.drawer_size` → `"md"`. (A source comment claims `"lg"`; the code uses `"md"`.) |
-| `defaultDetailView` | `"drawer" \| "navigate" \| "custom" \| "none"` | — | ⚠️ Declared but **ignored** in 2.0.0 — `CrudHandler` never forwards it. Use `metadata.detail_config.default_view`, or set it on a `TableBody` in `customTableBody`. |
+| `formDrawerSize` | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | `"md"` | Add-form drawer width. Precedence: this prop → `metadata.form_config.drawer_size` → `"md"`. |
+| `defaultDetailView` | `"drawer" \| "navigate" \| "custom" \| "none"` | — | ⚠️ Declared but **ignored** in 2.0.0 — `CrudHandler` passes `metadata.detail_config.default_view` in its place. Set that in the backend, or set it on a `TableBody` in `customTableBody`. |
 
 ### Section replacement
 
@@ -1106,7 +1127,8 @@ export function Users() {
 
 ### Utilities
 
-Available both as top-level shortcuts and inside `utilityProps`.
+Top-level `CrudHandler` props. These are the only way to configure the default
+toolbar.
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
@@ -1119,22 +1141,33 @@ Available both as top-level shortcuts and inside `utilityProps`.
 | `extraLeftActions` | ReactNode | — | Extra actions on the left. |
 | `extraRightActions` | ReactNode | — | Extra actions on the right. |
 
-`utilityProps` accepts all of the above plus icon/label overrides:
-`filterIcon`, `filterLabel`, `filterIconPosition`, `filterBadgeClassName`,
-`filterBadgeStyle`, `hideFilterIcon`, `hideFilterBadge`, `downloadIcon`,
-`downloadLabel`, `downloadIconPosition`, `hideDownloadIcon`.
+> **⚠️ `utilityProps` never reaches the default toolbar.** `CrudHandler` spreads
+> it only onto a `customUtilities` component. Its typed keys (`filterIcon`,
+> `filterLabel`, `downloadLabel`, `hideDownloadIcon`, …) and any
+> `utilityProps.extraRightActions` do nothing otherwise. For icon or label
+> changes, build the toolbar from `TableSearchField` / `TableDownloadButton`
+> (see [recipes.md → 15](recipes.md#15-own-toolbar-from-the-package-controls)).
 
 ### headerProps
 
+Spread onto the default header (`TableHeader`), or onto your `customHeader`
+component.
+
 | Prop | Type | Description |
 |------|------|-------------|
-| `headerProps.title` | string | Header title text. |
-| `headerProps.showSearch` | boolean | Show/hide search in header. |
-| `headerProps.showFilters` | boolean | Show/hide filter controls. |
-| `headerProps.showActions` | boolean | Show/hide action buttons. |
-| `headerProps.searchPlaceholder` | string | Search placeholder. |
-| `headerProps.customLeftActions` | ReactNode | Custom actions, left. |
-| `headerProps.customRightActions` | ReactNode | Custom actions, right. |
+| `headerProps.title` | string \| ReactNode | Header title. Falls back to `metadata.page_title`. |
+| `headerProps.showCount` | boolean | Show the record count next to the title. |
+| `headerProps.showAddButton` | boolean | Show/hide the add button. |
+| `headerProps.addButtonTitle` | string \| ReactNode | Add button label. |
+| `headerProps.onAddClick` | () => void | Replace the default add-form drawer. |
+| `headerProps.extraActions` | ReactNode | Extra buttons, rendered beside the add button. |
+| `headerProps.className` / `containerClassName` / `titleClassName` / `buttonClassName` | string | Styling hooks. |
+
+> **⚠️ `headerProps.customRightActions` / `customLeftActions` render nothing.**
+> They are in the `CrudHandler` type, but `TableHeader` has no such props. The
+> same goes for `headerProps.showSearch`, `showFilters`, `showActions` and
+> `searchPlaceholder` — search and filters live in the toolbar. Use
+> `headerProps.extraActions` (header) or `extraRightActions` (toolbar).
 
 ### Render props
 
@@ -1184,15 +1217,12 @@ Customize individual cell types without replacing the body.
   api_endpoint="/api/crud"
   headerProps={{
     title: "User Management",
-    showSearch: true,
-    searchPlaceholder: "Search users...",
-    customRightActions: <Button>Export</Button>,
+    extraActions: <Button>Invite</Button>,
   }}
-  utilityProps={{
-    showUpload: true,
-    showColumnOptions: false,
-    searchPlaceholder: "Quick search...",
-  }}
+  showUpload
+  showColumnOptions={false}
+  searchPlaceholder="Search users..."
+  extraRightActions={<Button>Export</Button>}
   className="custom-table-wrapper"
   style={{ height: "600px" }}
 />
