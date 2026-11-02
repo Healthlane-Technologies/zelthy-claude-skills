@@ -165,20 +165,20 @@ Look at the models — if an entity has one-to-many relationships (e.g., Patient
 **3. Does the list need a non-standard layout?**
 Some entities are better visualised outside a standard table — kanban (statuses/stages), calendar (date-based), card/grid (visual content), timeline (sequential steps).
 → Ask: *"For [Entity] list, would a standard table work or would a different layout suit better?"*
-`CrudHandler` supports this via `customTableBody` — no need for a fully custom component.
+A headless list page renders any layout over the same data, and `CrudHandler` supports it via `customTableBody` — no need for a fully custom component.
 
 **4. Choose page type based on the above:**
 
 | Scenario | Page Type | Implementation |
 |----------|-----------|----------------|
 | Simple lookup/reference entity (Department, City, Category) — no rich detail needed | Default CRUD | `page_type: "crud"` — no React component needed |
-| Primary entity, profile/detail view, child tables in detail, custom columns/actions, OR custom list layout (kanban, calendar, cards) | Custom CRUD | `page_type: "custom"` — `TableProvider` + `useCrud()`/`useTable()` when you control the layout, or `CrudHandler` (with `customTableBody`) for a standard table |
+| Primary entity, profile/detail view, child tables in detail, custom columns/actions, OR custom list layout (kanban, calendar, cards) | Custom CRUD | `page_type: "custom"` — headless list page (`TableProvider` + `useCrud()`) by default; `CrudHandler` for a drop-in table or a custom body inside a detail tab |
 | UI has no list/detail pattern at all — dashboards, multi-step wizards, reporting screens | Fully custom | `page_type: "custom"`, hand-written React component |
 
 > **Key insight:** both paths run the same engine. `CrudHandler` is
-> `TableProvider` + `useCrud()` pre-wired, so start from the hooks when the
-> layout is yours and drop to `CrudHandler` when a standard table is what you
-> want. Either way, a fully hand-written component is needed only when there is
+> `TableProvider` + `useCrud()` pre-wired. Production list pages are headless —
+> start from the hooks and drop to `CrudHandler` when a standard table is what
+> you want. Either way, a fully hand-written component is needed only when there is
 > genuinely no list/detail structure.
 
 Based on what you need to build, identify the relevant references to read before coding:
@@ -193,7 +193,7 @@ Based on what you need to build, identify the relevant references to read before
 | Async task | [core/async-tasks.md](references/core/async-tasks.md) |
 | Frontend app setup | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
 | App module (serve React build) | [templates/app-module/README.md](references/templates/app-module/README.md) |
-| Custom frontend page / table / form | [frontend/crud.md](references/frontend/crud.md), [frontend/form.md](references/frontend/form.md) |
+| Custom frontend page / table / form | [frontend/crud.md](references/frontend/crud.md), [frontend/recipes-headless.md](references/frontend/recipes-headless.md), [frontend/recipes-detail.md](references/frontend/recipes-detail.md), [frontend/form.md](references/frontend/form.md), [frontend/styling.md](references/frontend/styling.md) |
 | Routes and menus | [packages/appbuilder/api-configuration.md](references/packages/appbuilder/api-configuration.md) |
 | Secrets / encrypted fields | [core/secrets.md](references/core/secrets.md) |
 | AI tools (define, ToolParam, ToolSafety) | [ai-agents.md](references/ai-agents.md) |
@@ -369,30 +369,36 @@ Use when working on the React frontend. For full-stack feature work, use Capabil
 | Task | Reference |
 |------|-----------|
 | App setup, routes, menus, theme, auth, navbar, `useAppContext`/`useAuth` | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
-| CRUD hooks (`useCrud`, `useTable`), CrudHandler, tables, detail views | [frontend/crud.md](references/frontend/crud.md) |
-| Copy-paste recipes: card/kanban bodies, drawer & route detail, modal row click, stats header, filters, export, nested tabs, branding, custom toolbar, row actions in cards | [frontend/recipes.md](references/frontend/recipes.md) — **check before scaffolding** |
+| CRUD hooks (`useCrud`, `useTable`, slice hooks), filters, CrudHandler, tables, detail views | [frontend/crud.md](references/frontend/crud.md) |
+| **List pages** (primary): headless `TableProvider` page — rows, columns, sort, pager, toolbar, filters popover on the right, quick filters, export, row actions | [frontend/recipes-headless.md](references/frontend/recipes-headless.md) — **check before scaffolding** |
+| Detail route, drawers, multi-tab detail, workflow controls, form drawer, page-key routing | [frontend/recipes-detail.md](references/frontend/recipes-detail.md) |
+| `CrudHandler`-hosted recipes: card/kanban bodies, modal row click, stats header, custom toolbar, row actions in cards, add-drawer callback, branding | [frontend/recipes.md](references/frontend/recipes.md) |
+| Theming tokens, `customClass`, filter placement, table look | [frontend/styling.md](references/frontend/styling.md) |
 | FormRenderer (server-driven and local RJSF) | [frontend/form.md](references/frontend/form.md) |
 | WorkflowStatus, WorkflowTags | [frontend/workflow.md](references/frontend/workflow.md) |
 | App module (serve React build from backend) | [templates/app-module/README.md](references/templates/app-module/README.md) |
 
 ### Critical Rules
 
-1. **Imports**: `@zango-core/crud/table` for hooks/CrudHandler/WorkflowStatus/WorkflowTags, `@zango-core/crud/ui` for the `Crud*` presentational components, `@zango-core/crud/form` for FormRenderer — never `@zango-core/crud`
-1b. **`useCrud()` takes no `apiUrl`** — it reads the surrounding `TableProvider`. Passing one leaves `table` null and loads no data. `scrollMode` is `"pagination"`, never `"paginated"`.
-1c. **Hook return shapes differ**: `useTable()` is flat (`t.searchTerm`, `t.currentPage`); `useCrud()` is namespaced (`c.search.term`, `c.pagination.currentPage`). Mixing them yields `undefined`, not an error.
-1d. **Filter writes go through `useTableFilters()`**, never `crud.filters.setFilter()` — the latter persists but never reaches the query, so rows only change on reload. `crud.filters.columns` is always `[]`.
-1e. **`customTableBody` / `customMainDetail` must be stable component refs** (module scope or memoized). An inline arrow remounts and refetches on every parent render.
-1f. **Open the drawer with `useTableContext().openDetailDrawer(row)`** — in crud 2.0.0, `crud.detail.open`, `crud.row.onClick` and `useTable().handleRowClick` swap their arguments and do nothing. Pass a `Row<T>` from `crud.table?.getRowModel().rows`, or route to `detail-view/<uuid>` yourself.
-1h. **`<CrudHandler defaultDetailView=…>` is ignored** — `CrudHandler` passes `metadata.detail_config.default_view` in its place. Set it on a `TableBody` inside a module-scope `customTableBody`, or in backend `detail_config.default_view`.
-1i. **`DetailViewProvider` ignores `objectUuid` when `apiUrl` is set** — use `apiUrl={`${endpoint}?object_uuid=${uuid}`}` or `baseApiUrl` + `objectUuid`. Under a provider, read with `useDetailViewContext()`; `useDetailView()` there fetches a second time.
-1j. **`customTableBody` receives no props** — read rows from `useCrud()`, never `({ data }) => …`.
+1. **Imports**: `@zango-core/crud/core` for `useCrud` / `CrudProvider` / `useCrudContext`; `@zango-core/crud/table` for `TableProvider`, `CrudHandler`, the `useTable*` hooks, `DetailWrapper`, `WorkflowStatus` / `WorkflowTags`; `@zango-core/crud/ui` for the `Crud*` components; `@zango-core/crud/form` for `FormRenderer` — never the bare `@zango-core/crud`.
+1a. **List pages are headless by default**: `<TableProvider key={apiUrl} apiUrl={apiUrl} deferRows>` + `useCrud()` / `useTableContext()` / `useTableFilters()`, release rows with `requestRows()` once metadata settles. Use `CrudHandler` for a drop-in table or to host a custom body in a detail tab.
+1b. **`useCrud()` takes no `apiUrl`** — it reads the surrounding `TableProvider`. Passing one leaves `table` null and loads no data. Of its options only `defaultDetailView` and `navigateUrl` are read.
+1c. **Hook return shapes differ**: `useTable()` is flat (`t.searchTerm`, `t.currentPage`); `useCrud()` is namespaced (`c.search.term`, `c.pagination.currentPage`). Mixing them yields `undefined`, not an error. `currentPage` is **1-based**.
+1d. **Filter writes go through `useTableFilters()`** (`setFilter`, `removeFilter`, `clearFilters`). `crud.filters.columns` is always `[]`. Date ranges are stored as `[ymdStart, ymdEnd]`.
+1e. **Section props take stable component refs** — `customTableBody`, `customHeader`, `customUtilities`, `customPagination`, `customMainDetail` at module scope or memoized. An inline arrow remounts and refetches on every parent render. `customTableBody` / `customPagination` receive **no props** — read `useCrud()`.
+1f. **Opening the package drawer from a custom body**: `useTableContext().openDetailDrawer(row)` with a `Row<T>` from `crud.table?.getRowModel().rows`. On crud ≤ 2.1.1 `crud.detail.open`, `crud.row.onClick` and `useTable().handleRowClick` swap their arguments and do nothing.
+1g. **Forms use `FormRenderer`, not hooks.** `FormHandler`'s `renderFields` slot does not fire the init request in shipped builds — wrap `FormRenderer` in your own drawer/dialog for custom chrome. Endpoint params go on the URL only; keep the trailing slash before the query string.
+1h. **On crud ≤ 2.1.1 `<CrudHandler defaultDetailView=…>` is ignored** — set it on a `TableBody` inside a module-scope `customTableBody`, or in backend `detail_config.default_view`.
+1i. **Detail data**: `customDrawerDetail` already sits in a `DetailViewProvider` — read `useDetailViewContext()`, never wrap another provider (double fetch). A detail route mounts `DetailWrapper` on its own (no `CrudHandler`, no list metadata fetch); `customMainDetail` props are camelCase (`generalDetails`, `workflowDetails`, `onRefresh`). Gate first paint on `!data && !error`, not `loading`. Standalone: `useDetailView({ apiUrl: `${endpoint}?object_uuid=${uuid}` })` — the uuid must be in the URL (on ≤ 2.1.1 `DetailViewProvider` drops `objectUuid` when `apiUrl` is set).
+1j. **Workflow controls**: mount `WorkflowStatus` / `WorkflowTags` only once `workflowDetails` is non-empty, pass it as `staticData`, put `object_uuid` in `apiUrl`, and do not refresh again in `onStatusChange` / `onTagChange` inside a `DetailViewProvider`.
 1k. **Extra buttons: `extraRightActions` (toolbar) or `headerProps.extraActions` (header).** `headerProps.customRightActions` / `customLeftActions` render nothing, and `utilityProps` only reaches a `customUtilities` component.
-1g. **Forms use `FormRenderer`, not hooks.** Hooks are the primary path for tables; forms are the exception. `FormHandler`'s `renderFields` slot does not fire the init request in shipped builds and leaves the form on a spinner — wrap `FormRenderer` in your own drawer/dialog for custom chrome.
+1l. **Filters on the right are not a package option** — the sidebar is left-only. Build a popover around `<CrudFilters hideHeader />` anchored to a toolbar button ([H6](references/frontend/recipes-headless.md#h6-filters-in-a-popover-on-the-right)).
+1m. **Routing**: navigate with router paths from route config (`detail-view/<uuid>` under the page's route), never with the CRUD API endpoint or a row's `crud_url`.
 2. **Server API fields**: snake_case — `json_schema`, `ui_schema`, `form_data`, `status_label`, `next_transitions`, `tag_details`, `display_name`, `tag_label`
 3. **Local RJSF fields**: camelCase — `schema`, `uiSchema`, `formData`
 4. **StatusCol data**: `{ status_label: "Active", status_color: "#12B76A" }`
-5. **Row actions**: `type: "form"` opens a drawer form, `type: "simple"` shows a confirmation dialog
-6. **Custom page export**: name in `pages/index.js` MUST exactly match the `component` field in the AppBuilder route config
+5. **Row actions**: `type: "form"` opens a drawer form (never POST it directly), `type: "simple"` shows a confirmation dialog; a direct POST puts `action_type`, `action_key`, `object_uuid` in the **query string**
+6. **Custom page export**: name in `pages/index.js` MUST exactly match the `component` field in the AppBuilder route config; `export *` does not re-export a default export
 7. **Proxy routes**: include ALL backend routes in `VITE_PROXY_ROUTES` in `.env` — never add `/app` (that's a frontend route)
 8. **Backend form response format**: `{ response: { form: { json_schema, ui_schema, form_data } } }`
 
@@ -406,11 +412,35 @@ export default {{PageName}};
 ```
 `src/custom/pages/index.js`: `export { default as {{PageName}} } from './{{PageName}}';`
 
-#### Two ways to build a CRUD page
+#### Three ways to build a CRUD page
 
-**A. Custom list layout — `CrudHandler` + `customTableBody` calling `useCrud()`.**
-Most common. The handler owns fetching, toolbar and detail route; the body owns
-the markup. The body MUST be a stable module-scope component.
+**A. Headless list page (primary).** Your own header, toolbar, filters, table and
+pager on the package's engine. Full recipe set: [recipes-headless.md](references/frontend/recipes-headless.md).
+```jsx
+import { useEffect } from 'react';
+import { TableProvider, useTableContext } from '@zango-core/crud/table';
+import { CrudProvider, useCrud } from '@zango-core/crud/core';
+
+function {{PageName}}Inner() {
+  const crud = useCrud();                       // no arguments
+  const ctx = useTableContext();
+  useEffect(() => { if (!ctx.isMetadataLoading) ctx.requestRows(); }, [ctx.isMetadataLoading, ctx.requestRows]);
+  return (
+    <CrudProvider value={crud}>
+      <{{PageName}}Toolbar /><{{PageName}}Table /><{{PageName}}Pager />
+    </CrudProvider>
+  );
+}
+
+const {{PageName}} = () => (
+  <TableProvider key="{{endpoint}}" apiUrl="{{endpoint}}" deferRows>
+    <{{PageName}}Inner />
+  </TableProvider>
+);
+```
+
+**B. Custom body inside `CrudHandler`.** The handler owns fetching, toolbar,
+pager and drawer; the body owns the markup. MUST be a module-scope component.
 ```jsx
 import { CrudHandler, useTableContext } from '@zango-core/crud/table';
 import { useCrud } from '@zango-core/crud/core';
@@ -432,25 +462,6 @@ function {{PageName}}Cards() {          // module scope — NOT an inline arrow
 <CrudHandler api_endpoint="{{endpoint}}" customTableBody={{{PageName}}Cards} />
 ```
 
-**B. Full control — mount the engine yourself.** No CrudHandler chrome at all.
-```jsx
-import { TableProvider, CrudProvider } from '@zango-core/crud/table';
-import { useCrud } from '@zango-core/crud/core';
-
-const Inner = () => {
-  const crud = useCrud();               // no arguments — endpoint comes from TableProvider
-  return (
-    <CrudProvider value={crud}>
-      <MyHeader /><MyTable rows={crud.data} /><MyPager {...crud.pagination} />
-    </CrudProvider>
-  );
-};
-
-const {{PageName}} = () => (
-  <TableProvider apiUrl="{{endpoint}}"><Inner /></TableProvider>
-);
-```
-
 **C. Plain drop-in — when a standard table is what you want.**
 ```jsx
 import { CrudHandler } from '@zango-core/crud/table';
@@ -459,20 +470,55 @@ import { CrudHandler } from '@zango-core/crud/table';
 All three run the same engine: `CrudHandler` is `TableProvider` + `useCrud()` +
 `CrudProvider` pre-wired, which is why the hooks work inside it.
 
-#### CrudHandler with custom detail drawer
-`customDrawerDetail` receives **only** `{ selectedRow, open, onClose }` — it does
-NOT receive fetched detail data. Load the record through `DetailViewProvider`
-(`baseApiUrl` + `objectUuid`) and read it with `useDetailViewContext()`.
+#### Detail route (navigate on row click)
+Mount `DetailWrapper` on the detail route by itself. Details: [D1](references/frontend/recipes-detail.md#d1-route-based-detail-page).
 ```jsx
-import { CrudHandler, DetailViewProvider, useDetailViewContext } from '@zango-core/crud/table';
+import { useCallback } from 'react';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { DetailWrapper } from '@zango-core/crud/table';
 
-const DetailBody = ({ onClose }) => {
-  const { data, loading } = useDetailViewContext() ?? {};
-  if (loading || !data) return <p>Loading…</p>;
+const {{PageName}}Resource = () => {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const Detail = useCallback((p) => <{{PageName}}Detail {...p} />, []);   // stable type
+  if (pathname.includes('detail-view/')) {
+    return (
+      <Routes>
+        <Route path="detail-view/:object_uuid"
+               element={<DetailWrapper apiUrl="{{endpoint}}" customComponent={Detail} />} />
+      </Routes>
+    );
+  }
+  return <{{PageName}} onRowClick={(row) => navigate(`detail-view/${row.object_uuid}`)} />;
+};
+
+// camelCase props from DetailWrapper; gate on !data && !error
+const {{PageName}}Detail = ({ data, error, generalDetails, workflowDetails, onRefresh }) => {
+  if (!data && !error) return <p>Loading…</p>;
   return (
     <div>
-      <h2>{data?.title}</h2>
-      {Object.entries(data?.general_details?.fields || {}).map(([k, f]) => (
+      <h1>{data?.title}</h1>
+      {Object.entries(generalDetails?.fields || {}).map(([k, f]) => (
+        <div key={k}>{f.display_name}: {f.value}</div>
+      ))}
+    </div>
+  );
+};
+```
+
+#### CrudHandler with custom detail drawer
+`customDrawerDetail` is called inside a `DetailViewProvider` the package mounts
+for the clicked row. Read the record from it — no provider of your own.
+```jsx
+import { CrudHandler, useDetailViewContext } from '@zango-core/crud/table';
+
+const {{PageName}}Drawer = ({ onClose }) => {
+  const { data } = useDetailViewContext() ?? {};
+  if (!data) return <p>Loading…</p>;
+  return (
+    <div>
+      <h2>{data.title}</h2>
+      {Object.entries(data.general_details?.fields || {}).map(([k, f]) => (
         <div key={k}>{f.display_name}: {f.value}</div>
       ))}
       <button onClick={onClose}>Close</button>
@@ -480,49 +526,7 @@ const DetailBody = ({ onClose }) => {
   );
 };
 
-const Detail = ({ selectedRow, open, onClose }) => {
-  const uuid = selectedRow?.original?.object_uuid;
-  if (!open || !uuid) return null;
-  return (
-    // baseApiUrl, not apiUrl — apiUrl + objectUuid drops the uuid
-    <DetailViewProvider baseApiUrl="{{endpoint}}" objectUuid={uuid}>
-      <DetailBody onClose={onClose} />
-    </DetailViewProvider>
-  );
-};
-
-<CrudHandler api_endpoint="{{endpoint}}" customDrawerDetail={Detail} />
-```
-
-#### CrudHandler with full-page detail view (navigate on row click)
-```jsx
-import { useNavigate } from 'react-router-dom';
-import { CrudHandler, TableBody } from '@zango-core/crud/table';
-
-// customTableBody must be a component ref, not JSX element
-const NavigateTableBody = () => <TableBody defaultDetailView="navigate" />;
-
-// Props are camelCase: generalDetails (not general_details), objectUuid, workflowDetails
-const Detail = ({ data, generalDetails, objectUuid }) => {
-  const navigate = useNavigate();
-  if (!data) return null;
-  return (
-    <div>
-      <button onClick={() => navigate(-1)}>← Back</button>
-      <h1>{data.title}</h1>
-      {Object.entries(generalDetails?.fields || {}).map(([k, f]) => (
-        <div key={k}>{f.display_name}: {f.value}</div>
-      ))}
-    </div>
-  );
-};
-
-<CrudHandler
-  api_endpoint="{{endpoint}}"
-  enableDetailViewRoute={true}
-  customMainDetail={Detail}
-  customTableBody={NavigateTableBody}
-/>
+<CrudHandler api_endpoint="{{endpoint}}" customDrawerDetail={{{PageName}}Drawer} />
 ```
 
 #### FormRenderer - Server-driven
@@ -530,6 +534,7 @@ const Detail = ({ data, generalDetails, objectUuid }) => {
 import { FormRenderer } from '@zango-core/crud/form';
 <FormRenderer api_endpoint="{{endpoint}}" onResponse={(r) => {}} onError={(e) => {}} />
 ```
+In a drawer, edit forms and row-action forms: [D5](references/frontend/recipes-detail.md#d5-server-driven-form-in-a-drawer).
 
 #### FormRenderer - Local RJSF
 ```jsx
@@ -540,12 +545,18 @@ import { FormRenderer } from '@zango-core/crud/form';
 />
 ```
 
-#### WorkflowStatus / WorkflowTags (standalone)
+#### WorkflowStatus / WorkflowTags
 ```jsx
 import { WorkflowStatus, WorkflowTags } from '@zango-core/crud/table';
-<WorkflowStatus apiUrl="/api/entity/?object_uuid={{uuid}}" onStatusChange={() => refetch()} />
-<WorkflowTags apiUrl="/api/entity/?object_uuid={{uuid}}" onTagChange={() => refetch()} />
+// Mount only once workflowDetails is non-empty; object_uuid in apiUrl.
+{workflowDetails && Object.keys(workflowDetails).length > 0 && (
+  <>
+    <WorkflowStatus apiUrl="/api/entity/?object_uuid={{uuid}}" staticData={workflowDetails} onStatusChange={refetch} />
+    <WorkflowTags apiUrl="/api/entity/?object_uuid={{uuid}}" staticData={workflowDetails} onTagChange={refetch} />
+  </>
+)}
 ```
+Inside a `DetailViewProvider`, drop `onStatusChange` / `onTagChange` refreshes — the provider already refreshes. See [D4](references/frontend/recipes-detail.md#d4-workflow-status-and-tags).
 
 ---
 

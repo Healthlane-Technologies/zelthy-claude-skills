@@ -1,14 +1,16 @@
 # Zango CRUD Reference
 
-**Package:** `@zango-core/crud` v2.0.0 · React 17/18
+**Package:** `@zango-core/crud` 2.1.1 · React 17/18 · peer `@zango-core/components ^1.0.1`
 
-> **How this reference is ordered.** The package's own README leads with
-> `CrudHandler` and calls it "the primary table component". This reference leads
-> with the **hooks** instead, because Zango app code usually needs a custom
-> layout, and the hooks are what make that possible without fighting the
-> drop-in component. **Neither path is deprecated** — `CrudHandler` is fully
-> supported and documented in full below. Use the drop-in when a standard table
-> is what you want; use the hooks when you control the markup.
+> **How this reference is ordered.** It leads with the **hooks**, and the first
+> hosting pattern is a **headless list page** on `TableProvider` — that is how
+> production Zango apps build list pages. `CrudHandler` is fully supported and
+> documented in Part 2: use it for a drop-in table, or to host a custom body.
+>
+> APIs marked **unreleased** are on the package's main line after 2.1.1 and need
+> the next release. Copy-paste recipes: [recipes-headless.md](recipes-headless.md)
+> (list pages), [recipes-detail.md](recipes-detail.md) (detail, workflow, forms),
+> [recipes.md](recipes.md) (`CrudHandler`). Theming: [styling.md](styling.md).
 
 ## Quick Import Reference
 ```js
@@ -103,14 +105,52 @@ Three ways to drive a table. Pick one per component; do not mix shapes.
 Every hook needs an engine above it. There are three ways to provide one.
 Patterns A and B are what real Zango apps use; C is available but rarely chosen.
 
-### A. CrudHandler + customTableBody (most common)
+### A. Headless list page — TableProvider + useCrud (primary)
+
+Mount the engine yourself and render every pixel: header, toolbar, filters,
+table, pager. This is how production Zango apps build list pages.
+
+```jsx
+import { useEffect } from 'react';
+import { TableProvider, useTableContext, useTableFilters } from '@zango-core/crud/table';
+import { CrudProvider, useCrud } from '@zango-core/crud/core';
+
+function OrdersInner() {
+  const crud = useCrud();                 // no arguments — reads TableProvider
+  const ctx = useTableContext();          // requestRows, isMetadataLoading, columns, debounced state
+  const filters = useTableFilters();      // filter reads and writes
+
+  // deferRows holds the rows fetch until metadata (and mount-time filters) settle.
+  useEffect(() => { if (!ctx.isMetadataLoading) ctx.requestRows(); }, [ctx.isMetadataLoading, ctx.requestRows]);
+
+  return (
+    <CrudProvider value={crud}>
+      <MyHeader /><MyToolbar /><MyTable /><MyPager />
+    </CrudProvider>
+  );
+}
+
+export default function OrdersPage({ apiUrl = '/api/orders/' }) {
+  return (
+    <TableProvider key={apiUrl} apiUrl={apiUrl} deferRows>
+      <OrdersInner />
+    </TableProvider>
+  );
+}
+```
+
+- `key={apiUrl}` remounts the engine when the endpoint (scope, parent uuid)
+  changes, resetting search, filters and page.
+- Rows, columns, sorting, pager, toolbar, filters popover, export, row actions:
+  [recipes-headless.md](recipes-headless.md).
+- There is no package drawer here — row clicks navigate to a detail route or
+  open your own drawer ([recipes-detail.md](recipes-detail.md)).
+
+### B. CrudHandler + customTableBody
 
 `CrudHandler` mounts `TableProvider`, calls `useCrud()`, and publishes it via
 `CrudProvider`. Your custom body renders inside all of that, so it can call
 `useCrud()` and get the live engine while you own every pixel of the list.
-
-Use this when you want a custom list layout — cards, kanban, calendar — but are
-happy to let the package own fetching, the toolbar, and the detail route.
 
 ```jsx
 import { CrudHandler, useTableContext } from '@zango-core/crud/table';
@@ -141,39 +181,9 @@ function ProgramCards() {
 `customTableBody` is rendered as `<CustomTableBody />` — it receives **no
 props**. Read rows from `useCrud()`, not from a `({ data })` argument.
 
-More end-to-end examples (drawer, route detail, modal, export, tabs) live in
+Use this when a detail tab or a drop-in page wants a custom list layout but is
+happy to let the package own fetching, toolbar, pager and drawer. More examples:
 [recipes.md](recipes.md).
-
-### B. TableProvider + useCrud + CrudProvider (full control)
-
-Mount the engine yourself when you want no `CrudHandler` chrome at all — your
-own header, toolbar and pagination. Re-publish the `useCrud()` result through
-`CrudProvider` so slotted children can read it without prop drilling.
-
-```jsx
-import { TableProvider, CrudProvider } from '@zango-core/crud/table';
-import { useCrud } from '@zango-core/crud/core';
-
-function PageInner() {
-  const crud = useCrud();
-  return (
-    <CrudProvider value={crud}>
-      <MyHeader />
-      <MyToolbar />
-      <MyTable rows={crud.data} />
-      <MyPager {...crud.pagination} />
-    </CrudProvider>
-  );
-}
-
-export default function OrdersPage() {
-  return (
-    <TableProvider apiUrl="/api/orders/">
-      <PageInner />
-    </TableProvider>
-  );
-}
-```
 
 ### C. The packaged Crud* components (available, rarely used)
 
@@ -201,37 +211,11 @@ const crud = useCrud();
 
 Each of these cost a real app real debugging time. All verified against source.
 
-### `useCrud().filters` does not drive the query
+### Section components must be stable references
 
-`crud.filters.setFilter()` / `setFilterObj()` write to state that **never reaches
-the provider's query** — the filter appears to apply, but the rows only change on
-reload. Use `useTableFilters()`, which mutates `TableProvider` state directly.
-
-```jsx
-// ✗ writes persist but rows don't refetch
-const crud = useCrud();
-crud.filters.setFilter('status', 'active');
-
-// ✓ actually filters
-import { useTableFilters } from '@zango-core/crud/table';
-const { filterObj, setFilter, removeFilter } = useTableFilters();
-setFilter('status', 'active');
-```
-
-Read `crud.filters.filterObj` for display if you like, but perform writes through
-`useTableFilters()`.
-
-### `crud.filters.columns` is always `[]`
-
-Hardcoded empty in `useCrud`, deliberately: it makes `shapeFilterProps` emit
-`undefined` so `FilterContainer` falls back to the table context's transformed
-columns. Raw `metadata.columns` uses a snake_case shape the filter inputs cannot
-key off. Never read `crud.filters.columns` — source your filter column list from
-table metadata instead.
-
-### `customTableBody` / `customMainDetail` must be stable references
-
-`CrudHandler` remounts the section whenever the component's identity changes, so
+Applies to `customTableBody`, `customHeader`, `customUtilities`,
+`customPagination` and `customMainDetail` (and `DetailWrapper`'s
+`customComponent`). `CrudHandler` remounts the section whenever the component's identity changes, so
 an arrow function defined during render remounts (and refetches) on every parent
 render. Declare the component at module scope, or memoize it.
 
@@ -244,9 +228,96 @@ function BareOrdersTable() { return <OrdersTable bare />; }
 <CrudHandler customTableBody={BareOrdersTable} />
 ```
 
-### `detail.open`, `row.onClick` and `handleRowClick` do nothing — use `openDetailDrawer`
+### `customDrawerDetail` already has a `DetailViewProvider`
 
-A package bug in 2.0.0. `TableProvider`'s `handleRowClick` takes
+The package mounts `DetailViewProvider` (`baseApiUrl` = the endpoint,
+`objectUuid` = the clicked row) around the drawer and **calls** your component
+as a function with `{ selectedRow, open: true, onClose, onCloseDrawer, ... }`.
+Read the record with `useDetailViewContext()`.
+
+```jsx
+// ✗ second provider → the record is fetched twice
+const Drawer = ({ selectedRow }) => (
+  <DetailViewProvider baseApiUrl="/api/x/" objectUuid={selectedRow.original.object_uuid}>
+    <Body />
+  </DetailViewProvider>
+);
+
+// ✓ read the provider that is already there
+const Drawer = ({ onClose }) => {
+  const { data } = useDetailViewContext() ?? {};
+  return data ? <Body data={data} onClose={onClose} /> : <p>Loading…</p>;
+};
+```
+
+### Wait for `!data && !error`, not `loading`
+
+`useDetailView` and `DetailWrapper` start with `loading: false` and
+`data: null`. A `if (loading) return <Spinner/>` gate renders the empty page for
+that first frame — or for good on paths where `loading` never flips. Gate on
+"no data and no error".
+
+### `crud.filters.columns` is always `[]`
+
+Hardcoded empty in `useCrud`, deliberately: it makes `shapeFilterProps` emit
+`undefined` so `FilterContainer` falls back to the table context's transformed
+columns. Raw `metadata.columns` uses a snake_case shape the filter inputs cannot
+key off. Never read `crud.filters.columns` — source your filter column list from
+table metadata instead.
+
+### `headerProps.customRightActions` and `utilityProps` render nothing
+
+`headerProps` is spread onto `TableHeader`, which has no `customLeftActions` /
+`customRightActions`. `utilityProps` is spread only onto a `customUtilities`
+component; the default toolbar reads the top-level props instead.
+
+```jsx
+// ✗ neither button appears
+<CrudHandler
+  api_endpoint="/api/x/"
+  headerProps={{ customRightActions: <Export /> }}
+  utilityProps={{ extraRightActions: <Export /> }}
+/>
+
+// ✓ toolbar slot, or header slot beside the add button
+<CrudHandler api_endpoint="/api/x/" extraRightActions={<Export />} />
+<CrudHandler api_endpoint="/api/x/" headerProps={{ extraActions: <Export /> }} />
+```
+
+### `WorkflowStatus` / `WorkflowTags` self-fetch
+
+Their internal `useWorkflow` reads `apiUrl` from `DetailViewContext`, not just
+the prop — so withholding the prop cannot stop a duplicate `fetch_item_details`.
+Only *not mounting* them does. Gate the mount on `workflowDetails` so the hook
+short-circuits on data that is already present.
+
+```jsx
+if (!workflowDetails) return null;
+return <WorkflowStatus workflowDetails={workflowDetails} … />;
+```
+
+### Do not forward `onChanged` inside a `DetailViewProvider`
+
+`useWorkflow`'s `toggleTag` / `executeTransition` already `await
+context.refreshDetail()` before invoking your callback. Refreshing again in
+`onStatusChange` / `onTagChange` refetches the record a second time — one toggle,
+two visible reloads. Forward your own refresh **only** when there is no provider
+above you (`useDetailViewContext()` returns `null`).
+
+---
+
+---
+
+## Version notes (crud ≤ 2.1.1)
+
+Package bugs present in every release up to and including 2.1.1, all fixed on
+the package's main line by pkg-zango-crud PR #408 (unreleased at the time of
+writing). The workarounds below work on all versions, so keep using them until
+your app is on a release whose CHANGELOG lists the fix.
+
+### `detail.open`, `row.onClick` and `handleRowClick` do nothing
+
+`TableProvider`'s `handleRowClick` takes
 `(event, row)`, but `useTable()` types it `(row, event)` and passes it through
 unchanged. So every hook-level caller sends the arguments in the wrong order:
 
@@ -259,7 +330,7 @@ The provider only opens the drawer `if (row)`, so all three are silent no-ops.
 is why stock tables work.)
 
 ```jsx
-// ✗ no-op in 2.0.0, Row wrapper or not
+// ✗ no-op on ≤ 2.1.1, Row wrapper or not
 crud.detail.open(row);
 
 // ✓ open the package drawer
@@ -293,25 +364,6 @@ function NavigateTableBody() { return <TableBody defaultDetailView="navigate" />
 <CrudHandler api_endpoint="/api/x/" enableDetailViewRoute customTableBody={NavigateTableBody} />
 ```
 
-### `headerProps.customRightActions` and `utilityProps` render nothing
-
-`headerProps` is spread onto `TableHeader`, which has no `customLeftActions` /
-`customRightActions`. `utilityProps` is spread only onto a `customUtilities`
-component; the default toolbar reads the top-level props instead.
-
-```jsx
-// ✗ neither button appears
-<CrudHandler
-  api_endpoint="/api/x/"
-  headerProps={{ customRightActions: <Export /> }}
-  utilityProps={{ extraRightActions: <Export /> }}
-/>
-
-// ✓ toolbar slot, or header slot beside the add button
-<CrudHandler api_endpoint="/api/x/" extraRightActions={<Export />} />
-<CrudHandler api_endpoint="/api/x/" headerProps={{ extraActions: <Export /> }} />
-```
-
 ### `DetailViewProvider` ignores `objectUuid` when `apiUrl` is set
 
 With `apiUrl`, the provider uses that URL as-is and reads the uuid **out of it**.
@@ -329,38 +381,41 @@ With `apiUrl`, the provider uses that URL as-is and reads the uuid **out of it**
 <DetailViewProvider baseApiUrl="/api/orders/" objectUuid={uuid}>
 ```
 
-### `WorkflowStatus` / `WorkflowTags` self-fetch
+### `useDetailView()` under a provider fetches twice
 
-Their internal `useWorkflow` reads `apiUrl` from `DetailViewContext`, not just
-the prop — so withholding the prop cannot stop a duplicate `fetch_item_details`.
-Only *not mounting* them does. Gate the mount on `workflowDetails` so the hook
-short-circuits on data that is already present.
+Inside a `DetailViewProvider`, `useDetailView()` without an `apiUrl` runs its
+own fetch until the provider's data arrives. Under a provider, read
+`useDetailViewContext()` instead; use `useDetailView({ apiUrl })` only
+standalone.
 
-```jsx
-if (!workflowDetails) return null;
-return <WorkflowStatus workflowDetails={workflowDetails} … />;
-```
+### `beforeTransition` / `afterTransition` fire twice
 
-### Do not forward `onChanged` inside a `DetailViewProvider`
+For a transition without a form, `WorkflowStatus` calls both hooks twice (also
+on failure). Guard side effects with a `pending` ref. `WorkflowTags` has the same
+fault for `beforeTagChange`, and never calls `afterTagChange` for a tag toggle
+that opens a form.
 
-`useWorkflow`'s `toggleTag` / `executeTransition` already `await
-context.refreshDetail()` before invoking your callback. Refreshing again in
-`onStatusChange` / `onTagChange` refetches the record a second time — one toggle,
-two visible reloads. Forward your own refresh **only** when there is no provider
-above you (`useDetailViewContext()` returns `null`).
+Still open after the fix: when the parent opens the form itself via
+`onShowStatusForm` / `onShowTagForm`, the after-hooks do not fire for form
+transitions.
 
----
+### `FormRenderer` ignores `templates`
+
+The prop is typed but not passed on. Custom RJSF templates only take effect
+through `FormHandler`.
 
 ## Provider hierarchy
 
 ```
-TableProvider              owns TableContext + QueryClient + TanStack Table instance
+TableProvider              owns TableContext + TanStack Table instance (QueryClient is shared)
   └─ CrudProvider          owns CrudContext (the useCrud result)
        └─ DetailViewProvider   single-record detail + workflow
 ```
 
-`TableProvider` requires `apiUrl` and creates its own `QueryClient`. You do not
-need to supply `QueryClientProvider` yourself.
+`TableProvider` requires `apiUrl`. Every provider uses **one module-level
+`QueryClient`** (staleTime and gcTime 5 min, `refetchOnMount: 'always'`), so two
+providers on the same `apiUrl` share cached rows. You do not supply
+`QueryClientProvider` yourself.
 
 ```jsx
 <TableProvider apiUrl="/api/orders">
@@ -378,6 +433,10 @@ need to supply `QueryClientProvider` yourself.
 | `scrollMode` | `"pagination" \| "infinite"` | Falls back to API metadata. |
 | `filterLayout` | `"sidebar" \| "horizontal"` | Falls back to API metadata. |
 | `renderActions` / `renderStatus` / `renderTags` / `renderWorkflowTransitions` | fn | Cell render props (moved here from `useTableData`). |
+| `customClass` / `customStyle` | object | Styling hooks for package parts — see [styling.md](styling.md). |
+| `formProps` | `FormProps` | Forwarded to every `FormRenderer` the package renders. Spread **after** the package's own handlers, so it can replace them. |
+| `deferRows` | boolean | Hold the rows fetch until a child calls `useTableContext().requestRows()`. Metadata still loads. |
+| `freshRows` | boolean | Drop rows cached for this `apiUrl` on mount — for a table remounted because its rows just changed. |
 
 ## Provider requirements
 
@@ -469,7 +528,7 @@ complete `UseTableReturn<T>`, grouped by concern for readability only.
 
 | Key | Type |
 |-----|------|
-| `currentPage` | `number` — zero-based |
+| `currentPage` | `number` — **1-based** |
 | `setCurrentPage` | `(page: number) => void` |
 | `totalPages` | `number` |
 | `rowsPerPage` | `number` |
@@ -513,7 +572,7 @@ complete `UseTableReturn<T>`, grouped by concern for readability only.
 | `selectedDetailRow` | `Row<T> \| null` |
 | `detailDrawerOpen` | `boolean` |
 | `setDetailDrawerOpen` | `(open: boolean) => void` |
-| `handleRowClick` | typed `(row: Row<T>, event?) => void`, but the context value underneath is `(event, row)` — ⚠️ calling it as typed is a no-op. Use `useTableContext().openDetailDrawer(row)`. See Known traps. |
+| `handleRowClick` | typed `(row: Row<T>, event?) => void`, but the context value underneath is `(event, row)` — ⚠️ calling it as typed is a no-op on ≤ 2.1.1. Use `useTableContext().openDetailDrawer(row)`. See Version notes. |
 | `closeDetailDrawer` | `() => void` |
 | `navigateToNextEntry?` / `navigateToPreviousEntry?` | `() => void` — optional |
 
@@ -585,7 +644,7 @@ function OrdersTable() {
         ))}
       </ul>
       <button disabled={!t.hasPreviousPage} onClick={t.goToPreviousPage}>Prev</button>
-      <span>Page {t.currentPage + 1} of {t.totalPages}</span>
+      <span>Page {t.currentPage} of {t.totalPages}</span>
       <button disabled={!t.hasNextPage} onClick={t.goToNextPage}>Next</button>
     </div>
   );
@@ -631,23 +690,26 @@ useCrud<T = TableRowData>(options?: UseCrudOptions): UseCrudReturn<T>
 | `formProps` | `Record<string, unknown>` |
 | `config` | `Record<string, unknown>` |
 
-> **⚠️ `scrollMode` is `"pagination"`,** not `"paginated"`.
+> **⚠️ Only `defaultDetailView` and `navigateUrl` are read.** The other options
+> are typed but ignored — set initial filters, sort, page size, scroll mode and
+> filter layout on `TableProvider` / `CrudHandler` or in table metadata.
+> `scrollMode` values are `"pagination"` / `"infinite"`, never `"paginated"`.
 
 **Return shape** — flat at the top, namespaced underneath:
 
-| Top level | `data`, `flatData`, `totalCount`, `totalDBRowCount`, `isLoading`, `isFetching`, `error`, `metadata`, `isMetadataLoading`, `features`, `table` |
+| Top level | `data`, `flatData`, `totalCount`, `totalDBRowCount`, `isLoading`, `isFetching`, `error`, `metadata`, `isMetadataLoading`, `features`, `table` — `isMetadataLoading` mirrors `isLoading`; for real metadata loading read `useTableContext().isMetadataLoading` |
 |-----------|---|
 | `features` | `{ add?, edit?, delete?, upload?, download? }` |
 | `search` | `{ term, setTerm, debouncedTerm, isActive }` |
-| `filters` | `{ filterObj, setFilterObj, setFilter, removeFilter, clearFilters, hasFilter, getFilter, activeCount, debouncedFilterObj, columns }` — ⚠️ **writes here do not drive the query** (use `useTableFilters()`), and `columns` is always `[]`. See Known traps. |
-| `pagination` | `{ currentPage, setCurrentPage, totalPages, rowsPerPage, setRowsPerPage, hasNextPage, hasPreviousPage, canGoNext, canGoPrevious, goToNextPage, goToPreviousPage, goToFirstPage, goToLastPage, pageNumbers, startRow, endRow, isInfiniteScroll, fetchMoreOnBottomReached? }` |
+| `filters` | `{ filterObj, setFilterObj, setFilter, removeFilter, clearFilters, hasFilter, getFilter, activeCount, debouncedFilterObj, columns }` — writes reach the provider query like `useTableFilters()` (the slice hook is the usual choice); `columns` is always `[]`. See Known traps. |
+| `pagination` | `{ currentPage, setCurrentPage, totalPages, rowsPerPage, setRowsPerPage, hasNextPage, hasPreviousPage, canGoNext, canGoPrevious, goToNextPage, goToPreviousPage, goToFirstPage, goToLastPage, pageNumbers, startRow, endRow, isInfiniteScroll, fetchMoreOnBottomReached? }` — `currentPage` is 1-based; `fetchMoreOnBottomReached` is always `undefined` |
 | `selection` | `{ selectedRows, selectRow, selectAll, clearSelection, selectedCount, isAllSelected, isSomeSelected, hasSelection, isRowSelected, selectedRowIds, toggleRows, getSelectedData }` |
-| `columns` | `{ definitions, visibility, setVisibility, order, setOrder, pinning, setPinning, sorting, setSorting, wrap, setWrap }` |
-| `row` | `{ onClick(event, row), onClickAction, navigateUrl?, customClickHandler? }` — ⚠️ `onClick` is a no-op in 2.0.0 (argument-order bug). See Known traps. |
-| `detail` | `{ selectedRow, selectedObjectUuid, drawerOpen, open(row), close(), navigateNext(), navigatePrevious(), canNavigateNext, canNavigatePrevious }` — ⚠️ `open()` is a no-op in 2.0.0; use `useTableContext().openDetailDrawer(row)`. `close()` and the navigation helpers work. See Known traps. |
-| `actions` | `{ refresh, refetch, invalidateCache, executeRowAction(actionKey, objectUuid), executeTransition(transitionName, objectUuid) }` |
-| `workflow` | `{ details, transitions, tags }` |
-| `ui` | `{ hideControls, setHideControls, filterLayout }` |
+| `columns` | `{ definitions, visibility, setVisibility, order, setOrder, pinning, setPinning, sorting, setSorting, wrap, setWrap }` — `definitions` are `ColumnDef`s from metadata (`accessorKey` = field name, `header` = display name, `type`, `enableSorting`); `wrap` / `setWrap` do nothing |
+| `row` | `{ onClick(event, row), onClickAction, navigateUrl?, customClickHandler? }` — ⚠️ `onClick` is a no-op on ≤ 2.1.1 (argument-order bug). See Version notes. |
+| `detail` | `{ selectedRow, selectedObjectUuid, drawerOpen, open(row), close(), navigateNext(), navigatePrevious(), canNavigateNext, canNavigatePrevious }` — ⚠️ `open()` is a no-op on ≤ 2.1.1; use `useTableContext().openDetailDrawer(row)`. `close()` and the navigation helpers work. See Version notes. |
+| `actions` | `{ refresh, refetch, invalidateCache, executeRowAction(actionKey, objectUuid), executeTransition(transitionName, objectUuid) }` — ⚠️ `executeRowAction` / `executeTransition` are stubs that do nothing; see [H9](recipes-headless.md#h9-row-actions-in-your-own-table) |
+| `workflow` | `{ details, transitions, tags }` — ⚠️ stub; use `useWorkflow()` / `useDetailViewContext()` |
+| `ui` | `{ hideControls, setHideControls, filterLayout }` — ⚠️ on crud ≤ 2.1.1 `filterLayout` reads only `metadata.filter_layout`, ignoring the prop |
 | Prop bags | `headerProps`, `toolbarProps`, `tableProps`, `paginationProps`, `filterProps`, `detailProps`, `addFormProps` |
 
 ### Composing with the /ui components
@@ -792,7 +854,7 @@ function Pager() {
   const { currentPage, totalPages, goToNextPage, hasNextPage } = useTablePagination();
   return (
     <>
-      <span>{currentPage + 1} / {totalPages}</span>
+      <span>{currentPage} / {totalPages}</span>
       <button disabled={!hasNextPage} onClick={goToNextPage}>Next</button>
     </>
   );
@@ -1034,6 +1096,44 @@ import { FormHandler } from "@zango-core/crud/form";
 Reach for `useForm()` itself only when a component nested deeper than that slot
 needs the same state.
 
+## Filters
+
+Filter **writes** go through `useTableFilters()` (`setFilter`, `removeFilter`,
+`clearFilters`, `setFilterObj`). Values are stored as-is per column key: a
+string, an array for multi-select, `[ymdStart, ymdEnd]` for a date range.
+
+| Component (`/table`) | Use |
+|----------------------|-----|
+| `CrudFilters` (also `/ui`) | The package's filter panel for the current table. `hideHeader` drops its title row — use it inside your own popover ([H6](recipes-headless.md#h6-filters-in-a-popover-on-the-right)). |
+| `CrudFilters variant="fields" \| "accordion"` | **unreleased** — `fields` is a labelled grid of every filter (becomes the default); `accordion` is the 2.1.1 look. Grid tunable with `--filter-grid-min` / `--filter-grid-gap`; items carry `data-filter-item`, `data-filter-key`, `data-active`. |
+| `CrudFilters focusField={{ key }}` | **unreleased** — scrolls to and focuses that field and sets `data-flash` for 1.4 s. Pair with `AppliedFilters onOpen`. |
+| `AppliedFilters` | **unreleased** — one chip per active filter plus "Clear all". Props: `hidden` (keys shown elsewhere; "Clear all" keeps them), `labels`, `formatValue`, `onOpen(key)`, `clearAllLabel`. Renders nothing when no filter is set. Needs `TableProvider`. `appliedFilterText(value, choices?)` formats a value the same way. |
+| `DateRangeFilter` | **unreleased** as a named export — the package's range picker: `startDate`, `endDate` (`Date \| null`), `onDatesChange({ startDate, endDate })`, `minDate` / `maxDate` (`YYYY-MM-DD`). It does not write a filter itself. |
+| `ensurePickerTheme()` | **unreleased** — injects the picker stylesheet once; call it when you render `DateRangeFilter` outside the package's own panel. |
+
+```jsx
+import { DateRangeFilter, useTableFilters } from '@zango-core/crud/table';
+
+// Local-date helpers: toISOString() / new Date('YYYY-MM-DD') are UTC and shift the day.
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const fromYmd = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+
+function CreatedRange() {                       // module scope
+  const { getFilter, setFilter, removeFilter } = useTableFilters();
+  const [start, end] = getFilter('created_at') ?? [];
+  return (
+    <DateRangeFilter
+      startDate={start ? fromYmd(start) : null}
+      endDate={end ? fromYmd(end) : null}
+      onDatesChange={({ startDate, endDate }) =>
+        startDate && endDate
+          ? setFilter('created_at', [ymd(startDate), ymd(endDate)])
+          : removeFilter('created_at')}
+    />
+  );
+}
+```
+
 ---
 
 # Part 2 — CrudHandler (reference)
@@ -1042,8 +1142,8 @@ needs the same state.
 detail drawer — from one endpoint. Fully supported; not deprecated.
 
 **It is the same engine as Part 1, pre-wired.** Internally it renders
-`TableProvider`, calls `useCrud()`, publishes the result through `CrudProvider`,
-and spreads the prop bags onto the `Crud*` components. So anything you render
+`TableProvider`, calls `useCrud()` and publishes the result through
+`CrudProvider`; its own sections read the table context directly. So anything you render
 inside it can call `useCrud()`, `useCrudContext()`, `useTableContext()` or the
 slice hooks without prop drilling.
 
@@ -1051,10 +1151,10 @@ slice hooks without prop drilling.
 
 - **As a drop-in** — `<CrudHandler api_endpoint="…" />` on its own, when a
   standard table is exactly what you want.
-- **As a host for the hooks** — hosting pattern A in Part 1. You pass
+- **As a host for the hooks** — hosting pattern B in Part 1. You pass
   `customTableBody` (or `customHeader` / `customMainDetail`), and that component
-  calls `useCrud()` to render your own layout on the package's engine. This is
-  the most common way real apps use both.
+  calls `useCrud()` to render your own layout on the package's engine. Common
+  inside detail tabs; full list pages are usually headless (pattern A).
 
 So reading this section is not a fallback to the "old" way. The props below are
 what you configure when hosting hooks, and `customTableBody` is the seam.
@@ -1097,10 +1197,11 @@ export function Users() {
 |------|------|---------|-------------|
 | `enableDetailViewRoute` | boolean | false | Enable the `/detail-view/:object_uuid` route. |
 | `scrollMode` | `"pagination" \| "infinite"` | metadata | Pagination or infinite scroll. |
-| `filterLayout` | `"sidebar" \| "horizontal"` | metadata | Filter panel placement. |
-| `detailDrawerSize` | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | `"md"` | Detail drawer width. Precedence: this prop → `metadata.detail_config.drawer_size` → `"md"`. (A source comment claims `"lg"`; the code uses `"md"`.) |
+| `filterLayout` | `"sidebar" \| "horizontal"` | metadata, then `"sidebar"` | Filter panel placement. The sidebar is on the **left** (268px, starts hidden, toggled by the toolbar Filters button); `"horizontal"` is a row under the toolbar; on mobile filters open in a bottom sheet. Filters on the right: [H6](recipes-headless.md#h6-filters-in-a-popover-on-the-right). |
+| `detailDrawerSize` | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | `"md"` | Detail drawer width. Precedence: this prop → `metadata.detail_config.drawer_size` → `"md"`. (A source comment claims `"lg"`; the code uses `"md"`.) Always `"full"` on mobile. |
 | `formDrawerSize` | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | `"md"` | Add-form drawer width. Precedence: this prop → `metadata.form_config.drawer_size` → `"md"`. |
-| `defaultDetailView` | `"drawer" \| "navigate" \| "custom" \| "none"` | — | ⚠️ Declared but **ignored** in 2.0.0 — `CrudHandler` passes `metadata.detail_config.default_view` in its place. Set that in the backend, or set it on a `TableBody` in `customTableBody`. |
+| `defaultDetailView` | `"drawer" \| "navigate" \| "custom" \| "none"` | — | ⚠️ **Ignored on crud ≤ 2.1.1** — `CrudHandler` passes `metadata.detail_config.default_view` in its place. Set that in the backend, or set it on a `TableBody` in `customTableBody`. |
+| `freshRows` | boolean | false | Drop rows cached for this endpoint on mount. Pair with a `key` change to remount after a change ([C10](recipes.md#c10-remount-to-refresh)). |
 
 ### Section replacement
 
@@ -1109,16 +1210,19 @@ export function Users() {
 | `customHeader` | ComponentType \| string | Replace the header. A string renders as the title. |
 | `customUtilities` | ComponentType | Replace the utilities/action bar. |
 | `customTableBody` | ComponentType | Replace the table body — this is how you get kanban, calendar or card layouts, and the seam for hosting `useCrud()`. ⚠️ Must be a **stable** component reference. |
-| `customPagination` | ComponentType | Replace pagination. |
-| `customDrawerDetail` | ComponentType | Custom drawer detail. Receives **only** `{ selectedRow, open, onClose }`. |
+| `customPagination` | ComponentType | Replace pagination. Receives no props — read `useCrud().pagination`. |
+| `customDrawerDetail` | ComponentType | Custom drawer detail. Rendered inside a `DetailViewProvider` for the clicked row; read the record with `useDetailViewContext()`. |
 | `customMainDetail` | ComponentType | Custom full-page detail for route-based navigation. Receives fetched data — see below. |
 
 > **⚠️ The two detail props are NOT symmetric.** This trips people up.
 >
-> **`customDrawerDetail` gets no fetched data** — exactly
-> `{ selectedRow, open, onClose }`. To load the record, call `useDetailView()`
-> inside your component or wrap it in `DetailViewProvider`. Examples that
-> destructure `data` or `workflowDetails` from this prop are wrong.
+> **`customDrawerDetail` gets no fetched data as props.** The package wraps it
+> in a `DetailViewProvider` (`baseApiUrl` = the endpoint, `objectUuid` = the
+> clicked row) and **calls it as a function** with
+> `{ selectedRow, open: true, onClose, onCloseDrawer, ... }`. Read the record
+> with `useDetailViewContext()`. Do **not** wrap your own `DetailViewProvider`
+> around it — that fetches the record a second time. Examples that destructure
+> `data` or `workflowDetails` from the props are wrong.
 >
 > **`customMainDetail` does get fetched data**, injected by `DetailWrapper`:
 > `apiUrl`, `data`, `loading`, `error`, `workflowDetails`, `generalDetails`
@@ -1146,7 +1250,7 @@ toolbar.
 > `filterLabel`, `downloadLabel`, `hideDownloadIcon`, …) and any
 > `utilityProps.extraRightActions` do nothing otherwise. For icon or label
 > changes, build the toolbar from `TableSearchField` / `TableDownloadButton`
-> (see [recipes.md → 15](recipes.md#15-own-toolbar-from-the-package-controls)).
+> (see [recipes.md → 15](recipes.md#c7-own-toolbar-from-the-package-controls)).
 
 ### headerProps
 
@@ -1229,26 +1333,15 @@ Customize individual cell types without replacing the body.
 ```
 
 ```jsx
-// Custom drawer detail — fetch the record yourself
-import { CrudHandler, DetailViewProvider, useDetailViewContext } from "@zango-core/crud/table";
+// Custom drawer detail — the package already provides the record's context
+import { CrudHandler, useDetailViewContext } from "@zango-core/crud/table";
 
-function UserDrawer({ selectedRow, open, onClose }) {
-  const objectUuid = selectedRow?.original?.object_uuid;
-  if (!open || !objectUuid) return null;
-  return (
-    // baseApiUrl + objectUuid — apiUrl + objectUuid drops the uuid
-    <DetailViewProvider baseApiUrl="/api/users/" objectUuid={objectUuid}>
-      <UserDrawerBody onClose={onClose} />
-    </DetailViewProvider>
-  );
-}
-
-function UserDrawerBody({ onClose }) {
-  const { data, loading, workflowDetails } = useDetailViewContext() ?? {};
-  if (loading || !data) return <p>Loading…</p>;
+function UserDrawer({ onClose }) {
+  const { data, workflowDetails } = useDetailViewContext() ?? {};
+  if (!data) return <p>Loading…</p>;
   return (
     <aside>
-      <h2>{data?.title}</h2>
+      <h2>{data.title}</h2>
       <p>{workflowDetails?.current_status_meta?.status_label}</p>
       <button onClick={onClose}>Close</button>
     </aside>
@@ -1267,7 +1360,7 @@ import { useCrud } from "@zango-core/crud/core";
 
 function KanbanBody() {
   const crud = useCrud();
-  // crud.detail.open is a no-op in 2.0.0 — open the drawer through the context.
+  // crud.detail.open is a no-op on ≤ 2.1.1 — open the drawer through the context.
   const { openDetailDrawer } = useTableContext();
   if (crud.isLoading) return <p>Loading…</p>;
 
@@ -1679,19 +1772,20 @@ fetched record, injected by `DetailWrapper` in **camelCase**.
 Snake_case names (`general_details`, `workflow_details`, `row_actions`) are the
 API payload's keys, not props — destructuring them gets `undefined`.
 
-**`customDrawerDetail`** — exactly `{ selectedRow, open, onClose }`.
-`selectedRow` is a TanStack `Row`; the record is `selectedRow.original`. Fetch
-the detail yourself with `DetailViewProvider`.
+**`customDrawerDetail`** — called with `{ selectedRow, open: true, onClose, onCloseDrawer, ... }`
+inside a `DetailViewProvider` the package mounts for the clicked row.
+`selectedRow` is a TanStack `Row`; the record is `selectedRow.original`. Read the
+fetched detail with `useDetailViewContext()` — no provider of your own.
 
 ### Code Examples
 
 ```jsx
-// customDrawerDetail — module scope; fetch the record through a provider.
-import { DetailViewProvider, useDetailViewContext } from '@zango-core/crud/table';
+// customDrawerDetail — module scope; the package provides the record's context.
+import { CrudHandler, useDetailViewContext } from '@zango-core/crud/table';
 
 const ENDPOINT = '/api/users/';
 
-function DrawerBody({ onClose }) {
+export function CustomDrawerDetail({ onClose }) {
   const { data, loading, workflowDetails } = useDetailViewContext() ?? {};
   if (loading || !data) return <p className="p-6">Loading…</p>;
   const fields = data.general_details?.fields ?? {};   // raw payload: snake_case
@@ -1723,16 +1817,6 @@ function DrawerBody({ onClose }) {
         )}
       </div>
     </div>
-  );
-}
-
-export function CustomDrawerDetail({ selectedRow, open, onClose }) {
-  const uuid = selectedRow?.original?.object_uuid;
-  if (!open || !uuid) return null;
-  return (
-    <DetailViewProvider baseApiUrl={ENDPOINT} objectUuid={uuid}>
-      <DrawerBody onClose={onClose} />
-    </DetailViewProvider>
   );
 }
 
@@ -2064,9 +2148,7 @@ const { data, refresh } = useDetailViewContext();
     options={['All', 'In Stock', 'Low Stock', 'Out of Stock']}
     onChange={handleStatusChange}
   />
-  <DateRangeFilter
-    onRangeChange={handleDateChange}
-  />
+  <CreatedRange />   {/* DateRangeFilter wired to a filter — see "Filters" in Part 1 */}
 </TableHeader>
 ```
 
