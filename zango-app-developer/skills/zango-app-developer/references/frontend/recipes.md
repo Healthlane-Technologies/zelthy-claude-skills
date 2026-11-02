@@ -1,52 +1,63 @@
-# Recipes
+# Recipes — CrudHandler
 
-Copy-paste recipes for common frontend patterns. Check here before scaffolding.
+Copy-paste recipes for pages hosted by `CrudHandler`. Check the right file
+before scaffolding:
 
-Every recipe follows the hooks-first model in [crud.md](crud.md): `CrudHandler`
-(or `TableProvider`) hosts the engine, and your own components read it with
-`useCrud()` / `useTable()` / the slice hooks. Four rules apply to every recipe
-below — they are the reason most hand-written versions break:
+| Building | Read |
+|----------|------|
+| **A list page** (primary path — your own table, toolbar, filters, pager) | [recipes-headless.md](recipes-headless.md) |
+| Detail pages, drawers, workflow, forms | [recipes-detail.md](recipes-detail.md) |
+| A drop-in table, or a custom body inside `CrudHandler` | this file |
+| Styling and theming | [styling.md](styling.md) |
 
-1. **Component props get component references, never inline arrows.**
-   `customTableBody`, `customHeader`, `customDrawerDetail`, `customMainDetail`:
-   declare the component at module scope, or `useMemo` it. An inline arrow is a
-   new component every render, so the section remounts and refetches.
-2. **Open the drawer with `useTableContext().openDetailDrawer(row)`.** In
-   `@zango-core/crud` 2.0.0, `crud.detail.open`, `crud.row.onClick` and
-   `useTable().handleRowClick` pass their arguments in the wrong order and do
-   nothing. See [crud.md → Known traps](crud.md#known-traps).
-3. **`DetailViewProvider` needs the uuid inside the URL.** Pass
-   `apiUrl={`${endpoint}?object_uuid=${uuid}`}`, or `baseApiUrl` + `objectUuid`.
-   `apiUrl` + `objectUuid` together silently drops the uuid.
+Written against `@zango-core/crud` **2.1.1**. Four rules apply to every recipe
+below:
+
+1. **Section props take stable component references.** `customTableBody`,
+   `customHeader`, `customUtilities`, `customPagination`, `customMainDetail`:
+   declare the component at module scope or `useMemo` it. An inline arrow is a
+   new component type every render, so the section remounts and refetches.
+   (`customDrawerDetail` is the exception — the package *calls* it as a
+   function inside its own detail provider — but module scope is still the
+   clearer habit.)
+2. **Open the package drawer with `useTableContext().openDetailDrawer(row)`**,
+   passing a `Row<T>` from `crud.table.getRowModel().rows`. On crud ≤ 2.1.1,
+   `crud.detail.open`, `crud.row.onClick` and `useTable().handleRowClick` do
+   nothing (see [crud.md → Version notes](crud.md#version-notes-crud--211)).
+3. **`customDrawerDetail` already sits inside a `DetailViewProvider`.** Read the
+   record with `useDetailViewContext()`; wrapping your own provider around it
+   fetches the record twice.
 4. **Extra buttons go in `extraRightActions` or `headerProps.extraActions`.**
-   `extraLeftActions` / `extraRightActions` are top-level `CrudHandler` props
-   and land in the toolbar; `headerProps.extraActions` lands in the header
-   beside the add button. `headerProps.customRightActions` /
-   `customLeftActions` are typed but nothing renders them, and `utilityProps`
-   only reaches a `customUtilities` component — the default toolbar ignores it.
+   `extraLeftActions` / `extraRightActions` land in the toolbar;
+   `headerProps.extraActions` lands in the header beside the add button.
+   `headerProps.customRightActions` / `customLeftActions` are typed but nothing
+   renders them, and `utilityProps` only reaches a `customUtilities` component.
 
 | # | Recipe | Main pieces |
 |---|--------|-------------|
-| 1 | [Custom list layout (cards, kanban)](#1-custom-list-layout-cards-kanban) | `customTableBody` + `useCrud()` |
-| 2 | [Drawer detail view](#2-drawer-detail-view) | `customDrawerDetail` + `DetailViewProvider` + `useDetailViewContext()` |
-| 3 | [Route-based detail view](#3-route-based-detail-view) | `enableDetailViewRoute` + `customMainDetail` |
-| 4 | [Row click opens your own modal](#4-row-click-opens-your-own-modal) | `TableBody` custom handler |
-| 5 | [Stats header above the table](#5-stats-header-above-the-table) | `customHeader` + `useTable().rawResponse` |
-| 6 | [Custom filter controls](#6-custom-filter-controls) | `useTableFilters()` |
-| 7 | [Export with current search, filters and sort](#7-export-with-current-search-filters-and-sort) | `useTable()` debounced state |
-| 8 | [Full control, no CrudHandler chrome](#8-full-control-no-crudhandler-chrome) | `TableProvider` + `useCrud()` + `CrudProvider` |
-| 9 | [Custom page with a CRUD table](#9-custom-page-with-a-crud-table) | `CrudHandler` in a page |
-| 10 | [Nested CRUD in tabs](#10-nested-crud-in-tabs) | one `CrudHandler` per tab |
-| 11 | [Multi-tab detail page](#11-multi-tab-detail-page) | `useDetailView()` + nested `CrudHandler` |
-| 12 | [Standalone workflow status and tags](#12-standalone-workflow-status-and-tags) | `DetailViewProvider` + `WorkflowStatus` |
-| 13 | [Server-driven form in a drawer](#13-server-driven-form-in-a-drawer) | `FormRenderer` |
-| 14 | [App branding and theming](#14-app-branding-and-theming) | `ZangoApp` configs |
-| 15 | [Own toolbar from the package controls](#15-own-toolbar-from-the-package-controls) | `customUtilities` + `TableSearchField` + `TableDownloadButton` |
-| 16 | [Row actions in a custom body](#16-row-actions-in-a-custom-body) | `ActionsCell` + `renderActions` |
+| C1 | [Custom list layout (cards, kanban)](#c1-custom-list-layout-cards-kanban) | `customTableBody` + `useCrud()` |
+| C2 | [Row click opens your own modal](#c2-row-click-opens-your-own-modal) | `TableBody` custom handler |
+| C3 | [Stats header above the table](#c3-stats-header-above-the-table) | `customHeader` + metadata `stats` |
+| C4 | [Custom filter controls](#c4-custom-filter-controls) | `useTableFilters()` |
+| C5 | [Export](#c5-export) | default download, or `exportParams` |
+| C6 | [Custom page with a CRUD table](#c6-custom-page-with-a-crud-table) | `CrudHandler` in a page |
+| C7 | [Own toolbar from the package controls](#c7-own-toolbar-from-the-package-controls) | `customUtilities` |
+| C8 | [Row actions in a custom body](#c8-row-actions-in-a-custom-body) | `ActionsCell` |
+| C9 | [React to a create from the add drawer](#c9-react-to-a-create-from-the-add-drawer) | `TableAddButton onFormSuccess` |
+| C10 | [Remount to refresh](#c10-remount-to-refresh) | `key` + `freshRows` |
+| C11 | [App branding and theming](#c11-app-branding-and-theming) | `ZangoApp` configs |
+
+Moved: drawer detail → [D2](recipes-detail.md#d2-drawer-detail), route detail →
+[D1](recipes-detail.md#d1-route-based-detail-page), full control →
+[H1](recipes-headless.md#h1-the-list-page-core), nested tabs →
+[D6](recipes-detail.md#d6-related-records-in-a-tab), multi-tab detail →
+[D3](recipes-detail.md#d3-multi-tab-detail-page), workflow →
+[D4](recipes-detail.md#d4-workflow-status-and-tags), form drawer →
+[D5](recipes-detail.md#d5-server-driven-form-in-a-drawer).
 
 ---
 
-## 1. Custom list layout (cards, kanban)
+## C1. Custom list layout (cards, kanban)
 
 **When:** the user wants cards, a kanban board or a calendar instead of the
 default table, but the package should still own fetching, toolbar and drawer.
@@ -88,130 +99,21 @@ function TaskBoard() {
 <CrudHandler api_endpoint="/api/tasks/" customTableBody={TaskBoard} />
 ```
 
-**Gotcha:** `customTableBody` receives **no props** — read everything from
-`useCrud()`. A body written as `({ data }) => …` gets `undefined` and renders
-nothing. Pagination, search and filters keep working because the header,
-toolbar and pager are still `CrudHandler`'s.
-
----
-
-## 2. Drawer detail view
-
-**When:** clicking a row opens the record in a side drawer with your own layout.
-
-```jsx
-import { CrudHandler, DetailViewProvider, useDetailViewContext } from '@zango-core/crud/table';
-
-const ENDPOINT = '/api/entity/';
-
-function EntityDrawerBody({ onClose }) {
-  const ctx = useDetailViewContext();                 // reads the provider, never fetches
-  const { data, loading, workflowDetails } = ctx ?? {};
-  if (loading || !data) return <p>Loading…</p>;
-  return (
-    <div>
-      <h2>{data.title}</h2>
-      <p>{workflowDetails?.current_status_meta?.status_label}</p>
-      {Object.entries(data.general_details?.fields ?? {}).map(([key, f]) => (
-        <div key={key}>{f.display_name}: {f.value}</div>
-      ))}
-      <button onClick={onClose}>Close</button>
-    </div>
-  );
-}
-
-/* Module scope. Receives exactly { selectedRow, open, onClose }. */
-function EntityDrawer({ selectedRow, open, onClose }) {
-  const uuid = selectedRow?.original?.object_uuid;
-  if (!open || !uuid) return null;
-  return (
-    <DetailViewProvider baseApiUrl={ENDPOINT} objectUuid={uuid}>
-      <EntityDrawerBody onClose={onClose} />
-    </DetailViewProvider>
-  );
-}
-
-<CrudHandler api_endpoint={ENDPOINT} customDrawerDetail={EntityDrawer} detailDrawerSize="lg" />
-```
-
-**Gotcha:** `customDrawerDetail` gets **no fetched data** — only
-`{ selectedRow, open, onClose }`, where `selectedRow` is a TanStack `Row`
-(`selectedRow.original` holds the record). Fetch it yourself through
-`DetailViewProvider`. Use `baseApiUrl` + `objectUuid`; `apiUrl` +
-`objectUuid` fetches without the uuid. Read it with `useDetailViewContext()`:
-`useDetailView()` under a provider starts its own fetch until the provider's
-data arrives, so the record loads twice.
-
----
-
-## 3. Route-based detail view
-
-**When:** the detail is its own page at `…/detail-view/:object_uuid`, not a drawer.
-
-```jsx
-import { useNavigate } from 'react-router-dom';
-import { CrudHandler, TableBody } from '@zango-core/crud/table';
-
-/* Module scope — makes default-table rows navigate on click. */
-function NavigateTableBody() {
-  return <TableBody defaultDetailView="navigate" />;
-}
-
-/* Module scope. Props are camelCase, injected by the package. */
-function EntityDetail({ data, generalDetails, workflowDetails, onRefresh }) {
-  const navigate = useNavigate();
-  if (!data) return null;
-  return (
-    <div>
-      <button onClick={() => navigate(-1)}>← Back</button>
-      <h1>{data.title}</h1>
-      <p>{workflowDetails?.current_status_meta?.status_label}</p>
-      {Object.entries(generalDetails?.fields ?? {}).map(([key, f]) => (
-        <div key={key}>{f.display_name}: {f.value}</div>
-      ))}
-      <button onClick={onRefresh}>Reload</button>
-    </div>
-  );
-}
-
-<CrudHandler
-  api_endpoint="/api/entity/"
-  enableDetailViewRoute
-  customMainDetail={EntityDetail}
-  customTableBody={NavigateTableBody}
-/>
-```
-
-With a custom body (recipe 1), navigate yourself instead of using `TableBody`:
-
-```jsx
-import { useCrud } from '@zango-core/crud/core';
-
-/* Module scope. Still needs enableDetailViewRoute + customMainDetail. */
-function EntityCards() {
-  const crud = useCrud();
-  const navigate = useNavigate();
-  const open = (uuid) =>
-    navigate(`${window.location.pathname.replace(/\/$/, '')}/detail-view/${uuid}`);
-  return (crud.data ?? []).map((row) => (
-    <article key={row.object_uuid} onClick={() => open(row.object_uuid)}>{row.title}</article>
-  ));
-}
-```
-
 **Gotchas:**
-- `customMainDetail` props are **camelCase** (`generalDetails`,
-  `workflowDetails`, `onRefresh`, `objectUuid`), unlike the snake_case API
-  payload. Destructuring `general_details` gets `undefined`.
-- `<CrudHandler defaultDetailView="navigate">` is **ignored** in 2.0.0 —
-  `CrudHandler` passes `metadata.detail_config.default_view` in its place. Put
-  it on `TableBody`, or set `detail_config.default_view` in the backend table
-  metadata.
-- Without `enableDetailViewRoute` the URL changes but no route matches it.
+- `customTableBody` receives **no props** — read everything from `useCrud()`.
+  A body written as `({ data }) => …` gets `undefined` and renders nothing.
+  Pagination, search and filters keep working because the header, toolbar and
+  pager are still `CrudHandler`'s.
+- Pass page callbacks (open my drawer, start a flow) to the body through React
+  context, not props or closures — the body must stay a stable component.
+- For a card grid with its own pager, set `showPagination={false}` and render
+  `TablePagination` (or your own pager from `crud.pagination`) inside the body.
+- Reporting a row count up to the parent? Write to a store, not parent state —
+  a parent re-render with a new callback loops.
 
 ---
 
-## 4. Row click opens your own modal
+## C2. Row click opens your own modal
 
 **When:** a row click should open a modal or dialog that your page owns.
 
@@ -255,7 +157,7 @@ export default function EntityPage() {
 
 ---
 
-## 5. Stats header above the table
+## C3. Stats header above the table
 
 **When:** summary cards above the table, fed by the same list response.
 
@@ -281,14 +183,18 @@ function StatsHeader() {
 <CrudHandler api_endpoint="/api/entity/" customHeader={StatsHeader} />
 ```
 
-**Gotcha:** `stats` exists only if the backend adds it to the list response —
+Prefer **metadata stats** when the backend declares them: read
+`crud.metadata?.table_metadata?.stats` (from `useCrud()`) instead of the list
+response, so the cards do not change with the current page.
+
+**Gotcha:** `rawResponse.stats` exists only if the backend adds it to the list response —
 `rawResponse` is the untouched server payload. `customHeader` replaces the whole
 header, so render `<TableHeader />` again if you still want the title and add
 button.
 
 ---
 
-## 6. Custom filter controls
+## C4. Custom filter controls
 
 **When:** status chips, a date toggle or any filter UI of your own.
 
@@ -319,84 +225,35 @@ function StatusChips() {
 <CrudHandler api_endpoint="/api/entity/" extraRightActions={<StatusChips />} />
 ```
 
-**Gotcha:** write filters through `useTableFilters()`. `crud.filters.setFilter()`
-from `useCrud()` updates state that never reaches the query, so the rows only
-change on reload. `setFilter(key, value)` stores `value` as-is — use the shape
-the column's filter type expects (e.g. an array for multi-select).
+**Gotchas:**
+- `useTableFilters()` is the filter slice hook — use it for reads and writes.
+- `setFilter(key, value)` stores `value` as-is — use the shape the column's
+  filter type expects (an array for multi-select, `[ymdStart, ymdEnd]` for a
+  date range).
+- Show what is applied with `<AppliedFilters />` (**unreleased** after 2.1.1):
+  one chip per filter plus "Clear all". Pass `hidden={['status']}` for keys your
+  own chips already show.
 
 ---
 
-## 7. Export with current search, filters and sort
+## C5. Export
 
-**When:** an export button that respects what the user has applied.
+**When:** an export that respects the current search and filters.
 
-```jsx
-import { useTable } from '@zango-core/crud/table';
+- **Default:** keep `CrudHandler`'s toolbar download button. It already sends
+  the backend export (`action=export_table`) with the table's own query.
+- **Custom button:** build the params with `exportParams` from
+  [H8](recipes-headless.md#h8-export-with-the-tables-own-query) — it reads
+  `useTableContext()`, which works inside `CrudHandler` too — and put the button
+  in `extraRightActions`.
 
-/* Render anywhere inside CrudHandler — e.g. extraRightActions. */
-function ExportButton({ exportEndpoint }) {
-  const t = useTable();
-  const handleExport = () => {
-    const params = new URLSearchParams({
-      search: t.debouncedSearchTerm ?? '',
-      filters: JSON.stringify(t.debouncedFilterObj ?? {}),
-      sorting: JSON.stringify(t.sorting ?? []),
-    });
-    window.open(`${exportEndpoint}?${params}`);
-  };
-  return <button onClick={handleExport}>Export</button>;
-}
-
-<CrudHandler
-  api_endpoint="/api/entity/"
-  extraRightActions={<ExportButton exportEndpoint="/api/entity/export/" />}
-/>
-```
-
-**Gotcha:** use the `debounced*` values — they are what the table actually
-queried. `useTableFilters()` has `debouncedFilterObj` but **no**
-`debouncedSearchTerm`; that lives on `useTableSearch()` and `useTable()`.
-Match the parameter names to what your export view parses.
+**Gotcha:** the backend expects the data call's encoding (`search[value]`,
+`columns[i][search][value]`, `filter[key]`), not JSON blobs of `filterObj` /
+`sorting`. Hand-rolled JSON params are not read by the backend.
 
 ---
 
-## 8. Full control, no CrudHandler chrome
-
-**When:** your own header, toolbar, list and pager — nothing from the package UI.
-
-```jsx
-import { TableProvider, CrudProvider } from '@zango-core/crud/table';
-import { useCrud } from '@zango-core/crud/core';
-
-function OrdersInner() {
-  const crud = useCrud();                     // no arguments
-  return (
-    <CrudProvider value={crud}>
-      <input value={crud.search.term} onChange={(e) => crud.search.setTerm(e.target.value)} />
-      <ul>{(crud.data ?? []).map((o) => <li key={o.object_uuid}>{o.title}</li>)}</ul>
-      <button disabled={!crud.pagination.hasPreviousPage} onClick={crud.pagination.goToPreviousPage}>Prev</button>
-      <button disabled={!crud.pagination.hasNextPage} onClick={crud.pagination.goToNextPage}>Next</button>
-    </CrudProvider>
-  );
-}
-
-export default function OrdersPage() {
-  return (
-    <TableProvider apiUrl="/api/orders/">
-      <OrdersInner />
-    </TableProvider>
-  );
-}
-```
-
-**Gotcha:** `useCrud()` takes **no** `apiUrl` — it reads `TableProvider`.
-Passing one leaves `crud.table` null and loads nothing. `useCrud()` is
-namespaced (`crud.search.term`); `useTable()` is flat (`t.searchTerm`).
-There is no drawer here, so route to a detail page or render your own.
-
----
-
-## 9. Custom page with a CRUD table
+## C6. Custom page with a CRUD table
 
 **When:** a custom page mixes a CRUD table with other UI.
 
@@ -417,170 +274,148 @@ export default DashboardPage;
 export { default as DashboardPage } from './DashboardPage';
 ```
 
-**Gotcha:** export name in `pages/index.js` must match the backend route's
-`component` field exactly. A mismatch renders a blank page.
+**Gotchas:**
+- The export name in `pages/index.js` must match the backend route's
+  `component` field exactly. A mismatch renders a blank page.
+- `export * from './X'` re-exports **named** exports only. A page whose component
+  is a default export must be re-exported by name:
+  `export { default as X } from './X'`.
+- Routes that render the same component for several pages tell them apart with
+  `extra_params.page_key`.
 
 ---
 
-## 10. Nested CRUD in tabs
+## C7. Own toolbar from the package controls
 
-**When:** a detail view has tabs, each with its own CRUD table
-(Program → Teams, Vendors).
-
-```jsx
-import { useState } from 'react';
-import { CrudHandler } from '@zango-core/crud/table';
-
-/* Module scope — one component per tab, no inline arrows. */
-function TeamsTab({ programUuid }) {
-  return (
-    <CrudHandler
-      api_endpoint={`/api/team/?program_uuid=${programUuid}`}
-      enableDetailViewRoute={false}
-      customDrawerDetail={TeamDrawer}       // module-scope, see recipe 2
-      detailDrawerSize="full"
-    />
-  );
-}
-
-function VendorsTab({ programUuid }) {
-  return (
-    <CrudHandler
-      api_endpoint={`/api/vendor/?program_uuid=${programUuid}`}
-      enableDetailViewRoute={false}
-    />
-  );
-}
-
-export function ProgramTabs({ programUuid }) {
-  const [tab, setTab] = useState('teams');
-  return (
-    <div>
-      <button onClick={() => setTab('teams')}>Teams</button>
-      <button onClick={() => setTab('vendors')}>Vendors</button>
-      {tab === 'teams' && <TeamsTab programUuid={programUuid} />}
-      {tab === 'vendors' && <VendorsTab programUuid={programUuid} />}
-    </div>
-  );
-}
-```
-
-**Gotcha:** set `enableDetailViewRoute={false}` on nested handlers — their
-detail route would fight the parent's. Each handler is a separate engine keyed
-by its `api_endpoint`, so the parent uuid goes in the query string.
-
----
-
-## 11. Multi-tab detail page
-
-**When:** a full detail page with tabs: overview, workflow, related records.
+**When:** the toolbar needs a different layout or extra controls, but search,
+filters and export should keep their package behaviour.
 
 ```jsx
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { CrudHandler, useDetailView, WorkflowStatus } from '@zango-core/crud/table';
+import { CrudHandler, TableDownloadButton, TableSearchField, useTable } from '@zango-core/crud/table';
 
-export default function EntityDetailPage() {
-  const { object_uuid: uuid } = useParams();
-  const detailUrl = `/api/entity/?object_uuid=${uuid}`;
-  const { data, loading, workflowDetails, refresh } = useDetailView({ apiUrl: detailUrl });
-  const [tab, setTab] = useState('overview');
-
-  if (loading || !data) return <p>Loading…</p>;
+/* Module scope. Each control wires itself to the table through context. */
+function Toolbar() {
+  const { hideControls, setHideControls } = useTable();
   return (
-    <div>
-      <h1>{data.title}</h1>
-      {workflowDetails && (
-        <WorkflowStatus apiUrl={detailUrl} workflowDetails={workflowDetails} onStatusChange={refresh} />
-      )}
-      <button onClick={() => setTab('overview')}>Overview</button>
-      <button onClick={() => setTab('items')}>Items</button>
-      {tab === 'overview' && <Overview data={data} />}
-      {tab === 'items' && (
-        <CrudHandler api_endpoint={`/api/items/?entity_uuid=${uuid}`} enableDetailViewRoute={false} />
-      )}
-    </div>
-  );
-}
-```
-
-**Gotcha:** take the uuid from `useParams()`, not by splitting
-`window.location.pathname`. If this page is a `customMainDetail` instead,
-skip the fetch — the props already carry `data`, `workflowDetails` and
-`onRefresh` (recipe 3).
-
----
-
-## 12. Standalone workflow status and tags
-
-**When:** workflow status/tags on a page that is not inside `CrudHandler`.
-
-```jsx
-import { DetailViewProvider, useDetailViewContext, WorkflowStatus, WorkflowTags } from '@zango-core/crud/table';
-
-function WorkflowBar() {
-  const ctx = useDetailViewContext();
-  if (!ctx?.workflowDetails) return null;     // gate the mount — see crud.md traps
-  return (
-    <div>
-      <WorkflowStatus workflowDetails={ctx.workflowDetails} />
-      <WorkflowTags tagDetails={ctx.workflowDetails.tag_details} />
+    <div className="flex items-center gap-2 p-3">
+      <TableSearchField inputSize="md" placeholder="Search…" />
+      <button onClick={() => setHideControls(!hideControls)}>Filters</button>
+      <TableDownloadButton label="Export" size="md" />
     </div>
   );
 }
 
-export function EntityWorkflow({ objectUuid }) {
-  return (
-    <DetailViewProvider apiUrl={`/api/entity/?object_uuid=${objectUuid}`}>
-      <WorkflowBar />
-    </DetailViewProvider>
-  );
-}
+<CrudHandler api_endpoint="/api/entity/" customUtilities={Toolbar} />
 ```
 
 **Gotchas:**
-- One provider = one fetch shared by both components. Without it, give each an
-  `apiUrl` containing `object_uuid`, and each fetches on its own.
-- Inside a provider, do not pass `onStatusChange` / `onTagChange` that refresh
-  again — the hook already refreshes the provider, and you get two reloads.
+- The Filters button toggles the package's own filter panel (sidebar or
+  horizontal, per `filterLayout`). It starts hidden. To show filters in your
+  own popover instead (filters on the right), see
+  [H6](recipes-headless.md#h6-filters-in-a-popover-on-the-right) — the same
+  popover works inside `CrudHandler`.
+- `TableSearchField` and `TableDownloadButton` default to `sm`, one step
+  smaller than the other controls. Pass `inputSize="md"` / `size="md"` to line
+  them up.
+- `TableDownloadButton` hides itself when `utilities_config.show_download` is
+  false in the metadata; `showDownload` overrides that.
+- `customUtilities` receives the `utilityProps` bag as props. The default
+  toolbar never sees `utilityProps`.
 
 ---
 
-## 13. Server-driven form in a drawer
+## C8. Row actions in a custom body
 
-**When:** a form whose schema comes from the backend, in your own drawer or
-dialog — edit forms, row actions, status-dependent forms.
+**When:** a card or kanban body (recipe 1) needs the same row actions the
+default table shows, with their confirmations and forms.
 
 ```jsx
-import { FormRenderer } from '@zango-core/crud/form';
+import { ActionsCell, CrudHandler, useTableContext } from '@zango-core/crud/table';
+import { useCrud } from '@zango-core/crud/core';
 
-export function EditDrawer({ objectUuid, status, open, onClose, onSuccess }) {
-  if (!open) return null;
-  // Different action_key → different form schema from the backend.
-  const actionKey = status === 'draft' ? 'edit_basic' : 'edit';
-  return (
-    <Drawer open={open} onClose={onClose}>
-      <FormRenderer
-        api_endpoint="/api/entity/"
-        getParams={{ action: 'initialize_form', action_type: 'row', action_key: actionKey, object_uuid: objectUuid }}
-        postParams={{ form_type: 'row_action_form', action_type: 'row', action_key: actionKey, object_uuid: objectUuid }}
-        onResponse={() => { onSuccess?.(); onClose(); }}
-        onError={(e) => console.error(e)}
-      />
-    </Drawer>
-  );
+/* Module scope. */
+function EntityCards() {
+  const crud = useCrud();
+  const { openDetailDrawer } = useTableContext();
+  const rows = crud.table?.getRowModel().rows ?? [];
+  return rows.map((r) => (
+    <article key={r.original.object_uuid} onClick={() => openDetailDrawer(r)}>
+      <h3>{r.original.title}</h3>
+      {/* Keep a click on an action from also opening the drawer. */}
+      <span onClick={(e) => e.stopPropagation()}>
+        <ActionsCell row={r} />
+      </span>
+    </article>
+  ));
 }
+
+<CrudHandler api_endpoint="/api/entity/" customTableBody={EntityCards} />
 ```
 
-**Gotcha:** forms are the one place hooks are not the primary path — use
-`FormRenderer` and wrap it in your own chrome (see [form.md](form.md)).
-`getParams` loads the schema, `postParams` submits; `action_key` must match a
-form the backend registered. Backend response:
-`{ response: { form: { json_schema, ui_schema, form_data } } }`.
+**Gotchas:**
+- `ActionsCell` reads the actions from the row (`actions_col` or
+  `row_actions`) and owns their confirmation dialogs and form drawers. Pass the
+  `Row` or the plain record; both work.
+- By default the first two actions render inline and the rest go into a
+  three-dot menu. To put all of them behind a menu, pass
+  `renderActions={({ actions, onActionClick }) => …}` and call
+  `onActionClick(action)` from your own menu items.
+- Intercept `type === 'form'` actions in your `renderActions` if you want them
+  in your own panel instead of the package's form drawer.
 
 ---
 
-## 14. App branding and theming
+## C9. React to a create from the add drawer
+
+**When:** the page must do something after a record is created from the add
+drawer (refresh a count, open the new record, refetch a sibling table).
+
+```jsx
+import { CrudHandler, TableAddButton } from '@zango-core/crud/table';
+
+function AddButton() {                               // module scope
+  const onCreated = useContext(CreatedContext);      // page callback via context
+  return <TableAddButton enableDrawer size="md" onFormSuccess={onCreated} />;
+}
+
+<CrudHandler
+  api_endpoint="/api/entity/"
+  showAddButton={false}                              // hide the default one
+  headerProps={{ extraActions: <AddButton /> }}
+/>
+```
+
+**Gotchas:**
+- `TableAddButton` refreshes the table itself, then calls `onFormSuccess`. Its
+  drawer size follows `drawerSize` → metadata `form_config.drawer_size` → `md`.
+- Do **not** use `formProps={{ onResponse }}`: `formProps` is spread **after**
+  the add button's own `onResponse`, so it replaces the package handler — no
+  table refresh, no success screen — and `onResponse` is not in the `FormProps`
+  type.
+- `TableAddButton` reads the table context; it can sit anywhere under the
+  provider, including a portal into another header slot.
+
+---
+
+## C10. Remount to refresh
+
+**When:** the rows changed in a way a refetch alone shows wrongly — a bulk
+change, or a table whose cached rows would paint the pre-change state first.
+
+```jsx
+const [version, setVersion] = useState(0);
+<CrudHandler key={version} api_endpoint="/api/entity/" freshRows />
+// after the change:
+setVersion((v) => v + 1);
+```
+
+**Gotcha:** `freshRows` drops the cached rows for that endpoint on mount;
+without it the remounted table first paints the cached (stale) rows. For a
+plain "a row changed" case, `crud.actions.refetch()` is enough.
+
+---
+
+## C11. App branding and theming
 
 **When:** customise login page, navbar, topbar and colours.
 
@@ -620,80 +455,5 @@ Theme colours come from the backend AppBuilder config and become CSS variables
 - `showTopbar` / `showNavbar` live inside `layoutConfig`, not on `ZangoApp`.
 - Colours are configured in the App Panel / initializer API, not in React.
 - Full prop reference: [appbuilder.md](appbuilder.md).
-
----
-
-## 15. Own toolbar from the package controls
-
-**When:** the toolbar needs a different layout or extra controls, but search,
-filters and export should keep their package behaviour.
-
-```jsx
-import { CrudHandler, TableDownloadButton, TableSearchField, useTable } from '@zango-core/crud/table';
-
-/* Module scope. Each control wires itself to the table through context. */
-function Toolbar() {
-  const { hideControls, setHideControls } = useTable();
-  return (
-    <div className="flex items-center gap-2 p-3">
-      <TableSearchField inputSize="md" placeholder="Search…" />
-      <button onClick={() => setHideControls(!hideControls)}>Filters</button>
-      <TableDownloadButton label="Export" size="md" />
-    </div>
-  );
-}
-
-<CrudHandler api_endpoint="/api/entity/" customUtilities={Toolbar} />
-```
-
-**Gotchas:**
-- The Filters button toggles the package's own filter panel (sidebar or
-  horizontal, per `filterLayout`). It starts hidden. To show filters in your
-  own popover instead, render `<CrudFilters hideHeader />` inside it — it reads
-  the table from context.
-- `TableSearchField` and `TableDownloadButton` default to `sm`, one step
-  smaller than the other controls. Pass `inputSize="md"` / `size="md"` to line
-  them up.
-- `TableDownloadButton` hides itself when `utilities_config.show_download` is
-  false in the metadata; `showDownload` overrides that.
-- `customUtilities` receives the `utilityProps` bag as props. The default
-  toolbar never sees `utilityProps`.
-
----
-
-## 16. Row actions in a custom body
-
-**When:** a card or kanban body (recipe 1) needs the same row actions the
-default table shows, with their confirmations and forms.
-
-```jsx
-import { ActionsCell, CrudHandler, useTableContext } from '@zango-core/crud/table';
-import { useCrud } from '@zango-core/crud/core';
-
-/* Module scope. */
-function EntityCards() {
-  const crud = useCrud();
-  const { openDetailDrawer } = useTableContext();
-  const rows = crud.table?.getRowModel().rows ?? [];
-  return rows.map((r) => (
-    <article key={r.original.object_uuid} onClick={() => openDetailDrawer(r)}>
-      <h3>{r.original.title}</h3>
-      {/* Keep a click on an action from also opening the drawer. */}
-      <span onClick={(e) => e.stopPropagation()}>
-        <ActionsCell row={r} />
-      </span>
-    </article>
-  ));
-}
-
-<CrudHandler api_endpoint="/api/entity/" customTableBody={EntityCards} />
-```
-
-**Gotchas:**
-- `ActionsCell` reads the actions from the row (`actions_col` or
-  `row_actions`) and owns their confirmation dialogs and form drawers. Pass the
-  `Row` or the plain record; both work.
-- By default the first two actions render inline and the rest go into a
-  three-dot menu. To put all of them behind a menu, pass
-  `renderActions={({ actions, onActionClick }) => …}` and call
-  `onActionClick(action)` from your own menu items.
+- Theme seams outside `ZangoApp` props (sidebar width, page background) are CSS
+  variables — see [styling.md](styling.md).
