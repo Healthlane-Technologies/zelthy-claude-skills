@@ -1,5 +1,29 @@
 # Zango App Builder Reference
 
+## About this package
+
+**What it is.** `@zango-core/appbuilder` is the React app shell for a Zango
+app. Its backend half is the `appbuilder` Zango package, which serves the SPA
+and stores routes and menus per role.
+
+**What it provides.**
+- `ZangoApp`: one component that boots routing, auth, theme and layout.
+- Layout: `Layout`, `Navbar`, `Topbar`, `Breadcrumbs`, `SmartLink`.
+- Auth: `useAuth`, login forms, role selection.
+- Context and API helpers: `useAppContext`, `useSmartNavigation`,
+  `callGetApi`, `callPostApi`.
+- Built-in pages: `CrudPage`, `LoginPage`, `LogoutPage`, `NotFoundPage`.
+
+**Where it fits.** The outermost layer. Every page of a Zango app renders
+inside it. Pages and tables come from `@zango-core/crud`, which it does not
+bundle. Reach for it when you set up the app, routes, menus, theme or auth.
+Reach for crud when you build a page.
+
+**Pairs with.** [crud.md](crud.md) for page content.
+[../packages/appbuilder/overview.md](../packages/appbuilder/overview.md) for
+the backend. [../packages/appbuilder/api-configuration.md](../packages/appbuilder/api-configuration.md)
+to register routes and menus.
+
 > Auto-generated from documentation pages. Regenerate with: `node scripts/generate-reference.js`
 
 ## Quick Start

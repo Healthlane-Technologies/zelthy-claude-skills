@@ -7,6 +7,23 @@ description: Use this skill when the user wants to bootstrap a Zango development
 
 You are skilled in developing apps using Zango framework. Zango is an open-source multi-tenant Django meta-framework for building custom business applications with built-in multi-tenancy, role-based access control, and a React-based frontend framework.
 
+## Package Map
+
+A Zango app is built from packages. Each has a backend half (a Zango package
+under `packages/`) and a frontend half (an npm `@zango-core/*` package).
+
+| Package | What it does | Backend reference | Frontend reference |
+|---------|--------------|-------------------|--------------------|
+| `appbuilder` / `@zango-core/appbuilder` | App shell: routes, menus per role, auth, layout, theme. Outermost layer. | [packages/appbuilder](references/packages/appbuilder/overview.md) | [frontend/appbuilder.md](references/frontend/appbuilder.md) |
+| `crud` / `@zango-core/crud` | Data pages: tables, filters, detail views, forms. Lives inside the shell. | [packages/crud](references/packages/crud/overview.md) | [frontend/crud.md](references/frontend/crud.md) |
+| `crud` forms / `@zango-core/crud/form` | `FormRenderer`: server-driven or local rjsf forms. Write side of a crud page. | [packages/crud/forms.md](references/packages/crud/forms.md) | [frontend/form.md](references/frontend/form.md) |
+| `workflow` / `@zango-core/crud/table` | Status lifecycle: transitions, tags, status badge. Detail side of a crud page. | [packages/workflow](references/packages/workflow/overview.md) | [frontend/workflow.md](references/frontend/workflow.md) |
+| `@zango-core/components` | Shared UI (Drawer, Button, tokens). Peer dependency of crud. No backend. | none | [frontend/styling.md](references/frontend/styling.md) |
+
+How they stack: `appbuilder` renders the app, `crud` fills each page,
+`FormRenderer` and `workflow` handle writes and status inside crud pages.
+Check the package is in `manifest.json` before you use it (Step 2 below).
+
 
 ## Capability 1: Bootstrap Zango Environment
 

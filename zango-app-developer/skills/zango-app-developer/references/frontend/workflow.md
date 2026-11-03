@@ -1,5 +1,28 @@
 # Zango Workflow Reference
 
+## About this package
+
+**What it is.** The workflow components in `@zango-core/crud/table` show and
+move a record's status. The backend half is the `workflow` Zango package, which
+owns statuses, transitions and tags.
+
+**What it provides.**
+- `WorkflowStatus`: current status badge plus its next transitions.
+- `WorkflowTags`: tag switches that enable or disable per record.
+- `WorkflowFormRenderer`: the form for form-based transitions.
+- `useWorkflow`: the same logic without UI.
+- `DetailViewProvider` and `useDetailView`: load one record and its workflow
+  data.
+
+**Where it fits.** The detail side of a crud page. It sits in a detail route,
+drawer or tab, next to the record's fields. There is no
+`@zango-core/crud/workflow` entry. Import from `/table` and `/ui`.
+
+**Pairs with.** [recipes-detail.md](recipes-detail.md) for detail pages.
+[form.md](form.md) for transition forms.
+[../packages/workflow/overview.md](../packages/workflow/overview.md) for the
+backend.
+
 > Auto-generated from documentation pages. Regenerate with: `node scripts/generate-reference.js`
 
 ## Import

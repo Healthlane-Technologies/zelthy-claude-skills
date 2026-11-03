@@ -1,5 +1,27 @@
 # Zango FormRenderer Reference
 
+## About this package
+
+**What it is.** `FormRenderer` is the form engine in `@zango-core/crud/form`.
+It renders React JSON Schema Form (rjsf) forms. The schema comes from a Zango
+backend `BaseForm`, or you pass your own.
+
+**What it provides.**
+- Server-driven mode: give it a URL. It loads `json_schema`, `ui_schema` and
+  `form_data`, then submits.
+- Local mode: give it `rjsf_schema` and handle submit yourself.
+- Multi-step forms, file fields, autocomplete, form sync, theming.
+- A submit button portal, so a drawer footer can own the button.
+
+**Where it fits.** The write side of a crud page. It opens in a drawer or
+modal from a list page, and workflow transitions reuse it for form-based
+steps. Use it for every form. Do not rebuild forms from the form hooks.
+
+**Pairs with.** [crud.md](crud.md) for the page that hosts it.
+[workflow.md](workflow.md) for transition forms.
+[../packages/crud/forms.md](../packages/crud/forms.md) for the backend
+`BaseForm`.
+
 > Auto-generated from documentation pages. Regenerate with: `node scripts/generate-reference.js`
 
 ## Import

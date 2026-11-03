@@ -2,6 +2,30 @@
 
 **Package:** `@zango-core/crud` 2.1.1 · React 17/18 · peer `@zango-core/components ^1.0.1`
 
+## About this package
+
+**What it is.** `@zango-core/crud` is the data-page engine for Zango. It
+fetches, filters, sorts and pages records from a Zango `crud` backend view and
+shows one record in detail. The backend half is the `crud` Zango package
+(`BaseCrudView`, tables, forms, detail).
+
+**What it provides.** Four subpaths:
+- `/core`: headless `useCrud` and `CrudProvider`. No UI, no CSS.
+- `/table`: `TableProvider`, the table hooks, `CrudHandler`, and the detail and
+  workflow pieces.
+- `/ui`: presentational parts that take `useCrud` prop bags (`CrudTable`,
+  `CrudToolbar`, `CrudFilters`, `CrudPagination`, `CrudDetailDrawer`).
+- `/form`: `FormRenderer`. See [form.md](form.md).
+
+**Where it fits.** Inside the appbuilder shell, below the route. One page equals
+one `TableProvider` (or one `CrudHandler`) for the list, and a
+`DetailViewProvider` for one record. Reach for it for any list, detail or form
+page. It needs `@zango-core/components` for shared UI.
+
+**Pairs with.** [appbuilder.md](appbuilder.md) for the shell.
+[form.md](form.md) and [workflow.md](workflow.md) for forms and status.
+[../packages/crud/overview.md](../packages/crud/overview.md) for the backend.
+
 > **How this reference is ordered.** It leads with the **hooks**, and the first
 > hosting pattern is a **headless list page** on `TableProvider` — that is how
 > production Zango apps build list pages. `CrudHandler` is fully supported and
