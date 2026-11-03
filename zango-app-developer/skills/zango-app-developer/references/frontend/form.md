@@ -7,8 +7,8 @@ It renders React JSON Schema Form (rjsf) forms. The schema comes from a Zango
 backend `BaseForm`, or you pass your own.
 
 **What it provides.**
-- Server-driven mode: give it a URL. It loads `json_schema`, `ui_schema` and
-  `form_data`, then submits.
+- Server-driven mode: give it `api_endpoint`. It loads `json_schema`,
+  `ui_schema` and `form_data`, then submits.
 - Local mode: give it `rjsf_schema` and handle submit yourself.
 - Multi-step forms, file fields, autocomplete, form sync, theming.
 - A submit button portal, so a drawer footer can own the button.

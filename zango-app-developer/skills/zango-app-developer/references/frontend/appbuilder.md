@@ -3,8 +3,9 @@
 ## About this package
 
 **What it is.** `@zango-core/appbuilder` is the React app shell for a Zango
-app. Its backend half is the `appbuilder` Zango package, which serves the SPA
-and stores routes and menus per role.
+app. Its backend half is the `appbuilder` Zango package. It serves the SPA,
+returns app data from `/app/initializer/`, and stores one global routes list
+plus a menu and config per role.
 
 **What it provides.**
 - `ZangoApp`: one component that boots routing, auth, theme and layout.
