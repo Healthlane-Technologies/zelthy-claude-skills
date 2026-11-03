@@ -221,9 +221,19 @@ transitions = WorkflowTransitionsCol(display_as="Available Actions")
 - Excluded from exports and detail view
 - Auto-generates `_getval` returning transitions list
 
-> **⚠️ Known platform bug — prefer `row_actions` for workflow transitions.** The built-in `WorkflowTransitionsCell` (the React cell behind this column) calls a context hook inside a `try/catch`. When a row animates out after a transition is submitted (rows are wrapped in `AnimatePresence`), the cell re-renders detached from its table provider, the hook throws, and React crashes the page with **"Rendered more hooks than during the previous render"** (minified **React error #300**) — typically *after submitting a transition*. This is in platform code; an app developer cannot patch it from app code.
+> **✅ The React error #300 crash is fixed** in `@zango-core/crud` 2.0.0.
+> `WorkflowTransitionsCell` used to call a throwing context hook inside a
+> `try/catch`, so when a row animated out after a transition submit the cell
+> re-rendered detached from its provider and React crashed the page with
+> *"Rendered more hooks than during the previous render"*. The cell now calls
+> the null-safe `useOptionalTableContext()` unconditionally, with every hook
+> above its early return. `WorkflowTransitionsCol` is safe to use on 2.0.0+.
 >
-> **Recommended pattern (used by production apps):** drive workflow transitions through **`row_actions`** instead of `WorkflowTransitionsCol`. Keep `StatusCol` for status display, and add a `process_row_action_<key>` (plus optional `can_perform_row_action_<key>` to show/hide per status/role) that instantiates the workflow and calls `execute_transition`:
+> **Still consider `row_actions`** when you want per-status or per-role control
+> over which transitions appear, or custom confirmation and response handling —
+> `can_perform_row_action_<key>` gives you a hook the column does not. Keep
+> `StatusCol` for status display and add a `process_row_action_<key>` that
+> instantiates the workflow and calls `execute_transition`:
 > ```python
 > from ...packages.crud.table.column import StatusCol, ActionsCol
 >
@@ -242,7 +252,7 @@ transitions = WorkflowTransitionsCol(display_as="Available Actions")
 >         success, response = workflow.execute_transition("pending_to_approved")
 >         return success, {"message": response} if isinstance(response, str) else response
 > ```
-> See the row-actions reference below (`process_row_action_<action_key>`). Only use `WorkflowTransitionsCol` if you have confirmed the platform cell has been fixed.
+> See the row-actions reference below (`process_row_action_<action_key>`).
 
 ---
 
@@ -977,6 +987,12 @@ class Meta:
     page_title = "Custom Table Title"   # Override CRUD view's page title
     detail_class = MyDetailClass         # Custom detail view class
     row_selector = {}                    # Enable row selection
+
+    serializer_class = MySerializer      # Override the generated serializer
+    export_table_name = "Patients"       # Filename/title for exports
+    card_primary_fields = ['name']       # Fields the card layout leads with
+    column_view_config = {}              # Column-options config for the FE utilities
+    data_upload_class = MyUpload         # Custom bulk-upload handler
 ```
 
 **page_title**: Overrides the page title from CRUD view.
@@ -984,6 +1000,23 @@ class Meta:
 **detail_class**: Custom detail view class. See `packages/crud/detail.md`.
 
 **row_selector**: Enable row selection. Always use empty dict: `{}`.
+
+**serializer_class**: Supply your own DRF serializer instead of the one the
+table generates from `fields`. Read at init and returned by the table's
+serializer lookup, so it wins over the generated one.
+
+**export_table_name**: Name used for downloads. Falls back to `page_title`, then
+to an empty string — set it when the export should not inherit the page title.
+
+**card_primary_fields**: List of field names the card/mobile layout treats as
+primary. Defaults to `[]`. Passed through to the frontend in table metadata.
+
+**column_view_config**: Configuration for the frontend's column-options utility.
+Defaults to `None`, and is only emitted in metadata when set.
+
+**data_upload_class**: Custom handler for the table's bulk upload. The CRUD
+view instantiates it as `data_upload_class(request=..., table_obj=...)`; when
+unset it falls back to the platform's `UploadBase`.
 
 ### UI Visibility Controls
 

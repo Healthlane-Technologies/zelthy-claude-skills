@@ -13,6 +13,14 @@ from .workflow import MyModelWorkflow  # Optional
 from .detail import MyModelDetail  # Optional - or use Meta.detail_class in table
 ```
 
+`crud.base` exports **three** view base classes:
+
+| Class | Use for |
+|-------|---------|
+| `BaseCrudView` | The full list + detail + form CRUD interface. Everything below documents this one. |
+| `BaseFormOnlyView` | A standalone form with no table or list — see below. |
+| `BaseFormWizardView` | A multi-step form wizard — see below. |
+
 ---
 
 ## Table of Contents
@@ -24,9 +32,11 @@ from .detail import MyModelDetail  # Optional - or use Meta.detail_class in tabl
 5. [Workflow Integration](#workflow-integration)
 6. [Custom Templates](#custom-templates)
 7. [Method Reference](#method-reference)
-8. [Complete Examples](#complete-examples)
-9. [Best Practices](#best-practices)
-10. [Troubleshooting](#troubleshooting)
+8. [BaseFormOnlyView - Standalone Form](#baseformonlyview---standalone-form)
+9. [BaseFormWizardView - Multi-Step Form](#baseformwizardview---multi-step-form)
+10. [Complete Examples](#complete-examples)
+11. [Best Practices](#best-practices)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -387,7 +397,7 @@ class ProgramCrudView(BaseCrudView):
 
 - **Automatic status initialization**: When a record is created *through the CRUD view's create flow* (`form.save()` in the view), the CRUD base calls `get_workflow_obj(object_instance=...)` and then `workflow_obj.execute_transition(workflow_obj.Meta.on_create_status)`, which creates the `WorkflowState` row at `on_create_status`. Two prerequisites: the view must set `workflow = YourWorkflow`, and the workflow `Meta` must define `on_create_status`. **Gotcha:** this only fires on the CRUD create path — objects created directly via the ORM (e.g. `Model.objects.create(...)`, data migrations, shell, bulk imports) get **no** `WorkflowState`, so `get_current_status()` falls back to `on_create_status` only lazily and no creation transaction is recorded. Initialize those explicitly by instantiating the workflow and calling `execute_transition(on_create_status)` yourself.
 - **Status display**: `StatusCol` automatically shows current status with color badge
-- **Transitions display**: prefer driving transitions through **`row_actions`** (`process_row_action_*` calling `execute_transition`). The built-in `WorkflowTransitionsCol` has a known platform bug that crashes the page with "Rendered more hooks than during the previous render" (React error #300) after a transition submit — see tables.md → WorkflowTransitionsCol for the cause and the row-actions pattern.
+- **Transitions display**: `WorkflowTransitionsCol` is safe on `@zango-core/crud` 2.0.0+ — the React error #300 crash after a transition submit is fixed. Drive transitions through **`row_actions`** (`process_row_action_*` calling `execute_transition`) when you need per-status or per-role visibility via `can_perform_row_action_*`, or custom response handling. See tables.md → WorkflowTransitionsCol.
 - **Role-based transitions**: Transitions can be restricted by role
 - **Workflow history**: Track all status changes with timestamps
 
@@ -729,6 +739,80 @@ def get_context_data(self, **kwargs):
     context['show_analytics'] = self.request.user.has_perm('view_analytics')
     return context
 ```
+
+---
+
+## BaseFormOnlyView - Standalone Form
+
+A form with no table and no list view — use it for a settings page, a
+"submit a request" screen, or any page that is only a form.
+
+```python
+from ...packages.crud.base import BaseFormOnlyView
+from .forms import MyRequestForm
+
+class MyRequestView(BaseFormOnlyView):
+    form_template = "crud/standalone_form.html"   # default
+
+    def get_form(self, data=None, files=None, instance=None):
+        return MyRequestForm(data=data, files=files, instance=instance)
+
+    def get_success_url(self):
+        return "/my-module/requests/"
+```
+
+| Member | Purpose |
+|--------|---------|
+| `form_template` | Template for the form page. Defaults to `"crud/standalone_form.html"`. |
+| `get_form(data, files, instance)` | Build and return the form instance. |
+| `get_form_errors(form)` | Shape validation errors for the response. |
+| `get_success_url()` | Where to go after a successful submit. |
+| `get_workflow_obj(**kwargs)` | Attach a workflow to the submitted object. |
+| `get_context_data(**kwargs)` | Standard Django hook. |
+| `get_request_view()` | Reads the `?view=` query param. |
+
+It extends `TemplateView` with `CrudRequestMixin`, and its `get()` handles
+`?action=initialize_form` the same way the CRUD form endpoint does — so the
+frontend `FormRenderer` can drive it in server-driven mode.
+
+---
+
+## BaseFormWizardView - Multi-Step Form
+
+Wraps Django's `SessionWizardView`, so each step's data is held in the session
+until the final step commits.
+
+```python
+from ...packages.crud.base import BaseFormWizardView
+from .forms import StepOneForm, StepTwoForm
+
+class OnboardingWizard(BaseFormWizardView):
+    wizard_title = "Onboarding"
+    form_list = [StepOneForm, StepTwoForm]
+
+    step_config = {
+        "0": {"title": "Your details"},
+        "1": {"title": "Confirm"},
+    }
+```
+
+| Member | Purpose |
+|--------|---------|
+| `wizard_title` | Heading for the wizard. Defaults to `"Form Wizard"`. |
+| `step_config` | Per-step configuration, keyed by step index as a string. |
+| `template_name` | Defaults to `"crud/form_wizard.html"`. |
+| `file_storage` | `DefaultStorage()` — required by `SessionWizardView` for file steps. |
+| `workflow` / `workflow_object_instance` | Optional workflow attached to the result. |
+| `get_form_kwargs(step)` | Per-step form kwargs. |
+| `get_form_prefix(step, form)` | Per-step field prefix. |
+| `render(form, **kwargs)` | Builds the JSON response the frontend consumes. |
+| `process_step_done(step, form, object_instance, form_list, **kwargs)` | Hook after each step completes. Default is a no-op. |
+| `process_done(form_list, **kwargs)` | Runs at the end: saves each step's form and collects the results. |
+
+> Override `process_done` / `process_step_done` rather than Django's plain
+> `done()` — this class implements completion through those two hooks.
+> `process_done` receives `form_dict` in `kwargs` and calls `form.save()` per
+> step, so a subclass that wants different save behavior overrides it there.
 
 ---
 
