@@ -51,15 +51,15 @@ There is no `@zango-core/crud/workflow` entry. Subpaths are `/core`, `/ui`, `/fo
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `apiUrl` | string | context | Record endpoint. Falls back to `DetailViewProvider`'s `apiUrl`. Put `object_uuid` in its query string: the transition form reads it only from there. |
+| `apiUrl` | string | context | Record endpoint. Falls back to `DetailViewProvider`'s `apiUrl`. Put `object_uuid` in its query string: on crud ≤ 2.1.1 the transition form reads it only from there. |
 | `workflowDetails` | WorkflowDetails | - | Workflow data to start from. Skips the mount fetch. |
 | `staticData` | unknown | - | Workflow data in any of these shapes: `{ workflow_details }`, `{ response: { workflow_details } }`, or a bare workflow-details object. Skips the mount fetch. Executing a transition still needs `apiUrl`. |
-| `objectUuid` | string | - | Explicit object UUID for the fetch and execute calls. The transition form ignores it (see `apiUrl`). |
+| `objectUuid` | string | - | Object UUID, used when `apiUrl` has no `object_uuid` param (one in `apiUrl` wins). Covers fetch, execute and, after 2.1.1 (unreleased), the transition form. ⚠️ crud ≤ 2.1.1: the transition form ignores it (see `apiUrl`). |
 | `formContainerId` | string | - | DOM id to portal the transition form into. Without it the package opens its own `Drawer`. |
 | `onStatusChange` | `() => void` | - | Fires ~100ms after a successful transition. |
 | `onShowStatusForm` | `(transition, apiUrl) => void` | - | Form-based transitions call this instead of rendering a form. You render the form (e.g. `WorkflowFormRenderer`); `afterTransition` and `onStatusChange` then do not fire for that transition. |
 | `beforeTransition` | `(transition) => Promise<void> \| void` | - | Runs before a transition. Throwing aborts it; the default rendering shows the error inline (`renderTransitions` does not). |
-| `afterTransition` | `(transition, success) => Promise<void> \| void` | - | Runs after a transition. See [Callback Lifecycle](#callback-lifecycle): it fires twice for non-form transitions. |
+| `afterTransition` | `(transition, success) => Promise<void> \| void` | - | Runs after a transition, once. ⚠️ crud ≤ 2.1.1 runs it twice for non-form transitions. See [Callback Lifecycle](#callback-lifecycle). |
 | `confirmationAlert` | `(props: { onConfirm, onCancel, title, message }) => ReactNode` | - | Replaces the package's confirmation `Dialog`. Called only for non-form transitions that carry `confirmation_message`. |
 | `renderTransitions` | `(params) => ReactNode` | - | Replaces the status pill and menu. Receives `{ transitions, onTransitionClick, currentStatus, statusLabel, statusTransitionForm, onFormCancel }`. |
 | `onFormCancel` | `React.MutableRefObject<(() => void) \| null>` | - | Ref the package fills with a close function while a form is shown, `null` otherwise. |
@@ -73,11 +73,13 @@ There is no `@zango-core/crud/workflow` entry. Subpaths are `/core`, `/ui`, `/fo
 
 | Transition kind | Sequence |
 |-----------------|----------|
-| No confirmation | `beforeTransition` → (`useWorkflow`) `beforeTransition` again → POST → refresh → `afterTransition` → `afterTransition` again → `onStatusChange` |
+| No confirmation | `beforeTransition` → POST → refresh → `afterTransition(t, success)` → `onStatusChange` |
 | `confirmation_message` | `beforeTransition` → confirmation → on confirm, same as above. Cancel fires nothing more. |
-| `is_form_based` | `beforeTransition` → form → on success: refresh → `afterTransition(t, true)` once → `onStatusChange`. Cancel fires nothing more. |
+| `is_form_based` | `beforeTransition` → form → on success: refresh → `afterTransition(t, true)` → `onStatusChange`. Cancel fires nothing more. |
 
-⚠️ Non-form transitions call `beforeTransition` and `afterTransition` twice: once in `WorkflowStatus`, once in `useWorkflow.executeTransition`. On failure `afterTransition(t, false)` also fires twice. Guard side effects with a ref.
+`WorkflowStatus` calls both hooks itself, once per transition, and does not forward them to `useWorkflow`. Do not also pass the same callbacks to a `useWorkflow` call for the same transition.
+
+⚠️ **crud ≤ 2.1.1:** non-form transitions call `beforeTransition` and `afterTransition` twice: once in `WorkflowStatus`, once in `useWorkflow.executeTransition`. On failure `afterTransition(t, false)` also fires twice. Fixed after 2.1.1 (unreleased). Until your app is on the fix, guard side effects with a ref.
 
 After a success the package refreshes on its own: `refreshWorkflow()` (a `fetch_item_details` GET), then `refreshDetail()` when inside a `DetailViewProvider`.
 
@@ -196,12 +198,12 @@ function OrderWorkflow() {
 | `apiUrl` | string | context | Record endpoint. Falls back to `DetailViewProvider`'s `apiUrl`. Put `object_uuid` in its query string. |
 | `tagDetails` | TagDetail[] | - | Tag data to start from. Skips the mount fetch. |
 | `staticData` | unknown | - | `{ tag_details }`, `{ response: { tag_details } }`, `{ workflow_details }` or `{ response: { workflow_details } }`. Skips the mount fetch. Toggling still needs `apiUrl`. |
-| `objectUuid` | string | - | Explicit object UUID for fetch and toggle calls. The tag form ignores it. |
+| `objectUuid` | string | - | Object UUID, used when `apiUrl` has no `object_uuid` param (one in `apiUrl` wins). Covers fetch, toggle and, after 2.1.1 (unreleased), the tag form. ⚠️ crud ≤ 2.1.1: the tag form ignores it. |
 | `formContainerId` | string | - | DOM id to portal the tag form into. |
 | `onTagChange` | `() => void` | - | Fires ~100ms after a successful toggle or tag form. |
 | `onShowTagForm` | `(tag, apiUrl) => void` | - | Form-based toggles call this instead of rendering a form. You render the form. |
-| `beforeTagChange` | `(tag, newState) => Promise<void> \| void` | - | `newState` is `"enabled"` or `"disabled"`. Throwing aborts. Fires twice for non-form toggles (component + `useWorkflow.toggleTag`). |
-| `afterTagChange` | `(tag, success) => Promise<void> \| void` | - | Fires once for non-form toggles. ⚠️ Never fires for form-based toggles; use `onTagChange`. |
+| `beforeTagChange` | `(tag, newState) => Promise<void> \| void` | - | `newState` is `"enabled"` or `"disabled"`. Throwing aborts. Fires once per toggle, form toggles included. ⚠️ crud ≤ 2.1.1 fires it twice for non-form toggles (component + `useWorkflow.toggleTag`). |
+| `afterTagChange` | `(tag, success) => Promise<void> \| void` | - | Fires once per toggle, form toggles included. ⚠️ crud ≤ 2.1.1 never fires it for form-based toggles; use `onTagChange` there. |
 | `confirmationAlert` | `(props: { onConfirm, onCancel, title, message }) => ReactNode` | - | Replaces the package's confirmation `Dialog` for non-form toggles with a `confirmation_message`. Cleared after the toggle. |
 | `renderTags` | `(params) => ReactNode` | - | Receives `{ tags, onTagToggle, tagTransitionForm, onFormCancel }`. `tagTransitionForm` is `null` when `formContainerId` is set. Not called when there are no tags (the component returns `null`). ⚠️ Its `onFormCancel` clears a pending confirmation, not the form; close a form with the `onFormCancel` ref. |
 | `onFormCancel` | `React.MutableRefObject<(() => void) \| null>` | - | Ref the package fills with a close function while a tag form is shown, `null` otherwise. |
@@ -286,6 +288,27 @@ function UserTags({ objectUuid }) {
 
 ---
 
+## WorkflowFormRenderer
+
+Renders the form for a form-based transition or tag toggle. `WorkflowStatus` and `WorkflowTags` use it inside. Render it yourself when you take over forms with `onShowStatusForm` / `onShowTagForm`.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `transitionType` | `"status" \| "tag"` | Required. |
+| `transition` | `Transition` | Required when `transitionType="status"`. |
+| `tag` | `TagDetail` | Required when `transitionType="tag"`. |
+| `actionType` | `"enabled" \| "disabled"` | Tags only: the state the tag moves to. |
+| `apiUrl` | string | Required. Workflow endpoint. |
+| `objectUuid` | string | Used when `apiUrl` has no `object_uuid` param. ⚠️ Unreleased (after 2.1.1); on ≤ 2.1.1 put `object_uuid` in `apiUrl`. |
+| `containerId` | string | Portal the form into this element. Without it the form renders in drawer mode. |
+| `onSuccess` | `() => void` | Required. Runs after a successful submit. |
+| `onCancel` | `() => void` | Required. |
+| `onError` | `(error: Error) => void` | Optional. |
+
+When you render this form yourself, `WorkflowStatus` / `WorkflowTags` callbacks do not fire for it. Refresh and run follow-up work in `onSuccess`.
+
+---
+
 ## Standalone Controls (StatusBadge, StatusButton, TagSwitch)
 
 Single-purpose controls from `@zango-core/crud/ui`. They need no `DetailViewProvider` and do not refresh anything: refetch in `onSuccess` / `onToggle`.
@@ -327,7 +350,7 @@ Patterns proven in a production Zango app's detail view. Each is backed by packa
 
 1. **Mount only once `workflowDetails` exists.** `useWorkflow` fetches `fetch_item_details` on mount when it has no initial details and has an `apiUrl` with an object UUID. The `apiUrl` can come from the context, so withholding the prop does not stop it. Render `null` until the detail payload arrives, then pass `staticData={workflowDetails}`.
 2. **Do not refresh twice inside a `DetailViewProvider`.** The package already awaits `context.refreshDetail()` after a transition, a toggle or a transition form, before `onStatusChange` / `onTagChange` fire. Refreshing again there reloads the detail a second time. Outside a provider the callbacks are your only refresh.
-3. **Put `object_uuid` in `apiUrl`'s query string.** The transition form builds its init and submit urls from `apiUrl` and keeps only its `object_uuid` param. Without it a form-based transition posts no object. `objectUuid` does not reach the form.
+3. **Put `object_uuid` in `apiUrl`'s query string.** The transition form builds its init and submit urls from `apiUrl` and keeps only its `object_uuid` param. On crud ≤ 2.1.1 `objectUuid` does not reach the form, so without the param a form-based transition posts no object. Later releases pass `objectUuid` through, but the query param works on every version.
 4. **De-duplicate `afterTransition`.** It fires twice per non-form transition. Track a pending ref and act on the first call only.
 5. **Open your form container only for forms.** `beforeTransition` fires for every transition. Check `t.is_form_based` (tags: `tag.enable/disable.is_form_based` by `newState`).
 6. **No delay before the portal.** With `formContainerId`, the form polls for the container every 100ms for up to 3s and renders nothing until found. It can mount right after `beforeTransition` opens your dialog.

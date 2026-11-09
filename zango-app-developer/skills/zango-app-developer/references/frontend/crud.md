@@ -334,10 +334,27 @@ above you (`useDetailViewContext()` returns `null`).
 
 ## Version notes (crud ≤ 2.1.1)
 
-Package bugs present in every release up to and including 2.1.1, all fixed on
-the package's main line by pkg-zango-crud PR #408 (unreleased at the time of
-writing). The workarounds below work on all versions, so keep using them until
-your app is on a release whose CHANGELOG lists the fix.
+Package bugs present in every release up to and including 2.1.1. All are
+fixed on the package's development line (pkg-zango-crud PR #408 and later
+commits) and listed under "Unreleased" in its CHANGELOG. None has shipped in an
+npm release yet. The workarounds below work on all versions, so keep using
+them until your app is on a release whose CHANGELOG lists the fix.
+
+Fixed after 2.1.1, short form (details for the larger ones follow):
+
+| Bug on ≤ 2.1.1 | Workaround |
+|----------------|------------|
+| `detail.open`, `row.onClick`, `handleRowClick` do nothing | `useTableContext().openDetailDrawer(row)` (below) |
+| `CrudHandler` drops `defaultDetailView` | set `detail_config.default_view` in metadata (below) |
+| `DetailViewProvider` drops `objectUuid` when `apiUrl` is set | put `object_uuid` in `apiUrl` (below) |
+| `useDetailView()` fetches twice under a provider | use `useDetailViewContext()` (below) |
+| `useCrud().ui.filterLayout` ignores the prop | read the prop you passed |
+| `FormRenderer` ignores `templates` | pass them to `FormHandler` (below) |
+| Workflow hooks fire twice / `afterTagChange` never fires for form toggles | idempotent hooks, `onTagChange` (below) |
+| Form-based transitions and tag forms ignore `objectUuid` | put `object_uuid` in `apiUrl` ([workflow.md](workflow.md)) |
+| `headerProps.showAddButton` is ignored when the top-level prop is unset | pass top-level `showAddButton` |
+| `FormHandler` `renderLoading` hides the form forever; `renderError` / `renderSuccess` never run | leave the slots unset; handle outcomes in `onResponse` / `onError` |
+| Two live forms on one page share state (schema, submit portal, loading flag, `zango-rjsf-form` id) | keep one form mounted at a time |
 
 ### `detail.open`, `row.onClick` and `handleRowClick` do nothing
 
@@ -1285,7 +1302,7 @@ component.
 |------|------|-------------|
 | `headerProps.title` | string \| ReactNode | Header title. Falls back to `metadata.page_title`. |
 | `headerProps.showCount` | boolean | Show the record count next to the title. |
-| `headerProps.showAddButton` | boolean | Show/hide the add button. |
+| `headerProps.showAddButton` | boolean | Show/hide the add button. ⚠️ Ignored on ≤ 2.1.1; use top-level `showAddButton`. |
 | `headerProps.addButtonTitle` | string \| ReactNode | Add button label. |
 | `headerProps.onAddClick` | () => void | Replace the default add-form drawer. |
 | `headerProps.extraActions` | ReactNode | Extra buttons, rendered beside the add button. |

@@ -235,8 +235,8 @@ export default App;
 |------|------|---------|-------------|
 | `appInitializerEndpoint` | string | /appbuilder/initializer/ | API endpoint for app initialization data. |
 | `customPages` | object | - | Map of component names to React components for custom page routing. |
-| `layoutConfig` | object | - | Layout configuration: { showTopbar: boolean (true), showNavbar: boolean (true), layoutType: \ |
-| `topbarConfig` | object | - | Topbar configuration: { showProfile, customLeftContent, customRightContent, customProfileMenu, customTopbar, profileMenuConfig, className, style } |
+| `layoutConfig` | object | - | Layout configuration: { showTopbar (true), showNavbar (true), layoutType: `"wide" \| "compact"` (`"wide"`), showCommandPalette (true), routeTransition: `"spinner" \| "fade"` (`"spinner"`), webFont (true) }. `webFont` (unreleased): Inter loads from Google Fonts unless `false`; set `false` when the app hosts its own font and names it in `--zango-font-family`. |
+| `topbarConfig` | object | - | Topbar configuration: { showProfile, customLeftContent, customRightContent, customProfileMenu, customTopbar, profileMenuConfig, profileLabels, className, style }. `profileLabels` (unreleased) sets `{ logout, logoutSession, viewProfile }` wording; unset keys keep the defaults. |
 | `navbarConfig` | object | - | Navbar configuration: { showLogo, showMenu, isCollapsed, collapsible, customLogo, customMenuContent, customBottomContent, customNavbar, customMenu, menuConfig, className, style } |
 | `authConfig` | object | - | Authentication configuration: { customComponents, theme, card, logo, login, roleSelection, twoFactor, resetPassword, providers, messages } |
 | `config` | object | - | General app configuration. |
@@ -365,6 +365,12 @@ The main one. Returns the whole initializer payload plus derived config.
 | `registryLoading` | `boolean` |
 | `registryError` | `string \| null` |
 | `initializerEndpoint` | `string` — used in error messaging |
+| `openProfile` | `() => void` — opens the profile drawer (or `customViewProfile`), as the topbar's View Profile does. Works with the topbar hidden. **Unreleased** (after 1.0.0) |
+| `logout` | `(options?: { confirm?: boolean }) => void` — signs out as the topbar's Log Out does, confirmation dialog first unless `confirm: false`. **Unreleased** |
+
+With `openProfile` and `logout` an app can draw its own profile menu with
+`showTopbar: false`. Before them it had to keep the topbar mounted and click its
+hidden buttons.
 
 `routes` is the one to reach for when resolving a detail URL for a row: match
 the row's `page_key` against `routes[].extra_params.page_key` and use that
@@ -925,6 +931,9 @@ import CustomLogin from './custom/pages/CustomLogin';
 | `background` | string | - | Page background. |
 | `text` | string | - | Default text color. |
 | `font_family` | string | - | Font family (loaded via Google Fonts or local). |
+
+CSS font tokens: `--zango-font-family` names the text font (Apple system font first, then Inter). `--zango-font-mono` (unreleased) names the mono font for the `font-mono` utility and `@zango-core/components` mono text; it defaults to Tailwind's mono stack.
+
 | `font_size_base` | string | - | Base font size. |
 | `line_height` | number | - | Base line height. |
 

@@ -212,10 +212,11 @@ function WorkflowControls({ workflowDetails, apiUrl, objectUuid, onChanged }) {
 - Inside a `DetailViewProvider`, the hook already awaits `refreshDetail()` before
   your callback. Forwarding your own refresh too reloads the record twice.
 - Transition forms read the record from the **`apiUrl` query string** — put
-  `object_uuid` there.
+  `object_uuid` there. On crud ≤ 2.1.1 `objectUuid` does not reach the form;
+  the query param works on every version.
 - On crud ≤ 2.1.1 `beforeTransition` / `afterTransition` fire **twice** for a
-  transition without a form. Make them idempotent (a `pending` ref) before
-  doing anything with side effects.
+  transition without a form (fixed after 2.1.1, unreleased). Make them
+  idempotent (a `pending` ref) before doing anything with side effects.
 - Prop reference, `confirmationAlert`, `formContainerId`, custom renderers:
   [workflow.md](workflow.md).
 

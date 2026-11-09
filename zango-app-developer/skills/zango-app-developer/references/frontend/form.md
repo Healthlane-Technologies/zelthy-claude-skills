@@ -685,7 +685,7 @@ function UserFormDialog({ open, onClose }) {
 }
 ```
 
-⚠️ The submit button looks up `submitButtonContainerId` at render. If the node is missing it falls back to the default footer. The portaled button submits through `form="zango-rjsf-form"`, a fixed id, so keep only one portalled form mounted at a time.
+⚠️ The submit button looks up `submitButtonContainerId` at render. If the node is missing it falls back to the default footer. On crud ≤ 2.1.1 the portaled button submits through `form="zango-rjsf-form"`, a fixed id, and all forms share one module-level store, so keep only one form mounted at a time. After 2.1.1 (unreleased) each `FormRenderer` / `FormHandler` owns its store and form id, so two forms on a page stay independent.
 
 ### File Preview Layout
 
@@ -746,6 +746,8 @@ Fields read `--form-*` CSS variables. The field rules are scoped to both `.form-
 Field height precedence: `--form-field-height`, then `--zango-control-height-md`, then `36px`. Set `--zango-control-height-md` to resize form fields and every Zango control together. Set `--form-field-height` to resize forms only.
 
 `FormRenderer` has no `theme` prop. Set the variables on an ancestor or through `containerProps`. `FormHandler` also takes `theme` (a `FormTheme` object mapped to these variables) and `variant` (`"default" | "compact" | "floating" | "inline"`); `theme` wins over `variant`.
+
+`FormHandler` state slots: `renderLoading()` until the schema arrives, `renderError(error)` after a failed load or submit, `renderSuccess(response)` after a submit. The form engine stays mounted under the slot; `useForm().reset()` / `addAnother()` return to the form. ⚠️ Unreleased (after 2.1.1). On ≤ 2.1.1 `renderLoading` replaces the engine so the form never loads, and the other two never run: leave all three unset.
 
 ```jsx
 <FormRenderer
