@@ -18,12 +18,13 @@ from zango.core.utils import get_current_role
 2. [Configuration](#configuration)
 3. [Custom Fields](#custom-fields)
 4. [Overridable Methods](#overridable-methods)
-5. [Activity Timeline](#activity-timeline)
-6. [Workflow Integration](#workflow-integration)
-7. [Audit Logs](#audit-logs)
-8. [Complete Examples](#complete-examples)
-9. [Best Practices](#best-practices)
-10. [Troubleshooting](#troubleshooting)
+5. [Editable Sections](#editable-sections)
+6. [Activity Timeline](#activity-timeline)
+7. [Workflow Integration](#workflow-integration)
+8. [Audit Logs](#audit-logs)
+9. [Complete Examples](#complete-examples)
+10. [Best Practices](#best-practices)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -370,6 +371,59 @@ class ProgramDetail(BaseDetail):
 
         return mapping
 ```
+
+---
+
+## Editable Sections
+
+A detail view can carry named sections, each optionally backed by a form and
+restricted to particular roles. Declare them on the detail class's `Meta`:
+
+```python
+class PatientDetail(BaseDetail):
+    title = "Patient"
+
+    class Meta:
+        sections = [
+            {
+                "key": "clinical",
+                "name": "clinical",
+                "title": "Clinical notes",
+                "form": ClinicalNotesForm,      # optional — omit for read-only
+                "roles": ["Doctor", "Nurse"],   # optional — omit for all roles
+            },
+        ]
+```
+
+`SectionSchema` fields:
+
+| Field | Required | Purpose |
+|-------|----------|---------|
+| `key` | yes | Stable identifier for the section. |
+| `name` | yes | Internal name used when building section data. |
+| `title` | yes | Heading shown in the UI. |
+| `form` | no | `BaseForm` or `BaseSimpleForm` subclass making the section editable. |
+| `roles` | no | Role names allowed to see it. Omit to show to everyone. |
+
+**Role filtering happens server-side.** `get_sections()` reads the current role
+and skips any section whose `roles` list excludes it, so a hidden section is
+never serialized to the client.
+
+| Method | Purpose |
+|--------|---------|
+| `get_sections(sections)` | Builds the section payload — resolves data, applies role filtering. |
+| `get_detail_section_form(section_key)` | Looks up a section's `form` by its `key` from `Meta.sections`. |
+| `post(request, ...)` | Handles `?form_action=submit_form`: validates, saves, and returns `{success: true}` or a 400 with serialized errors. |
+
+The section form is constructed with
+`initial={"object_instance": <the detail object>}` and the
+`crud_view_instance`, so the form can reach both.
+
+> **⚠️ Verify section-form submits against your platform version.** `post()`
+> passes `form_action` — the literal string `"submit_form"` — into
+> `get_detail_section_form()`, which matches it against each section's `key`.
+> Only a section keyed exactly `"submit_form"` resolves; for any other key the
+> lookup returns `None` and the submit fails. Read-only sections are unaffected.
 
 ---
 

@@ -352,6 +352,32 @@ receipt = ModelField(label="Receipt", required=False)
 
 How it renders (from the crud package): a `forms.FileField` maps to **`FileFieldWidget`** with `ui:format: "data-url"` — the browser uploads the file inline as a data-URL, and `form.save()` persists it like any model file. For an existing record, the field's default is rendered as the file's absolute URL so the current file is shown.
 
+### CustomField - Plain Django Form Fields
+
+For a form field backed directly by a Django form class rather than a model
+field or a JSON schema.
+
+```python
+from ...packages.crud.form_fields import CustomField
+
+tags = CustomField("CharField", inital="draft", required=False)
+```
+
+> **⚠️ The initial-value kwarg is spelled `inital`, not `initial`.** That typo is
+> in the platform signature (`def __init__(self, type, inital=None, **kwargs)`)
+> and is assigned to `self.initial`. Spelling it correctly silently sends it to
+> `**kwargs` and the initial value is lost. Pass `inital`.
+
+`type` must be a key of `CustomField.FIELD_MAP`, which currently maps only:
+
+| Key | Django field |
+|-----|--------------|
+| `"CharField"` | `forms.CharField` |
+| `"ModelMultiChoiceField"` | `forms.ModelMultipleChoiceField` |
+
+Anything else raises `ValueError: Invalid field type: <type>`. Remaining
+`**kwargs` pass through to the Django field constructor.
+
 ### CustomSchemaField - Advanced JSON Schema Fields
 
 For complex fields using React JSON Schema Form (rjsf). Allows full JSON schema and UI schema control.
